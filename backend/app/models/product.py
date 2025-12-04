@@ -1,0 +1,25 @@
+from sqlalchemy import Column, Integer, String, Float, Date
+from sqlalchemy.orm import relationship
+from app.db.session import Base
+
+class Product(Base):
+    __tablename__ = "products"
+
+    id = Column(Integer, primary_key=True, index=True)
+    pricecharting_id = Column(Integer, unique=True, index=True)
+    console_name = Column(String, index=True)
+    product_name = Column(String, index=True)
+    loose_price = Column(Float)
+    cib_price = Column(Float)
+    new_price = Column(Float)
+    genre = Column(String, nullable=True)
+    release_date = Column(Date, nullable=True)
+    image_url = Column(String, nullable=True)
+    description = Column(String, nullable=True)
+    publisher = Column(String, nullable=True)
+    developer = Column(String, nullable=True)
+    esrb_rating = Column(String, nullable=True)
+    players = Column(String, nullable=True)
+
+    price_history = relationship("PriceHistory", back_populates="product", cascade="all, delete-orphan")
+    listings = relationship("Listing", back_populates="product", cascade="all, delete-orphan")
