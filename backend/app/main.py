@@ -71,3 +71,7 @@ def read_root():
 @app.get("/debug")
 def debug_root():
     return {"status": "ok", "message": "Backend is reachable"}
+
+@app.get("/version")
+def read_version():
+    return {"version": "1.0.1", "deployed_at": "2025-12-04"}
