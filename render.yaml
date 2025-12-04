@@ -2,6 +2,7 @@ services:
   # Backend Service (FastAPI)
   - type: web
     name: retrocharting-backend
+    region: frankfurt
     env: python
     rootDir: backend
     buildCommand: pip install -r requirements.txt
@@ -38,6 +39,7 @@ services:
   # Frontend Service (Next.js)
   - type: web
     name: retrocharting-frontend
+    region: frankfurt
     env: node
     rootDir: frontend
     buildCommand: npm install && npm run build
