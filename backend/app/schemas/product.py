@@ -3,9 +3,9 @@ from typing import Optional
 from datetime import date
 
 class ProductBase(BaseModel):
-    pricecharting_id: int
-    console_name: str
-    product_name: str
+    pricecharting_id: Optional[int] = None
+    console_name: Optional[str] = None
+    product_name: Optional[str] = None
     loose_price: Optional[float] = None
     cib_price: Optional[float] = None
     new_price: Optional[float] = None
