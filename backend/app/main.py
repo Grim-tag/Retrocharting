@@ -75,3 +75,18 @@ def debug_root():
 @app.get("/version")
 def read_version():
     return {"version": "1.0.1", "deployed_at": "2025-12-04"}
+
+@app.get("/api/debug/consoles")
+def debug_consoles():
+    from app.db.session import SessionLocal
+    from app.models.product import Product
+    from sqlalchemy import func
+    
+    db = SessionLocal()
+    try:
+        consoles = db.query(Product.console_name, func.count(Product.id)).group_by(Product.console_name).all()
+        return {"consoles": [{"name": c[0], "count": c[1]} for c in consoles]}
+    except Exception as e:
+        return {"error": str(e)}
+    finally:
+        db.close()
