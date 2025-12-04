@@ -6,7 +6,13 @@ from app.models.product import Product
 
 def import_csv_dump():
     # Path to CSV
-    csv_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'data_scripts', 'products_dump.csv')
+    # __file__ = backend/app/services/import_dump.py
+    # dirname 1 = backend/app/services
+    # dirname 2 = backend/app
+    # dirname 3 = backend
+    # dirname 4 = project root
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    csv_path = os.path.join(project_root, 'data_scripts', 'products_dump.csv')
     
     if not os.path.exists(csv_path):
         print(f"CSV dump not found at {csv_path}")
