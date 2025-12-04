@@ -21,8 +21,9 @@ import requests
 from bs4 import BeautifulSoup
 from sqlalchemy.orm import Session
 from app.db.session import SessionLocal
-from app.models.product import Product
 from app.models.listing import Listing
+from app.models.price_history import PriceHistory
+from app.models.product import Product
 import time
 import random
 import cloudinary
@@ -40,7 +41,6 @@ def scrape_data():
     
     # Get products without description OR without price history
     from sqlalchemy import or_, text
-    from app.models.price_history import PriceHistory
     
     # LIMIT to 50 items per run to avoid timeouts on Cron Jobs
     products = db.query(Product).outerjoin(PriceHistory).filter(
@@ -55,6 +55,10 @@ def scrape_data():
     
     count = 0
     for p in products:
+        if not p.console_name or not p.product_name:
+            print(f"Skipping product {p.id}: Missing console_name or product_name")
+            continue
+
         # Construct URL: https://www.pricecharting.com/game/{console-slug}/{product-slug}
         console_slug = p.console_name.lower().replace(' ', '-')
         product_slug = p.product_name.lower().replace(' ', '-').replace('[', '').replace(']', '').replace('/', '-').replace(':', '').replace('.', '').replace("'", "")
