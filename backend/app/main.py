@@ -8,6 +8,11 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="RetroCharting API")
 
+@app.on_event("startup")
+def startup_event():
+    from app.services.import_dump import import_csv_dump
+    import_csv_dump()
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
