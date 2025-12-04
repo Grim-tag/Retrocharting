@@ -96,11 +96,12 @@ def debug_consoles():
 def debug_csv():
     import os
     import csv
-    app_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    # backend/app/main.py -> dirname -> backend/app
+    app_dir = os.path.dirname(os.path.abspath(__file__))
     csv_path = os.path.join(app_dir, 'data', 'products_dump.csv')
     
     if not os.path.exists(csv_path):
-        return {"error": "File not found"}
+        return {"error": f"File not found at {csv_path}"}
         
     try:
         with open(csv_path, 'r', encoding='utf-8') as f:
@@ -112,3 +113,26 @@ def debug_csv():
             return {"fieldnames": reader.fieldnames, "rows": rows}
     except Exception as e:
         return {"error": str(e)}
+
+@app.post("/api/debug/reset-db")
+def debug_reset_db():
+    from app.db.session import SessionLocal
+    from app.models.product import Product
+    from sqlalchemy import text
+    
+    db = SessionLocal()
+    try:
+        # Delete all products
+        num_deleted = db.query(Product).delete()
+        db.commit()
+        # Reset ID sequence if possible (Postgres specific usually, but good to try)
+        try:
+            db.execute(text("ALTER SEQUENCE products_id_seq RESTART WITH 1"))
+        except:
+            pass
+        return {"status": "success", "deleted_count": num_deleted}
+    except Exception as e:
+        db.rollback()
+        return {"error": str(e)}
+    finally:
+        db.close()
