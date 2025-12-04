@@ -67,3 +67,7 @@ app.include_router(products.router, prefix="/api/v1/products", tags=["products"]
 @app.get("/")
 def read_root():
     return {"message": "Welcome to RetroCharting API"}
+
+@app.get("/debug")
+def debug_root():
+    return {"status": "ok", "message": "Backend is reachable"}
