@@ -1,0 +1,44 @@
+services:
+  # Backend Service (FastAPI)
+  - type: web
+    name: retrocharting-backend
+    env: python
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: retrocharting-db
+          property: connectionString
+      - key: PYTHON_VERSION
+        value: 3.10.0
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+    autoDeploy: false
+
+  # Frontend Service (Next.js)
+  # Using a Web Service for Next.js (SSR)
+  - type: web
+    name: retrocharting-frontend
+    env: node
+    buildCommand: cd frontend && npm install && npm run build
+    startCommand: cd frontend && npm start
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          type: web
+          name: retrocharting-backend
+          property: url
+      - key: NODE_VERSION
+        value: 18.17.0
+    autoDeploy: false
+
+databases:
+  - name: retrocharting-db
+    databaseName: retrocharting_db
+    user: retrocharting_user
+    plan: free # or starter

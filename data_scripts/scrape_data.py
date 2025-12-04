@@ -22,6 +22,15 @@ from app.db.session import SessionLocal
 from app.models.product import Product
 import time
 import random
+import cloudinary
+from app.core.config import settings
+
+# Configure Cloudinary
+cloudinary.config( 
+  cloud_name = settings.CLOUDINARY_CLOUD_NAME, 
+  api_key = settings.CLOUDINARY_API_KEY, 
+  api_secret = settings.CLOUDINARY_API_SECRET 
+)
 
 def scrape_data():
     db: Session = SessionLocal()
@@ -97,12 +106,22 @@ def scrape_data():
             if response.status_code == 200:
                 soup = BeautifulSoup(response.content, 'html.parser')
                 
-                # 1. Image (if missing)
-                if not p.image_url:
+                # 1. Image (if missing or not hosted on Cloudinary)
+                if not p.image_url or "cloudinary" not in p.image_url:
                     img = soup.select_one('#product_images img') or soup.select_one('.cover img')
                     if img and img.get('src') and "shim.gif" not in img.get('src'):
-                        p.image_url = img.get('src')
-                        print("  Found image.")
+                        original_url = img.get('src')
+                        
+                        # Upload to Cloudinary
+                        try:
+                            import cloudinary.uploader
+                            upload_result = cloudinary.uploader.upload(original_url, folder="retrocharting/products")
+                            p.image_url = upload_result['secure_url']
+                            print(f"  Uploaded image to Cloudinary: {p.image_url}")
+                        except Exception as e:
+                            print(f"  Error uploading to Cloudinary: {e}")
+                            # Fallback to original URL if upload fails
+                            p.image_url = original_url
 
                 # 2. Description
                 desc_elem = soup.select_one('#product_description')
