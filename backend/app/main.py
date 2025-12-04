@@ -145,3 +145,9 @@ def debug_reset_db():
         return {"error": str(e)}
     finally:
         db.close()
+
+@app.post("/api/debug/scrape")
+def debug_scrape(background_tasks: BackgroundTasks, limit: int = 50):
+    from app.services.scraper import scrape_products
+    background_tasks.add_task(scrape_products, limit)
+    return {"message": f"Scraping started in background (limit={limit})"}
