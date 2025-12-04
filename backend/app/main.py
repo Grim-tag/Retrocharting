@@ -74,8 +74,9 @@ def debug_root():
 
 @app.get("/version")
 def read_version():
-    return {"version": "1.0.1", "deployed_at": "2025-12-04"}
+    return {"version": "1.0.2", "deployed_at": "2025-12-04"}
 
+@app.get("/debug-consoles")
 @app.get("/api/debug/consoles")
 def debug_consoles():
     from app.db.session import SessionLocal
