@@ -2,7 +2,7 @@ services:
   # Backend Service (FastAPI)
   - type: web
     name: retrocharting-backend
-    region: frankfurt
+    region: oregon
     env: python
     rootDir: backend
     buildCommand: pip install -r requirements.txt
@@ -39,7 +39,7 @@ services:
   # Frontend Service (Next.js)
   - type: web
     name: retrocharting-frontend
-    region: frankfurt
+    region: oregon
     env: node
     rootDir: frontend
     buildCommand: npm install && npm run build
@@ -54,7 +54,7 @@ services:
   # Cron Job for Scraping Data (Runs every 15 minutes)
   - type: cron
     name: retrocharting-scraper
-    region: frankfurt
+    region: oregon
     env: python
     rootDir: .
     schedule: "*/15 * * * *" # Every 15 minutes
