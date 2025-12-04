@@ -118,16 +118,25 @@ def debug_csv():
 def debug_reset_db():
     from app.db.session import SessionLocal
     from app.models.product import Product
+    from app.models.price_history import PriceHistory
+    from app.models.listing import Listing
     from sqlalchemy import text
     
     db = SessionLocal()
     try:
+        # Delete children first
+        db.query(PriceHistory).delete()
+        db.query(Listing).delete()
+        
         # Delete all products
         num_deleted = db.query(Product).delete()
         db.commit()
-        # Reset ID sequence if possible (Postgres specific usually, but good to try)
+        
+        # Reset ID sequence if possible
         try:
             db.execute(text("ALTER SEQUENCE products_id_seq RESTART WITH 1"))
+            db.execute(text("ALTER SEQUENCE price_history_id_seq RESTART WITH 1"))
+            db.execute(text("ALTER SEQUENCE listings_id_seq RESTART WITH 1"))
         except:
             pass
         return {"status": "success", "deleted_count": num_deleted}
