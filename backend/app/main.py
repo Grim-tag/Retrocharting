@@ -24,6 +24,35 @@ def debug_import(background_tasks: BackgroundTasks):
     background_tasks.add_task(import_csv_dump)
     return {"message": "Import started in background"}
 
+@app.get("/api/debug/status")
+def debug_status():
+    import os
+    from app.db.session import SessionLocal
+    from app.models.product import Product
+    
+    # Check CSV path
+    app_dir = os.path.dirname(os.path.abspath(__file__))
+    csv_path = os.path.join(app_dir, 'data', 'products_dump.csv')
+    csv_exists = os.path.exists(csv_path)
+    
+    # Check DB
+    db = SessionLocal()
+    try:
+        product_count = db.query(Product).count()
+    except Exception as e:
+        product_count = str(e)
+    finally:
+        db.close()
+        
+    return {
+        "cwd": os.getcwd(),
+        "app_dir": app_dir,
+        "csv_path": csv_path,
+        "csv_exists": csv_exists,
+        "product_count": product_count,
+        "files_in_data": os.listdir(os.path.join(app_dir, 'data')) if os.path.exists(os.path.join(app_dir, 'data')) else "Data dir not found"
+    }
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
