@@ -16,7 +16,8 @@ def startup_event():
     # For safety, let's just print a message and maybe run it if we can.
     # Actually, let's rely on the manual trigger if startup fails or is too slow.
     # But user wants it auto.
-    import_csv_dump()
+    # import_csv_dump()
+    print("Skipping auto-import on startup to prevent timeout. Use /api/debug/import to trigger manually.")
 
 @app.post("/api/debug/import")
 def debug_import(background_tasks: BackgroundTasks):
