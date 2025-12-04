@@ -91,3 +91,24 @@ def debug_consoles():
         return {"error": str(e)}
     finally:
         db.close()
+
+@app.get("/debug-csv")
+def debug_csv():
+    import os
+    import csv
+    app_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    csv_path = os.path.join(app_dir, 'data', 'products_dump.csv')
+    
+    if not os.path.exists(csv_path):
+        return {"error": "File not found"}
+        
+    try:
+        with open(csv_path, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            rows = []
+            for i, row in enumerate(reader):
+                if i >= 5: break
+                rows.append(row)
+            return {"fieldnames": reader.fieldnames, "rows": rows}
+    except Exception as e:
+        return {"error": str(e)}
