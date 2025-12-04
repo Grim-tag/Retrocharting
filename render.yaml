@@ -7,9 +7,7 @@ services:
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: DATABASE_URL
-        fromDatabase:
-          name: retrocharting-db
-          property: connectionString
+        sync: false
       - key: PYTHON_VERSION
         value: 3.10.0
       - key: CLOUDINARY_CLOUD_NAME
@@ -34,8 +32,3 @@ services:
         value: 18.17.0
     autoDeploy: false
 
-databases:
-  - name: retrocharting-db
-    databaseName: retrocharting_db
-    user: retrocharting_user
-    plan: basic # Updated to supported plan (matches Basic-256mb)
