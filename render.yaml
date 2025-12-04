@@ -34,7 +34,7 @@ services:
         sync: false
       - key: GOOGLE_CALLBACK_URL
         sync: false
-    autoDeploy: false
+    autoDeploy: true
 
   # Frontend Service (Next.js)
   - type: web
