@@ -38,4 +38,4 @@ databases:
   - name: retrocharting-db
     databaseName: retrocharting_db
     user: retrocharting_user
-    plan: starter # Matches existing Basic-256mb instance
+    plan: basic # Updated to supported plan (matches Basic-256mb)
