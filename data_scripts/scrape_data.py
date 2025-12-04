@@ -44,7 +44,11 @@ def scrape_data():
     
     # LIMIT to 50 items per run to avoid timeouts on Cron Jobs
     products = db.query(Product).outerjoin(PriceHistory).filter(
-        or_(Product.description == None, PriceHistory.id == None)
+        or_(Product.description == None, PriceHistory.id == None),
+        Product.console_name != None,
+        Product.console_name != "",
+        Product.product_name != None,
+        Product.product_name != ""
     ).distinct().limit(50).all()
     
     print(f"Found {len(products)} games to scrape details for.")
