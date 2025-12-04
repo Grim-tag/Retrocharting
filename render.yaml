@@ -3,7 +3,8 @@ services:
   - type: web
     name: retrocharting-backend
     env: python
-    buildCommand: pip install -r backend/requirements.txt
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: DATABASE_URL
@@ -19,12 +20,12 @@ services:
     autoDeploy: false
 
   # Frontend Service (Next.js)
-  # Using a Web Service for Next.js (SSR)
   - type: web
     name: retrocharting-frontend
     env: node
-    buildCommand: cd frontend && npm install && npm run build
-    startCommand: cd frontend && npm start
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
     envVars:
       - key: NEXT_PUBLIC_API_URL
         sync: false
