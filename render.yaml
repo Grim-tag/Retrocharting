@@ -29,10 +29,7 @@ services:
     startCommand: cd frontend && npm start
     envVars:
       - key: NEXT_PUBLIC_API_URL
-        fromService:
-          type: web
-          name: retrocharting-backend
-          property: url
+        sync: false
       - key: NODE_VERSION
         value: 18.17.0
     autoDeploy: false
