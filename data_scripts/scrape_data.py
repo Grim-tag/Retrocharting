@@ -11,9 +11,11 @@ env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__
 load_dotenv(env_path)
 
 # Force absolute path to the correct DB BEFORE importing app
-db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'collector.db')
-os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
-print(f"Forcing DATABASE_URL to: {os.environ['DATABASE_URL']}")
+# Only if DATABASE_URL is not set (local dev)
+if not os.environ.get("DATABASE_URL"):
+    db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'collector.db')
+    os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
+    print(f"Forcing DATABASE_URL to: {os.environ['DATABASE_URL']}")
 
 import requests
 from bs4 import BeautifulSoup
@@ -35,53 +37,14 @@ cloudinary.config(
 def scrape_data():
     db: Session = SessionLocal()
     
-    print(f"Connected to DB at: {db_path}")
-    
     # Get products without description OR without price history
-    # We need to check if price_history relationship is empty.
-    # This is a bit complex in SQLAlchemy query directly without a join.
-    # Easier to just iterate all or do a left join.
-    # Let's do a left join and check for null id in history?
-    # Or just select all and filter in python (might be slow if many products).
-    # Let's stick to description for now, and maybe add a flag or check?
-    # Actually, user wants to resume. If description is already there, we skip.
-    # But we want to add history to existing items too.
-    
-    # Let's change the query to:
-    # Products where description is None OR (we need a way to check history).
-    # A simple way: Select products where description is None.
-    # AND ALSO select products that have description but no history?
-    
-    # Let's just iterate all products for now? No, too slow.
-    # Let's use a NOT EXISTS subquery for history.
-    
     from sqlalchemy import or_, text
-    
-    # Raw SQL might be easier for "products without history"
-    # SELECT p.id FROM products p LEFT JOIN price_history ph ON p.id = ph.product_id WHERE ph.id IS NULL
-    
-    # Let's try to use SQLAlchemy:
-    # products = db.query(Product).outerjoin(Product.price_history).filter(
-    #     or_(Product.description == None, PriceHistory.id == None)
-    # ).all()
-    # But we need to import PriceHistory model here.
-    
     from app.models.price_history import PriceHistory
     
+    # LIMIT to 50 items per run to avoid timeouts on Cron Jobs
     products = db.query(Product).outerjoin(PriceHistory).filter(
         or_(Product.description == None, PriceHistory.id == None)
-    ).all()
-    
-    # Note: This might return duplicates if a product has multiple history entries?
-    # No, if we filter by PriceHistory.id == None, it returns products with NO history.
-    # But what about products with description == None but HAVE history?
-    # The OR condition handles it.
-    # However, outerjoin might return multiple rows for the same product if it has history.
-    # We should use .distinct().
-    
-    products = db.query(Product).outerjoin(PriceHistory).filter(
-        or_(Product.description == None, PriceHistory.id == None)
-    ).distinct().all()
+    ).distinct().limit(50).all()
     
     print(f"Found {len(products)} games to scrape details for.")
     

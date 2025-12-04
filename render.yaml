@@ -49,5 +49,26 @@ services:
         sync: false
       - key: NODE_VERSION
         value: 20.11.0
-    autoDeploy: false
+    autoDeploy: true
+
+  # Cron Job for Scraping Data (Runs every 15 minutes)
+  - type: cron
+    name: retrocharting-scraper
+    region: frankfurt
+    env: python
+    rootDir: .
+    schedule: "*/15 * * * *" # Every 15 minutes
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: python data_scripts/scrape_data.py
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: PYTHON_VERSION
+        value: 3.10.0
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
 
