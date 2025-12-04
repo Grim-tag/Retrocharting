@@ -22,6 +22,7 @@ from bs4 import BeautifulSoup
 from sqlalchemy.orm import Session
 from app.db.session import SessionLocal
 from app.models.product import Product
+from app.models.listing import Listing
 import time
 import random
 import cloudinary
