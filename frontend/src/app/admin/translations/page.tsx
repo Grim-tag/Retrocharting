@@ -1,20 +1,39 @@
-export default function AdminTranslationsPage() {
+import TranslationsEditor from "@/components/admin/TranslationsEditor";
+import { getDictionary } from "@/lib/get-dictionary";
+
+function flattenObject(obj: any, prefix = ''): Record<string, string> {
+    const result: Record<string, string> = {};
+    for (const key in obj) {
+        if (typeof obj[key] === 'object' && obj[key] !== null) {
+            const nested = flattenObject(obj[key], prefix + key + '.');
+            Object.assign(result, nested);
+        } else {
+            result[prefix + key] = obj[key];
+        }
+    }
+    return result;
+}
+
+export default async function AdminTranslationsPage() {
+    // 1. Load full dictionaries (merged with DB)
+    const dictEn = await getDictionary('en');
+    const dictFr = await getDictionary('fr');
+
+    // 2. Flatten them for the editor
+    const flatEn = flattenObject(dictEn);
+    const flatFr = flattenObject(dictFr);
+
+    // 3. Admin Key for saving
+    const adminKey = process.env.ADMIN_SECRET_KEY || "admin_secret_123";
+
     return (
         <div>
             <h2 className="text-2xl font-bold mb-6 text-white uppercase tracking-wider">Translation Management</h2>
-            <div className="bg-[#1f2533] p-8 rounded border border-[#2a3142] text-center">
-                <p className="text-gray-400 mb-4">Translation management interface coming soon.</p>
-                <div className="flex justify-center gap-4">
-                    <div className="p-4 bg-[#0f121e] rounded border border-[#2a3142]">
-                        <span className="block text-2xl font-bold text-white mb-1">EN</span>
-                        <span className="text-xs text-gray-500">English</span>
-                    </div>
-                    <div className="p-4 bg-[#0f121e] rounded border border-[#2a3142]">
-                        <span className="block text-2xl font-bold text-white mb-1">FR</span>
-                        <span className="text-xs text-gray-500">French</span>
-                    </div>
-                </div>
-            </div>
+            <TranslationsEditor
+                initialEn={flatEn}
+                initialFr={flatFr}
+                adminKey={adminKey}
+            />
         </div>
     );
 }

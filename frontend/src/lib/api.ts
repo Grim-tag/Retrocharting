@@ -105,3 +105,30 @@ export async function getRelatedProducts(id: number): Promise<Product[]> {
         return [];
     }
 }
+
+export async function getTranslations(locale: string): Promise<Record<string, string>> {
+    try {
+        const response = await axios.get(`${API_URL}/translations/${locale}`, {
+            timeout: 2000 // Fast timeout
+        });
+        return response.data;
+    } catch (error) {
+        return {};
+    }
+}
+
+export async function saveTranslation(locale: string, key: string, value: string, adminKey: string): Promise<boolean> {
+    try {
+        await axios.post(`${API_URL}/translations/`, {
+            locale,
+            key,
+            value
+        }, {
+            headers: { 'X-Admin-Key': adminKey }
+        });
+        return true;
+    } catch (error) {
+        console.error("Failed to save translation", error);
+        return false;
+    }
+}

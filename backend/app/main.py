@@ -63,8 +63,9 @@ app.add_middleware(
 )
 
 app.include_router(products.router, prefix="/api/v1/products", tags=["products"])
-from app.routers import admin
+from app.routers import admin, translations
 app.include_router(admin.router, prefix="/api/v1/admin", tags=["admin"])
+app.include_router(translations.router, prefix="/api/v1/translations", tags=["translations"])
 
 @app.get("/")
 def read_root():
