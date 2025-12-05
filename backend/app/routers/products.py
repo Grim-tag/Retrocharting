@@ -18,42 +18,7 @@ def read_products(
     console: Optional[str] = None,
     genre: Optional[str] = None
 ):
-    from app.db.session import SessionLocal
-    db = SessionLocal()
-    try:
-        # Debug probe
-        # return [{"message": f"Endpoint reached. Console={console}, Limit={limit}"}]
-        
-        query = db.query(ProductModel)
-        
-        if search:
-            query = query.filter(ProductModel.product_name.ilike(f"%{search}%"))
-        if console:
-            # print(f"Filtering by console: '{console}'")
-            query = query.filter(ProductModel.console_name == console)
-        if genre:
-            query = query.filter(ProductModel.genre == genre)
-            
-        products = query.offset(skip).limit(limit).all()
-        
-        results = []
-        for p in products:
-            try:
-                # Use simple dict dump first to avoid Pydantic issues entirely
-                # results.append(ProductSchema.from_orm(p))
-                p_dict = p.__dict__.copy()
-                if '_sa_instance_state' in p_dict:
-                    del p_dict['_sa_instance_state']
-                results.append(p_dict)
-            except Exception as schema_err:
-                return [{"error": f"Serialization failed for product {p.id}: {schema_err}"}]
-        
-        return results
-    except Exception as e:
-        import traceback
-        return [{"error": str(e), "trace": traceback.format_exc()}]
-    finally:
-        db.close()
+    return [{"message": "Endpoint works. Logic disabled.", "params": {"console": console, "limit": limit}}]
 
 from app.models.listing import Listing
 from datetime import datetime, timedelta
