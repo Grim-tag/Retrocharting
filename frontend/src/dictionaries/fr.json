@@ -62,5 +62,44 @@
                 }
             }
         }
+    },
+    "product": {
+        "prices": {
+            "loose": "Loose",
+            "cib": "Complet",
+            "new": "Neuf",
+            "best_value": "Meilleure Valeur"
+        },
+        "actions": {
+            "add_collection": "Ajouter à ma Collection",
+            "add_wishlist": "Ajouter à la Liste de Souhaits"
+        },
+        "details": {
+            "description": "Description",
+            "publisher": "Éditeur",
+            "developer": "Développeur",
+            "release_date": "Date de Sortie",
+            "genre": "Genre",
+            "players": "Joueurs",
+            "rating": "Classification"
+        },
+        "history": {
+            "title": "Historique des Prix"
+        },
+        "not_found": {
+            "title": "Produit Introuvable",
+            "back": "Retour aux Jeux Vidéo"
+        }
+    },
+    "list": {
+        "filters": {
+            "all": "Tout",
+            "nintendo": "Nintendo",
+            "playstation": "PlayStation",
+            "xbox": "Xbox",
+            "sega": "Sega"
+        },
+        "sort": "Trier par",
+        "no_results": "Aucun produit trouvé."
     }
 }

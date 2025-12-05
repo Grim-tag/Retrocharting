@@ -10,23 +10,26 @@ import { searchProducts, Product } from '@/lib/api';
 
 
 
-export default function Header({ dict }: { dict: any }) {
+export default function Header({ dict, lang }: { dict: any; lang: string }) {
     const router = useRouter();
     const [query, setQuery] = useState('');
     const [suggestions, setSuggestions] = useState<Product[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const searchRef = useRef<HTMLDivElement>(null);
 
+    // Helper for localized path
+    const getPath = (path: string) => `/${lang}${path}`;
+
     // Dynamic Menu Items from Dictionary
     const menuItems = [
         {
             id: 'video-games',
             label: dict.header.nav.video_games,
-            href: '/video-games',
+            href: getPath('/video-games'),
         },
-        { id: 'consoles', label: dict.header.nav.consoles, href: '/consoles' },
-        { id: 'accessories', label: dict.header.nav.accessories, href: '/accessories' },
-        { id: 'collectibles', label: dict.header.nav.collectibles, href: '/collectibles' },
+        { id: 'consoles', label: dict.header.nav.consoles, href: getPath('/consoles') },
+        { id: 'accessories', label: dict.header.nav.accessories, href: getPath('/accessories') },
+        { id: 'collectibles', label: dict.header.nav.collectibles, href: getPath('/collectibles') },
     ];
 
     useEffect(() => {
@@ -67,7 +70,7 @@ export default function Header({ dict }: { dict: any }) {
     const handleSuggestionClick = (productId: number) => {
         setQuery('');
         setShowSuggestions(false);
-        router.push(`/games/${productId}`);
+        router.push(`/${lang}/games/${productId}`);
     };
 
     return (
@@ -77,7 +80,7 @@ export default function Header({ dict }: { dict: any }) {
 
                     {/* Left: Logo */}
                     <div className="flex items-center gap-4">
-                        <Link href="/" className="flex items-center gap-2 group">
+                        <Link href={`/${lang}`} className="flex items-center gap-2 group">
                             <span className="text-2xl font-bold text-white tracking-tight">
                                 Retro<span className="text-[#ff6600]">Charting</span>
                             </span>

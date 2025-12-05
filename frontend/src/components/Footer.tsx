@@ -1,13 +1,14 @@
 import Link from 'next/link';
 
-export default function Footer({ dict }: { dict: any }) {
+export default function Footer({ dict, lang }: { dict: any; lang: string }) {
+    const getPath = (path: string) => `/${lang}${path}`;
     return (
         <footer className="bg-[#0f121e] border-t border-[#1f2533] text-gray-400 py-12 mt-auto">
             <div className="max-w-[1400px] mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-8">
 
                 {/* Brand */}
                 <div>
-                    <Link href="/" className="flex items-center gap-2 mb-4">
+                    <Link href={`/${lang}`} className="flex items-center gap-2 mb-4">
                         <span className="text-2xl font-bold text-white tracking-tight">
                             Retro<span className="text-[#ff6600]">Charting</span>
                         </span>
@@ -21,10 +22,10 @@ export default function Footer({ dict }: { dict: any }) {
                 <div>
                     <h3 className="text-white font-bold uppercase mb-4">{dict.footer.links.title}</h3>
                     <ul className="space-y-2 text-sm">
-                        <li><Link href="/video-games" className="hover:text-white transition-colors">{dict.footer.links.video_games}</Link></li>
-                        <li><Link href="/consoles" className="hover:text-white transition-colors">{dict.footer.links.consoles}</Link></li>
-                        <li><Link href="/accessories" className="hover:text-white transition-colors">{dict.footer.links.accessories}</Link></li>
-                        <li><Link href="/collectibles" className="hover:text-white transition-colors">{dict.footer.links.collectibles}</Link></li>
+                        <li><Link href={getPath("/video-games")} className="hover:text-white transition-colors">{dict.footer.links.video_games}</Link></li>
+                        <li><Link href={getPath("/consoles")} className="hover:text-white transition-colors">{dict.footer.links.consoles}</Link></li>
+                        <li><Link href={getPath("/accessories")} className="hover:text-white transition-colors">{dict.footer.links.accessories}</Link></li>
+                        <li><Link href={getPath("/collectibles")} className="hover:text-white transition-colors">{dict.footer.links.collectibles}</Link></li>
                     </ul>
                 </div>
 
@@ -32,10 +33,10 @@ export default function Footer({ dict }: { dict: any }) {
                 <div>
                     <h3 className="text-white font-bold uppercase mb-4">{dict.footer.support.title}</h3>
                     <ul className="space-y-2 text-sm">
-                        <li><Link href="/contact" className="hover:text-white transition-colors">{dict.footer.support.contact}</Link></li>
-                        <li><Link href="/faq" className="hover:text-white transition-colors">{dict.footer.support.faq}</Link></li>
-                        <li><Link href="/privacy" className="hover:text-white transition-colors">{dict.footer.support.privacy}</Link></li>
-                        <li><Link href="/terms" className="hover:text-white transition-colors">{dict.footer.support.terms}</Link></li>
+                        <li><Link href="#" className="hover:text-white transition-colors">{dict.footer.support.contact}</Link></li>
+                        <li><Link href="#" className="hover:text-white transition-colors">{dict.footer.support.faq}</Link></li>
+                        <li><Link href="#" className="hover:text-white transition-colors">{dict.footer.support.privacy}</Link></li>
+                        <li><Link href="#" className="hover:text-white transition-colors">{dict.footer.support.terms}</Link></li>
                     </ul>
                 </div>
 

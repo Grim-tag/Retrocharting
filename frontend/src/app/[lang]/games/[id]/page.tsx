@@ -7,8 +7,9 @@ import { formatConsoleName } from "@/lib/utils";
 import CrossPlatformLinks from "@/components/CrossPlatformLinks";
 import Breadcrumbs from "@/components/seo/Breadcrumbs";
 import JsonLd, { generateProductSchema } from "@/components/seo/JsonLd";
+import { getDictionary } from "@/lib/get-dictionary"; // ADDED
 
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ id: string; lang: string }> }): Promise<Metadata> {
     const { id } = await params;
     const product = await getProductById(parseInt(id));
 
@@ -26,17 +27,18 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     };
 }
 
-export default async function GamePage({ params }: { params: Promise<{ id: string }> }) {
-    const { id } = await params;
+export default async function GamePage({ params }: { params: Promise<{ id: string; lang: string }> }) {
+    const { id, lang } = await params; // Get lang
+    const dict = await getDictionary(lang); // Fetch dict
     const product = await getProductById(parseInt(id));
     const history = await getProductHistory(parseInt(id));
 
     if (!product) {
         return (
             <main className="flex-grow bg-[#0f121e] py-20 text-center text-white">
-                <h1 className="text-3xl font-bold">Product Not Found</h1>
+                <h1 className="text-3xl font-bold">{dict.product.not_found.title}</h1>
                 <Link href="/video-games" className="text-[#ff6600] hover:underline mt-4 inline-block">
-                    Back to Video Games
+                    {dict.product.not_found.back}
                 </Link>
             </main>
         );
@@ -45,7 +47,7 @@ export default async function GamePage({ params }: { params: Promise<{ id: strin
     const shortConsoleName = formatConsoleName(product.console_name);
 
     const breadcrumbItems = [
-        { label: "Video Games", href: "/video-games" },
+        { label: dict.header.nav.video_games, href: "/video-games" },
         { label: product.console_name, href: `/video-games/${product.console_name.toLowerCase().replace(/ /g, '-')}` },
         { label: product.product_name, href: `/games/${product.id}` }
     ];
@@ -84,20 +86,20 @@ export default async function GamePage({ params }: { params: Promise<{ id: strin
                         {/* Price Cards */}
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
                             <div className="bg-[#1f2533] border border-[#2a3142] p-6 rounded text-center">
-                                <div className="text-gray-400 text-sm uppercase tracking-wider mb-2">Loose</div>
+                                <div className="text-gray-400 text-sm uppercase tracking-wider mb-2">{dict.product.prices.loose}</div>
                                 <div className="text-3xl font-bold text-white">
                                     {product.loose_price ? `$${product.loose_price.toFixed(2)}` : '-'}
                                 </div>
                             </div>
                             <div className="bg-[#1f2533] border border-[#2a3142] p-6 rounded text-center relative overflow-hidden">
-                                <div className="absolute top-0 right-0 bg-[#007bff] text-white text-xs px-2 py-1">Best Value</div>
-                                <div className="text-gray-400 text-sm uppercase tracking-wider mb-2">CIB</div>
+                                <div className="absolute top-0 right-0 bg-[#007bff] text-white text-xs px-2 py-1">{dict.product.prices.best_value}</div>
+                                <div className="text-gray-400 text-sm uppercase tracking-wider mb-2">{dict.product.prices.cib}</div>
                                 <div className="text-3xl font-bold text-[#007bff]">
                                     {product.cib_price ? `$${product.cib_price.toFixed(2)}` : '-'}
                                 </div>
                             </div>
                             <div className="bg-[#1f2533] border border-[#2a3142] p-6 rounded text-center">
-                                <div className="text-gray-400 text-sm uppercase tracking-wider mb-2">New</div>
+                                <div className="text-gray-400 text-sm uppercase tracking-wider mb-2">{dict.product.prices.new}</div>
                                 <div className="text-3xl font-bold text-[#00ff00]">
                                     {product.new_price ? `$${product.new_price.toFixed(2)}` : '-'}
                                 </div>
@@ -107,10 +109,10 @@ export default async function GamePage({ params }: { params: Promise<{ id: strin
                         {/* Actions */}
                         <div className="flex gap-4 mb-8">
                             <button className="flex-1 bg-[#ff6600] hover:bg-[#e65c00] text-white font-bold py-3 px-6 rounded transition-colors uppercase tracking-wide">
-                                Add to Collection
+                                {dict.product.actions.add_collection}
                             </button>
                             <button className="flex-1 bg-[#2a3142] hover:bg-[#353e54] text-white font-bold py-3 px-6 rounded transition-colors uppercase tracking-wide border border-[#353e54]">
-                                Add to Wishlist
+                                {dict.product.actions.add_wishlist}
                             </button>
                         </div>
 
@@ -119,34 +121,34 @@ export default async function GamePage({ params }: { params: Promise<{ id: strin
 
                         {/* Details & Description */}
                         <div className="bg-[#1f2533] border border-[#2a3142] p-6 rounded mb-8 mt-8">
-                            <h2 className="text-xl font-bold text-white mb-4">Description</h2>
+                            <h2 className="text-xl font-bold text-white mb-4">{dict.product.details.description}</h2>
                             <p className="text-gray-300 mb-6 leading-relaxed">
                                 {product.description || "No description available."}
                             </p>
 
                             <div className="grid grid-cols-2 gap-4 text-sm">
                                 <div>
-                                    <span className="text-gray-500 block">Publisher</span>
+                                    <span className="text-gray-500 block">{dict.product.details.publisher}</span>
                                     <span className="text-white font-medium">{product.publisher || "-"}</span>
                                 </div>
                                 <div>
-                                    <span className="text-gray-500 block">Developer</span>
+                                    <span className="text-gray-500 block">{dict.product.details.developer}</span>
                                     <span className="text-white font-medium">{product.developer || "-"}</span>
                                 </div>
                                 <div>
-                                    <span className="text-gray-500 block">Release Date</span>
+                                    <span className="text-gray-500 block">{dict.product.details.release_date}</span>
                                     <span className="text-white font-medium">{product.release_date ? new Date(product.release_date).toLocaleDateString() : "-"}</span>
                                 </div>
                                 <div>
-                                    <span className="text-gray-500 block">Genre</span>
+                                    <span className="text-gray-500 block">{dict.product.details.genre}</span>
                                     <span className="text-white font-medium">{product.genre || "-"}</span>
                                 </div>
                                 <div>
-                                    <span className="text-gray-500 block">Players</span>
+                                    <span className="text-gray-500 block">{dict.product.details.players}</span>
                                     <span className="text-white font-medium">{product.players || "-"}</span>
                                 </div>
                                 <div>
-                                    <span className="text-gray-500 block">ESRB Rating</span>
+                                    <span className="text-gray-500 block">{dict.product.details.rating}</span>
                                     <span className="text-white font-medium">{product.esrb_rating || "-"}</span>
                                 </div>
                                 <div>
@@ -162,7 +164,7 @@ export default async function GamePage({ params }: { params: Promise<{ id: strin
 
                         {/* Price History */}
                         <div className="bg-[#1f2533] border border-[#2a3142] p-6 rounded mb-8 mt-8">
-                            <h2 className="text-xl font-bold text-white mb-4">Price History</h2>
+                            <h2 className="text-xl font-bold text-white mb-4">{dict.product.history.title}</h2>
                             <PriceHistoryChart history={history} />
                         </div>
                     </div>

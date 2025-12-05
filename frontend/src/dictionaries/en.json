@@ -62,5 +62,44 @@
                 }
             }
         }
+    },
+    "product": {
+        "prices": {
+            "loose": "Loose",
+            "cib": "CIB",
+            "new": "New",
+            "best_value": "Best Value"
+        },
+        "actions": {
+            "add_collection": "Add to Collection",
+            "add_wishlist": "Add to Wishlist"
+        },
+        "details": {
+            "description": "Description",
+            "publisher": "Publisher",
+            "developer": "Developer",
+            "release_date": "Release Date",
+            "genre": "Genre",
+            "players": "Players",
+            "rating": "ESRB Rating"
+        },
+        "history": {
+            "title": "Price History"
+        },
+        "not_found": {
+            "title": "Product Not Found",
+            "back": "Back to Video Games"
+        }
+    },
+    "list": {
+        "filters": {
+            "all": "All",
+            "nintendo": "Nintendo",
+            "playstation": "PlayStation",
+            "xbox": "Xbox",
+            "sega": "Sega"
+        },
+        "sort": "Sort by",
+        "no_results": "No products found."
     }
 }

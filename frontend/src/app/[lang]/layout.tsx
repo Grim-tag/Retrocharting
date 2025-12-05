@@ -16,16 +16,15 @@ export default async function PublicLayout({
     return (
         <div className="flex flex-col min-h-screen">
             {/* 
-         We pass 'lang' to Header if it needs to generate language links.
-         For now, Header might not accept props, but we prepare for it.
+         We pass 'lang' to Header so it can generate language-aware links.
        */}
-            <Header dict={dict} />
+            <Header dict={dict} lang={lang} />
 
             <div className="flex-grow">
                 {children}
             </div>
 
-            <Footer dict={dict} />
+            <Footer dict={dict} lang={lang} />
         </div>
     );
 }
