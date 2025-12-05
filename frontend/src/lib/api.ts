@@ -19,6 +19,8 @@ export interface Product {
     esrb_rating?: string;
     players?: string;
     genre?: string;
+    ean?: string;
+    gtin?: string;
     release_date?: string; // ISO date string
 }
 

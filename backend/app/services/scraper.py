@@ -90,6 +90,15 @@ def scrape_products(limit: int = 50):
                             elif "Developer:" in key: p.developer = value.replace("edit", "").strip()
                             elif "ESRB Rating:" in key: p.esrb_rating = value.replace("edit", "").strip()
                             elif "Player Count:" in key: p.players = value.replace("edit", "").strip()
+                            elif "UPC:" in key: 
+                                p.ean = value.replace("edit", "").strip()
+                                p.gtin = p.ean # Usually UPC is the GTIN
+                            elif "EAN:" in key:
+                                p.ean = value.replace("edit", "").strip() 
+                                p.gtin = p.ean
+                            elif "GTIN:" in key:
+                                p.gtin = value.replace("edit", "").strip() 
+                                if not p.ean: p.ean = p.gtin
                             elif "Description:" in key: p.description = value.strip()
 
                     # 4. Price History

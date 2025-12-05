@@ -158,6 +158,14 @@ export default async function GamePage({ params }: { params: Promise<{ id: strin
                                         <span className="text-gray-500 block">ESRB Rating</span>
                                         <span className="text-white font-medium">{product.esrb_rating || "-"}</span>
                                     </div>
+                                    <div>
+                                        <span className="text-gray-500 block">EAN</span>
+                                        <span className="text-white font-medium">{product.ean || "-"}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-500 block">GTIN/UPC</span>
+                                        <span className="text-white font-medium">{product.gtin || "-"}</span>
+                                    </div>
                                 </div>
                             </div>
 
