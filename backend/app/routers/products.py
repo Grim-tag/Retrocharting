@@ -10,7 +10,7 @@ from app.services.ebay_client import ebay_client
 
 router = APIRouter()
 
-@router.get("/", response_model=List[ProductSchema])
+@router.get("/")
 def read_products(
     skip: int = 0,
     limit: int = 100,
@@ -19,18 +19,31 @@ def read_products(
     genre: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    query = db.query(ProductModel)
-    
-    if search:
-        query = query.filter(ProductModel.product_name.ilike(f"%{search}%"))
-    if console:
-        # print(f"Filtering by console: '{console}'")
-        query = query.filter(ProductModel.console_name == console)
-    if genre:
-        query = query.filter(ProductModel.genre == genre)
+    try:
+        query = db.query(ProductModel)
         
-    products = query.offset(skip).limit(limit).all()
-    return products
+        if search:
+            query = query.filter(ProductModel.product_name.ilike(f"%{search}%"))
+        if console:
+            # print(f"Filtering by console: '{console}'")
+            query = query.filter(ProductModel.console_name == console)
+        if genre:
+            query = query.filter(ProductModel.genre == genre)
+            
+        products = query.offset(skip).limit(limit).all()
+        # Manually convert to schema to catch validation errors
+        # Use simple dict conversion if schema fails, seeing what we have
+        results = []
+        for p in products:
+            try:
+                results.append(ProductSchema.from_orm(p))
+            except Exception as schema_err:
+                # If one fails, return the error details
+                return [{"error": f"Schema validation failed for product {p.id}: {schema_err}", "product_data": str(p.__dict__)}]
+        return results
+    except Exception as e:
+        import traceback
+        return [{"error": str(e), "trace": traceback.format_exc()}]
 
 from app.models.listing import Listing
 from datetime import datetime, timedelta
