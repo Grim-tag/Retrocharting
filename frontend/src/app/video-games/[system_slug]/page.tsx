@@ -4,6 +4,8 @@ import Link from "next/link";
 import { getProductsByConsole } from "@/lib/api";
 import { systems } from "@/data/systems";
 import { Metadata } from "next";
+import Breadcrumbs from "@/components/seo/Breadcrumbs";
+import JsonLd, { generateCollectionSchema } from "@/components/seo/JsonLd";
 
 // Helper to convert slug back to system name
 function getSystemNameFromSlug(slug: string): string {
@@ -31,6 +33,17 @@ export default async function SystemPage({ params }: { params: Promise<{ system_
     const products = await getProductsByConsole(systemName);
     const shortSystemName = formatConsoleName(systemName);
 
+    const breadcrumbItems = [
+        { label: "Video Games", href: "/video-games" },
+        { label: systemName, href: `/video-games/${system_slug}` }
+    ];
+
+    const schema = generateCollectionSchema(
+        `${systemName} Price Guide`,
+        `Current prices and value for ${systemName} games. Track your collection and see historic prices.`,
+        `https://retrocharting.com/video-games/${system_slug}`
+    );
+
     return (
         <div className="flex flex-col min-h-screen">
             <Header />
@@ -38,14 +51,8 @@ export default async function SystemPage({ params }: { params: Promise<{ system_
             <main className="flex-grow bg-[#0f121e] py-8">
                 <div className="max-w-[1400px] mx-auto px-4">
 
-                    {/* Breadcrumbs */}
-                    <div className="text-sm text-gray-400 mb-6">
-                        <Link href="/" className="hover:text-white">Home</Link>
-                        <span className="mx-2">/</span>
-                        <Link href="/video-games" className="hover:text-white">Video Games</Link>
-                        <span className="mx-2">/</span>
-                        <span className="text-white">{systemName}</span>
-                    </div>
+                    <JsonLd data={schema} />
+                    <Breadcrumbs items={breadcrumbItems} />
 
                     <div className="flex items-center justify-between mb-6 bg-[#1f2533] p-4 border-l-4 border-[#ff6600]">
                         <div>

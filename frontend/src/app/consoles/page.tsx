@@ -3,8 +3,20 @@ import Footer from "@/components/Footer";
 import Link from "next/link";
 import { groupedSystems } from "@/data/systems";
 import { getRegion } from "@/lib/utils";
+import Breadcrumbs from "@/components/seo/Breadcrumbs";
+import JsonLd, { generateCollectionSchema } from "@/components/seo/JsonLd";
 
 export default function ConsolesPage() {
+    const breadcrumbItems = [
+        { label: "Consoles", href: "/consoles" }
+    ];
+
+    const schema = generateCollectionSchema(
+        "Console Hardware Price Guide",
+        "Browse video game consoles, controllers, and hardware. Current market values and history.",
+        "https://retrocharting.com/consoles"
+    );
+
     return (
         <div className="flex flex-col min-h-screen">
             <Header />
@@ -12,12 +24,8 @@ export default function ConsolesPage() {
             <main className="flex-grow bg-[#0f121e] py-8">
                 <div className="max-w-[1400px] mx-auto px-4">
 
-                    {/* Breadcrumbs */}
-                    <div className="text-sm text-gray-400 mb-6">
-                        <Link href="/" className="hover:text-white">Home</Link>
-                        <span className="mx-2">/</span>
-                        <span className="text-white">Consoles</span>
-                    </div>
+                    <JsonLd data={schema} />
+                    <Breadcrumbs items={breadcrumbItems} />
 
                     <h1 className="text-3xl font-bold mb-4 text-white">Console Hardware Price Guide</h1>
                     <p className="text-gray-400 mb-8 max-w-3xl">
