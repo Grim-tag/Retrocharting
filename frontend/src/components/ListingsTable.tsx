@@ -19,13 +19,29 @@ export default function ListingsTable({ productId }: { productId: number }) {
     const [listings, setListings] = useState<Listing[]>([]);
     const [loading, setLoading] = useState(true);
 
+    const [isUpdating, setIsUpdating] = useState(false);
+
     useEffect(() => {
+        let timeoutId: NodeJS.Timeout;
+
         async function fetchListings() {
-            const data = await getListings(productId);
+            const { data, isStale } = await getListings(productId);
             setListings(data);
             setLoading(false);
+
+            if (isStale) {
+                setIsUpdating(true);
+                // Poll again in 5 seconds
+                timeoutId = setTimeout(fetchListings, 5000);
+            } else {
+                setIsUpdating(false);
+            }
         }
         fetchListings();
+
+        return () => {
+            if (timeoutId) clearTimeout(timeoutId);
+        };
     }, [productId]);
 
     if (loading) {
@@ -39,6 +55,11 @@ export default function ListingsTable({ productId }: { productId: number }) {
     return (
         <div className="bg-[#1f2533] border border-[#2a3142] rounded overflow-hidden">
             {/* Header removed as requested */}
+            {isUpdating && (
+                <div className="bg-[#2a3142] text-xs text-blue-400 px-4 py-1 text-center animate-pulse">
+                    Updating offers in background...
+                </div>
+            )}
             <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm text-gray-400">
                     <thead className="bg-[#151922] text-xs uppercase font-medium">

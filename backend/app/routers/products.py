@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks, Response
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
@@ -35,32 +35,20 @@ def read_products(
 from app.models.listing import Listing
 from datetime import datetime, timedelta
 
-@router.get("/{product_id}/listings")
-def get_product_listings(product_id: int, db: Session = Depends(get_db)):
-    product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
-    if not product:
-        return []
+from fastapi import BackgroundTasks
 
-    # Check for existing active listings in DB
-    # We can add a 'last_updated' check here later to refresh cache
-    db_listings = db.query(Listing).filter(
-        Listing.product_id == product_id,
-        Listing.status == 'active'
-    ).all()
+def update_listings_background(product_id: int):
+    """
+    Background task to fetch listings from eBay and update the database.
+    Creates its own database session.
+    """
+    from app.db.session import SessionLocal
+    db = SessionLocal()
+    try:
+        product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
+        if not product:
+            return
 
-    # If we have no listings, or if we want to force refresh (e.g. older than 1 hour)
-    # For now, let's simple check if empty. 
-    # To support "live" updates, we should ideally check timestamp.
-    # Let's assume if we have listings, they are good for 1 hour.
-    
-    should_refresh = True
-    if db_listings:
-        # Check if the most recent update was less than 1 hour ago
-        # We can check the first one since we update them in batch
-        if db_listings[0].last_updated > datetime.utcnow() - timedelta(hours=1):
-            should_refresh = False
-
-    if should_refresh:
         # Construct query: Product Name + Console
         query = f"{product.product_name} {product.console_name}"
         
@@ -108,24 +96,68 @@ def get_product_listings(product_id: int, db: Session = Depends(get_db)):
                         condition=item.get('condition', 'Used'),
                         url=item['itemWebUrl'],
                         image_url=image_url,
-                        seller_name='eBay User', # eBay API might not give seller name in simple search?
+                        seller_name='eBay User',
                         status='active',
                         last_updated=datetime.utcnow()
                     )
                     db.add(new_listing)
             
             db.commit()
-            
-            # Re-fetch from DB to get the updated list including any other sources
-            db_listings = db.query(Listing).filter(
-                Listing.product_id == product_id,
-                Listing.status == 'active'
-            ).all()
+            print(f"Background update completed for product {product_id}")
             
         except Exception as e:
-            print(f"Error fetching/saving eBay listings: {e}")
-            # If eBay fails, return what we have in DB
-            pass
+            print(f"Error in background eBay update: {e}")
+            
+    finally:
+        db.close()
+
+@router.get("/{product_id}/listings")
+def get_product_listings(
+    product_id: int, 
+    background_tasks: BackgroundTasks,
+    response: Response,
+    db: Session = Depends(get_db)
+):
+    product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
+    if not product:
+        return []
+
+    # Check for existing active listings in DB
+    db_listings = db.query(Listing).filter(
+        Listing.product_id == product_id,
+        Listing.status == 'active'
+    ).all()
+
+    # Strategy:
+    # 1. If we have listings, return them IMMEDIATELY (Cache Hit).
+    # 2. If listings are stale (> 1 hour), trigger background update.
+    # 3. If NO listings, we must fetch synchronously (Cache Miss).
+
+    should_refresh = True
+    if db_listings:
+        # Check if the most recent update was less than 1 hour ago
+        if db_listings[0].last_updated > datetime.utcnow() - timedelta(hours=1):
+            should_refresh = False
+        
+        if should_refresh:
+            print(f"Listings for {product_id} are stale. Scheduling background update.")
+            background_tasks.add_task(update_listings_background, product_id)
+            response.headers["X-Is-Stale"] = "true"
+        
+        return db_listings
+
+    # Cache Miss: No listings at all. Must wait.
+    print(f"No listings for {product_id}. Fetching synchronously.")
+    # We can reuse the background logic function but run it synchronously here? 
+    # Or just call it. Since it creates its own session, it's safe but slightly inefficient to open another session.
+    # But for simplicity, let's just call it.
+    update_listings_background(product_id)
+    
+    # Re-fetch from DB
+    db_listings = db.query(Listing).filter(
+        Listing.product_id == product_id,
+        Listing.status == 'active'
+    ).all()
     
     return db_listings
 

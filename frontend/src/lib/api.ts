@@ -76,12 +76,13 @@ export async function searchProducts(query: string): Promise<Product[]> {
     }
 }
 
-export async function getListings(id: number) {
+export async function getListings(id: number): Promise<{ data: any[], isStale: boolean }> {
     try {
         const response = await axios.get(`${API_URL}/products/${id}/listings`);
-        return response.data;
+        const isStale = response.headers['x-is-stale'] === 'true';
+        return { data: response.data, isStale };
     } catch (error) {
         console.error("Error fetching listings:", error);
-        return [];
+        return { data: [], isStale: false };
     }
 }
