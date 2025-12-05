@@ -13,7 +13,7 @@ export default function SystemList({ systems, basePath }: SystemListProps) {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {systems.map((system, index) => {
                 const region = getRegion(system);
-                const showSeparator = index > 0 && region !== lastRegion;
+                const showSeparator = region !== lastRegion;
                 lastRegion = region;
 
                 return (
