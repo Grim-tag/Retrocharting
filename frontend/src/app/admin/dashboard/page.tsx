@@ -10,8 +10,13 @@ type AdminStats = {
 async function getStats(): Promise<AdminStats | null> {
     try {
         const apiUrl = getApiUrl();
+        const secretKey = process.env.ADMIN_SECRET_KEY || "admin_secret_123";
+
         const res = await fetch(`${apiUrl}/api/v1/admin/stats`, {
-            cache: 'no-store' // Always fetch fresh data for admin
+            cache: 'no-store', // Always fetch fresh data for admin
+            headers: {
+                'X-Admin-Key': secretKey
+            }
         });
         if (!res.ok) return null;
         return res.json();

@@ -1,12 +1,21 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.db.session import get_db
 from app.models.product import Product
+import os
 
 router = APIRouter()
 
-@router.get("/stats")
+# Simple secret key check
+# In production, this should be in .env
+ADMIN_SECRET_KEY = os.getenv("ADMIN_SECRET_KEY", "admin_secret_123")
+
+async def verify_admin_key(x_admin_key: str = Header(...)):
+    if x_admin_key != ADMIN_SECRET_KEY:
+        raise HTTPException(status_code=401, detail="Invalid Admin Key")
+
+@router.get("/stats", dependencies=[Depends(verify_admin_key)])
 def get_admin_stats(db: Session = Depends(get_db)):
     """
     Returns high-level statistics for the Admin Dashboard.
