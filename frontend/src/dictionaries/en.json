@@ -1,0 +1,66 @@
+{
+    "header": {
+        "search_placeholder": "Search for a game...",
+        "nav": {
+            "video_games": "Video Games",
+            "consoles": "Consoles",
+            "accessories": "Accessories",
+            "collectibles": "Collectibles"
+        },
+        "actions": {
+            "collection": "Collection",
+            "wishlist": "Wishlist"
+        }
+    },
+    "footer": {
+        "tagline": "The ultimate price guide for video games, consoles, and collectibles. Track your collection value in real-time.",
+        "links": {
+            "title": "Quick Links",
+            "video_games": "Video Games",
+            "consoles": "Consoles",
+            "accessories": "Accessories",
+            "collectibles": "Collectibles"
+        },
+        "support": {
+            "title": "Support",
+            "contact": "Contact Us",
+            "faq": "FAQ",
+            "privacy": "Privacy Policy",
+            "terms": "Terms of Service"
+        },
+        "newsletter": {
+            "title": "Stay Updated",
+            "text": "Subscribe to our newsletter for the latest price trends.",
+            "placeholder": "Enter your email",
+            "button": "GO"
+        },
+        "copyright": "RetroCharting. All rights reserved."
+    },
+    "home": {
+        "hero": {
+            "title_prefix": "Track Your",
+            "title_highlight": "Collection",
+            "title_suffix": "Value",
+            "description": "The most accurate price guide for video games, consoles, and collectibles. Updated daily with real market data.",
+            "cta_browse": "Browse Games",
+            "cta_collection": "My Collection"
+        },
+        "categories": {
+            "title": "Popular Categories",
+            "items": {
+                "video_games": {
+                    "title": "Video Games",
+                    "desc": "Browse prices and history for Video Games."
+                },
+                "consoles": {
+                    "title": "Consoles",
+                    "desc": "Browse prices and history for Consoles."
+                },
+                "accessories": {
+                    "title": "Accessories",
+                    "desc": "Browse prices and history for Accessories."
+                }
+            }
+        }
+    }
+}

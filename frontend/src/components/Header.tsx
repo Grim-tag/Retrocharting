@@ -8,31 +8,26 @@ import {
 } from '@heroicons/react/24/outline';
 import { searchProducts, Product } from '@/lib/api';
 
-const menuItems = [
-    {
-        id: 'video-games',
-        label: 'Video Games',
-        href: '/video-games',
-        subcategories: [
-            { label: 'Nintendo', href: '/video-games#nintendo' },
-            { label: 'PlayStation', href: '/video-games#playstation' },
-            { label: 'Xbox', href: '/video-games#xbox' },
-            { label: 'Sega', href: '/video-games#sega' },
-            { label: 'Atari', href: '/video-games#atari' },
-            { label: 'Other', href: '/video-games#other' },
-        ]
-    },
-    { id: 'consoles', label: 'Consoles', href: '/consoles' },
-    { id: 'accessories', label: 'Accessories', href: '/accessories' },
-    { id: 'collectibles', label: 'Collectibles', href: '/collectibles' },
-];
 
-export default function Header() {
+
+export default function Header({ dict }: { dict: any }) {
     const router = useRouter();
     const [query, setQuery] = useState('');
     const [suggestions, setSuggestions] = useState<Product[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const searchRef = useRef<HTMLDivElement>(null);
+
+    // Dynamic Menu Items from Dictionary
+    const menuItems = [
+        {
+            id: 'video-games',
+            label: dict.header.nav.video_games,
+            href: '/video-games',
+        },
+        { id: 'consoles', label: dict.header.nav.consoles, href: '/consoles' },
+        { id: 'accessories', label: dict.header.nav.accessories, href: '/accessories' },
+        { id: 'collectibles', label: dict.header.nav.collectibles, href: '/collectibles' },
+    ];
 
     useEffect(() => {
         const delayDebounceFn = setTimeout(async () => {
@@ -110,7 +105,7 @@ export default function Header() {
                             onChange={(e) => setQuery(e.target.value)}
                             onKeyDown={handleKeyDown}
                             onFocus={() => query.length > 2 && setShowSuggestions(true)}
-                            placeholder="Search for a game..."
+                            placeholder={dict.header.search_placeholder}
                             className="w-full bg-[#0f121e] text-white border border-[#2a3142] rounded px-4 py-2 pl-10 focus:outline-none focus:border-[#ff6600] transition-colors"
                         />
                         <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 absolute left-3 top-2.5" />
@@ -143,10 +138,10 @@ export default function Header() {
                     <div className="flex items-center gap-4">
                         <div className="hidden md:flex items-center gap-4">
                             <button className="text-sm font-medium text-gray-300 hover:text-white transition-colors">
-                                Collection
+                                {dict.header.actions.collection}
                             </button>
                             <button className="text-sm font-medium text-gray-300 hover:text-white transition-colors">
-                                Wishlist
+                                {dict.header.actions.wishlist}
                             </button>
                         </div>
                     </div>

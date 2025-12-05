@@ -1,0 +1,66 @@
+{
+    "header": {
+        "search_placeholder": "Rechercher un jeu...",
+        "nav": {
+            "video_games": "Jeux Vidéo",
+            "consoles": "Consoles",
+            "accessories": "Accessoires",
+            "collectibles": "Objets de Collection"
+        },
+        "actions": {
+            "collection": "Ma Collection",
+            "wishlist": "Liste de Souhaits"
+        }
+    },
+    "footer": {
+        "tagline": "Le guide de prix ultime pour les jeux vidéo, consoles et objets de collection. Suivez la valeur de votre collection en temps réel.",
+        "links": {
+            "title": "Liens Rapides",
+            "video_games": "Jeux Vidéo",
+            "consoles": "Consoles",
+            "accessories": "Accessoires",
+            "collectibles": "Objets de Collection"
+        },
+        "support": {
+            "title": "Support",
+            "contact": "Contactez-nous",
+            "faq": "FAQ",
+            "privacy": "Politique de Confidentialité",
+            "terms": "Conditions d'Utilisation"
+        },
+        "newsletter": {
+            "title": "Restez Informé",
+            "text": "Abonnez-vous à notre newsletter pour les dernières tendances.",
+            "placeholder": "Votre email",
+            "button": "GO"
+        },
+        "copyright": "RetroCharting. Tous droits réservés."
+    },
+    "home": {
+        "hero": {
+            "title_prefix": "Suivez la Valeur de",
+            "title_highlight": "Votre Collection",
+            "title_suffix": "",
+            "description": "Le guide de prix le plus précis pour les jeux vidéo, consoles et objets de collection. Mis à jour quotidiennement.",
+            "cta_browse": "Voir les Jeux",
+            "cta_collection": "Ma Collection"
+        },
+        "categories": {
+            "title": "Catégories Populaires",
+            "items": {
+                "video_games": {
+                    "title": "Jeux Vidéo",
+                    "desc": "Consultez les prix et l'historique des Jeux Vidéo."
+                },
+                "consoles": {
+                    "title": "Consoles",
+                    "desc": "Consultez les prix et l'historique des Consoles."
+                },
+                "accessories": {
+                    "title": "Accessoires",
+                    "desc": "Consultez les prix et l'historique des Accessoires."
+                }
+            }
+        }
+    }
+}
