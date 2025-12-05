@@ -20,11 +20,11 @@ export default function CrossPlatformLinks({ productId }: { productId: number })
     }
 
     return (
-        <div className="bg-[#1f2533] border border-[#2a3142] rounded p-4 mt-4">
+        <div className="bg-[#1f2533] border border-[#2a3142] rounded p-4 mt-4 text-center">
             <h3 className="text-white font-bold mb-3 text-sm uppercase tracking-wide">
                 Also available on
             </h3>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap justify-center gap-2">
                 {related.map((product) => (
                     <Link
                         key={product.id}
