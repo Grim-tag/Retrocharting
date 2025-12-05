@@ -10,15 +10,27 @@ from app.services.ebay_client import ebay_client
 
 router = APIRouter()
 
-@router.get("/")
+@router.get("/", response_model=List[ProductSchema])
 def read_products(
     skip: int = 0,
     limit: int = 100,
     search: Optional[str] = None,
     console: Optional[str] = None,
-    genre: Optional[str] = None
+    genre: Optional[str] = None,
+    db: Session = Depends(get_db)
 ):
-    return [{"message": "Endpoint works. Logic disabled.", "params": {"console": console, "limit": limit}}]
+    query = db.query(ProductModel)
+    
+    if search:
+        query = query.filter(ProductModel.product_name.ilike(f"%{search}%"))
+    if console:
+        # print(f"Filtering by console: '{console}'")
+        query = query.filter(ProductModel.console_name == console)
+    if genre:
+        query = query.filter(ProductModel.genre == genre)
+        
+    products = query.offset(skip).limit(limit).all()
+    return products
 
 from app.models.listing import Listing
 from datetime import datetime, timedelta
