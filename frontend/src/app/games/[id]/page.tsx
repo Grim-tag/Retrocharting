@@ -6,6 +6,7 @@ import ListingsTable from "@/components/ListingsTable";
 import PriceHistoryChart from "@/components/PriceHistoryChart";
 import { Metadata } from "next";
 import { formatConsoleName } from "@/lib/utils";
+import CrossPlatformLinks from "@/components/CrossPlatformLinks";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
     const { id } = await params;
@@ -108,6 +109,9 @@ export default async function GamePage({ params }: { params: Promise<{ id: strin
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Cross Platform Links */}
+                            <CrossPlatformLinks productId={product.id} />
 
                             {/* Actions */}
                             <div className="flex gap-4 mb-8">

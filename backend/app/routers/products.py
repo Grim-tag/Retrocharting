@@ -172,3 +172,16 @@ def read_product(product_id: int, db: Session = Depends(get_db)):
     if product is None:
         raise HTTPException(status_code=404, detail="Product not found")
     return product
+
+@router.get("/{product_id}/related", response_model=List[ProductSchema])
+def get_related_products(product_id: int, db: Session = Depends(get_db)):
+    current_product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
+    if not current_product:
+        return []
+    
+    related = db.query(ProductModel).filter(
+        ProductModel.product_name == current_product.product_name,
+        ProductModel.id != product_id
+    ).all()
+    
+    return related

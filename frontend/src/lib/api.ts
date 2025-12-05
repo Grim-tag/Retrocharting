@@ -82,7 +82,16 @@ export async function getListings(id: number): Promise<{ data: any[], isStale: b
         const isStale = response.headers['x-is-stale'] === 'true';
         return { data: response.data, isStale };
     } catch (error) {
-        console.error("Error fetching listings:", error);
         return { data: [], isStale: false };
+    }
+}
+
+export async function getRelatedProducts(id: number): Promise<Product[]> {
+    try {
+        const response = await axios.get(`${API_URL}/products/${id}/related`);
+        return response.data;
+    } catch (error) {
+        console.error("Error fetching related products:", error);
+        return [];
     }
 }
