@@ -1,0 +1,38 @@
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from sqlalchemy import func
+from app.db.session import get_db
+from app.models.product import Product
+
+router = APIRouter()
+
+@router.get("/stats")
+def get_admin_stats(db: Session = Depends(get_db)):
+    """
+    Returns high-level statistics for the Admin Dashboard.
+    """
+    try:
+        # Total Products
+        total_products = db.query(Product).count()
+
+        # Scraped Products (those with an image_url)
+        # Assuming scrape success implies image_url is not null
+        scraped_products = db.query(Product).filter(Product.image_url.isnot(None)).count()
+        
+        # Scraped Percentage
+        scraped_percentage = (scraped_products / total_products * 100) if total_products > 0 else 0
+
+        # Total Value (Sum of Cib Price for now, as a proxy)
+        # Handle None values efficiently
+        total_value_query = db.query(func.sum(Product.cib_price)).filter(Product.cib_price.isnot(None))
+        total_value = total_value_query.scalar() or 0.0
+
+        return {
+            "total_products": total_products,
+            "scraped_products": scraped_products,
+            "scraped_percentage": round(scraped_percentage, 1),
+            "total_value": round(total_value, 2)
+        }
+    except Exception as e:
+        print(f"Error producing admin stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

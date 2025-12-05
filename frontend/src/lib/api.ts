@@ -1,10 +1,16 @@
 import axios from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL
-    ? `${process.env.NEXT_PUBLIC_API_URL}/api/v1`
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL
+    ? process.env.NEXT_PUBLIC_API_URL
     : (process.env.NODE_ENV === 'production'
-        ? 'https://retrocharting-backend.onrender.com/api/v1'
-        : 'http://127.0.0.1:8000/api/v1');
+        ? 'https://retrocharting-backend.onrender.com'
+        : 'http://127.0.0.1:8000');
+
+const API_URL = `${BASE_URL}/api/v1`;
+
+export function getApiUrl() {
+    return BASE_URL;
+}
 
 export interface Product {
     id: number;
