@@ -9,7 +9,9 @@ const nextConfig: NextConfig = {
         source: '/api/:path*',
         destination: process.env.NEXT_PUBLIC_API_URL
           ? `${process.env.NEXT_PUBLIC_API_URL}/api/:path*`
-          : 'http://127.0.0.1:8000/api/:path*',
+          : (process.env.NODE_ENV === 'production'
+            ? 'https://retrocharting-backend.onrender.com/api/:path*'
+            : 'http://127.0.0.1:8000/api/:path*'),
       },
     ]
   },
