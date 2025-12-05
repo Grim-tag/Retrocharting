@@ -16,10 +16,14 @@ def read_products(
     limit: int = 100,
     search: Optional[str] = None,
     console: Optional[str] = None,
-    genre: Optional[str] = None,
-    db: Session = Depends(get_db)
+    genre: Optional[str] = None
 ):
+    from app.db.session import SessionLocal
+    db = SessionLocal()
     try:
+        # Debug probe
+        # return [{"message": f"Endpoint reached. Console={console}, Limit={limit}"}]
+        
         query = db.query(ProductModel)
         
         if search:
@@ -31,19 +35,25 @@ def read_products(
             query = query.filter(ProductModel.genre == genre)
             
         products = query.offset(skip).limit(limit).all()
-        # Manually convert to schema to catch validation errors
-        # Use simple dict conversion if schema fails, seeing what we have
+        
         results = []
         for p in products:
             try:
-                results.append(ProductSchema.from_orm(p))
+                # Use simple dict dump first to avoid Pydantic issues entirely
+                # results.append(ProductSchema.from_orm(p))
+                p_dict = p.__dict__.copy()
+                if '_sa_instance_state' in p_dict:
+                    del p_dict['_sa_instance_state']
+                results.append(p_dict)
             except Exception as schema_err:
-                # If one fails, return the error details
-                return [{"error": f"Schema validation failed for product {p.id}: {schema_err}", "product_data": str(p.__dict__)}]
+                return [{"error": f"Serialization failed for product {p.id}: {schema_err}"}]
+        
         return results
     except Exception as e:
         import traceback
         return [{"error": str(e), "trace": traceback.format_exc()}]
+    finally:
+        db.close()
 
 from app.models.listing import Listing
 from datetime import datetime, timedelta
