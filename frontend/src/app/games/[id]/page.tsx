@@ -78,6 +78,9 @@ export default async function GamePage({ params }: { params: Promise<{ id: strin
                                     <span className="text-gray-500 font-bold text-xl">No Image</span>
                                 )}
                             </div>
+
+                            {/* Cross Platform Links */}
+                            <CrossPlatformLinks productId={product.id} />
                         </div>
 
                         {/* Right: Details */}
@@ -109,9 +112,6 @@ export default async function GamePage({ params }: { params: Promise<{ id: strin
                                     </div>
                                 </div>
                             </div>
-
-                            {/* Cross Platform Links */}
-                            <CrossPlatformLinks productId={product.id} />
 
                             {/* Actions */}
                             <div className="flex gap-4 mb-8">
