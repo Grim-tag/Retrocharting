@@ -21,7 +21,10 @@ export function middleware(request: NextRequest) {
 
     // 2. Handle /en/ Redirects (Canonical: /en/x -> /x)
     // If the path starts with /en, we redirect to the root version to avoid duplicates.
-    if (pathname.startsWith('/en/') || pathname === '/en') {
+    // CRITICAL: We must skip this if it's an internal rewrite (marked by param).
+    const isInternalRewrite = request.nextUrl.searchParams.has('__next_rewrite');
+
+    if ((pathname.startsWith('/en/') || pathname === '/en') && !isInternalRewrite) {
         const newPath = pathname.replace(/^\/en/, '');
         const url = new URL(newPath || '/', request.url);
         return NextResponse.redirect(url, 301);
@@ -36,8 +39,11 @@ export function middleware(request: NextRequest) {
     // If no locale in URL, we assume it's the intended default (English).
     // We REWRITE to /en/... so Next.js generic [lang] folder picks it up, but URL remains /.
     if (pathnameIsMissingLocale) {
-        // Rewrite to internal /en path
-        return NextResponse.rewrite(new URL(`/en${pathname}`, request.url));
+        // Rewrite to internal /en path.
+        // We append a sentinel param so the next pass knows it's a rewrite.
+        const url = new URL(`/en${pathname}`, request.url);
+        url.searchParams.set('__next_rewrite', '1');
+        return NextResponse.rewrite(url);
     }
 
     // 5. Handle Other Locales (e.g. /fr)
@@ -47,7 +53,6 @@ export function middleware(request: NextRequest) {
     const pathBody = match ? match[2] : pathname;
 
     // Handle Localized Path Rewrites (e.g. /fr/jeux-video -> /fr/video-games)
-    // We ONLY need this for non-default locales (like fr), because default runs in step 4.
     if (reverseRouteMap[locale]) {
         const segments = pathBody.split('/').filter(Boolean);
         const internalSegments = segments.map(segment => reverseRouteMap[locale][segment] || segment);
