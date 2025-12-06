@@ -1,18 +1,19 @@
 from fastapi import FastAPI, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from app.db.session import engine, Base
-app.include_router(products.router, prefix="/api/v1/products", tags=["products"])
-from app.routers import admin, translations, auth, collection
-app.include_router(admin.router, prefix="/api/v1/admin", tags=["admin"])
-app.include_router(translations.router, prefix="/api/v1/translations", tags=["translations"])
-app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
-app.include_router(collection.router, prefix="/api/v1/collection", tags=["collection"])
 from app.models.sales_transaction import SalesTransaction
 
 # Create tables on startup
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="RetroCharting API")
+
+app.include_router(products.router, prefix="/api/v1/products", tags=["products"])
+from app.routers import admin, translations, auth, collection
+app.include_router(admin.router, prefix="/api/v1/admin", tags=["admin"])
+app.include_router(translations.router, prefix="/api/v1/translations", tags=["translations"])
+app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
+app.include_router(collection.router, prefix="/api/v1/collection", tags=["collection"])
 
 @app.on_event("startup")
 def startup_event():
