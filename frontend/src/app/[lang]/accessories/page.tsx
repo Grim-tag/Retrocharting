@@ -1,0 +1,83 @@
+import Link from "next/link";
+import { groupedSystems } from "@/data/systems";
+import { getRegion } from "@/lib/utils";
+import Breadcrumbs from "@/components/seo/Breadcrumbs";
+import JsonLd, { generateCollectionSchema } from "@/components/seo/JsonLd";
+import { getDictionary } from "@/lib/get-dictionary";
+import { routeMap } from "@/lib/route-config";
+
+export default async function AccessoriesPage({ params }: { params: Promise<{ lang: string }> }) {
+    const { lang } = await params;
+    const dict = await getDictionary(lang);
+
+    const getSlug = (key: string) => routeMap[key]?.[lang] || key;
+    const accessoriesSlug = getSlug('accessories');
+
+    const breadcrumbItems = [
+        { label: dict.header.nav.accessories, href: `/${lang}/${accessoriesSlug}` }
+    ];
+
+    const schema = generateCollectionSchema(
+        dict.header.nav.accessories,
+        dict.home.categories.items.video_games.desc, // Reuse description or get generic
+        `https://retrocharting.com/${lang}/${accessoriesSlug}`
+    );
+
+    return (
+        <main className="flex-grow bg-[#0f121e] py-8">
+            <div className="max-w-[1400px] mx-auto px-4">
+
+                <JsonLd data={schema} />
+                <Breadcrumbs items={breadcrumbItems} />
+
+                <h1 className="text-3xl font-bold mb-4 text-white">{dict.header.nav.accessories}</h1>
+                <p className="text-gray-400 mb-8 max-w-3xl">
+                    {dict.home.categories.subtitle}
+                </p>
+
+                {/* Grouped Systems Grid */}
+                <div className="space-y-12">
+                    {Object.entries(groupedSystems).map(([groupName, systems]) => (
+                        <div key={groupName}>
+                            <h2 className="text-2xl font-bold text-white mb-4 border-b border-[#2a3142] pb-2 flex items-center gap-2">
+                                <span className="text-[#ff6600]">#</span> {groupName}
+                            </h2>
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                                {(() => {
+                                    let lastRegion = "";
+                                    return systems.map((system) => {
+                                        const region = getRegion(system);
+                                        const showSeparator = region !== lastRegion;
+                                        lastRegion = region;
+
+                                        return (
+                                            <div key={system} className="contents">
+                                                {showSeparator && (
+                                                    <div className="col-span-full h-px bg-[#2a3142] my-2 relative">
+                                                        <span className="absolute left-0 -top-2 bg-[#0f121e] text-[10px] text-gray-500 px-2 uppercase tracking-widest font-bold">
+                                                            {region === "JP" ? "Japan & Asia" : region === "PAL" ? "Europe (PAL)" : "North America (NTSC)"}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                <Link
+                                                    key={system}
+                                                    // Link to /accessories/console/[system-slug]
+                                                    href={`/${lang}/${accessoriesSlug}/console/${system.toLowerCase().replace(/ /g, '-')}`}
+                                                    className="bg-[#1f2533] p-4 rounded border border-[#2a3142] hover:border-[#ff6600] hover:bg-[#252b3b] transition-all group"
+                                                >
+                                                    <h3 className="font-medium text-gray-300 group-hover:text-white truncate" title={system}>
+                                                        {system}
+                                                    </h3>
+                                                </Link>
+                                            </div>
+                                        );
+                                    });
+                                })()}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </main>
+    );
+}

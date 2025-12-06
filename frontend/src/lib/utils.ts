@@ -44,9 +44,14 @@ import { routeMap } from "./route-config";
 // Generates: /[lang]/[games-slug]/[game-title]-[console]-[id]
 // Example EN: /games/metal-gear-solid-ps1-4402
 // Example FR: /fr/jeux-video/metal-gear-solid-ps1-4402
-export function getGameUrl(product: { id: number; product_name: string; console_name: string }, lang: string = 'en') {
-    // 1. Get localized 'games' segment
-    const gamesSlug = routeMap['games']?.[lang] || 'games';
+export function getGameUrl(product: { id: number; product_name: string; console_name: string; genre?: string }, lang: string = 'en') {
+    // 1. Determine base key (games vs accessories)
+    let baseKey = 'games';
+    if (product.genre && ['Accessories', 'Controllers'].includes(product.genre)) {
+        baseKey = 'accessories';
+    }
+
+    const baseSlug = routeMap[baseKey]?.[lang] || baseKey;
 
     // 2. Generate clean product slug (title-console)
     // We treat title as universal (no translation), just slugified
@@ -63,7 +68,7 @@ export function getGameUrl(product: { id: number; product_name: string; console_
 
     // 4. Construct path (handle root for EN)
     if (lang === 'en') {
-        return `/${gamesSlug}/${fullSlug}`;
+        return `/${baseSlug}/${fullSlug}`;
     }
-    return `/${lang}/${gamesSlug}/${fullSlug}`;
+    return `/${lang}/${baseSlug}/${fullSlug}`;
 }

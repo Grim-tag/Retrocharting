@@ -40,11 +40,14 @@ export interface PriceHistoryPoint {
     condition: string;
 }
 
-export async function getProductsByConsole(consoleName: string, limit = 50, genre?: string): Promise<Product[]> {
+export async function getProductsByConsole(consoleName: string, limit = 50, genre?: string, type?: 'game' | 'console' | 'accessory'): Promise<Product[]> {
     try {
         let url = `${API_URL}/products/?console=${encodeURIComponent(consoleName)}&limit=${limit}`;
         if (genre) {
             url += `&genre=${encodeURIComponent(genre)}`;
+        }
+        if (type) {
+            url += `&type=${encodeURIComponent(type)}`;
         }
         const response = await axios.get(url);
         return response.data;

@@ -17,6 +17,7 @@ def read_products(
     search: Optional[str] = None,
     console: Optional[str] = None,
     genre: Optional[str] = None,
+    type: Optional[str] = None, # 'game', 'console', 'accessory'
     db: Session = Depends(get_db)
 ):
     query = db.query(ProductModel)
@@ -28,6 +29,14 @@ def read_products(
         query = query.filter(ProductModel.console_name == console)
     if genre:
         query = query.filter(ProductModel.genre == genre)
+        
+    if type:
+        if type == 'game':
+             query = query.filter(ProductModel.genre.notin_(['Systems', 'Accessories', 'Controllers']))
+        elif type == 'console':
+             query = query.filter(ProductModel.genre == 'Systems')
+        elif type == 'accessory':
+             query = query.filter(ProductModel.genre.in_(['Accessories', 'Controllers']))
         
     products = query.offset(skip).limit(limit).all()
     return products

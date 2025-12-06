@@ -7,7 +7,7 @@ import { getGameUrl } from "@/lib/utils";
 import { Metadata } from "next";
 import { groupedSystems } from "@/data/systems";
 
-// Helper to make title case from slug (e.g. super-nintendo -> Super Nintendo)
+// Helper to make title case from slug
 function unslugify(slug: string) {
     return slug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 }
@@ -15,31 +15,30 @@ function unslugify(slug: string) {
 export async function generateMetadata({ params }: { params: Promise<{ system_slug: string, lang: string }> }): Promise<Metadata> {
     const { system_slug } = await params;
 
-    // Find exact system name from slug
     const flatSystems = Object.values(groupedSystems).flat();
     const systemName = flatSystems.find(s => s.toLowerCase().replace(/ /g, '-') === system_slug) || unslugify(system_slug);
 
     return {
-        title: `${systemName} Video Games Price Guide | RetroCharting`,
+        title: `${systemName} Accessories Price Guide | RetroCharting`,
     };
 }
 
-export default async function ConsolePage({ params }: { params: Promise<{ system_slug: string, lang: string }> }) {
+export default async function AccessoryConsolePage({ params }: { params: Promise<{ system_slug: string, lang: string }> }) {
     const { system_slug, lang } = await params;
     const dict = await getDictionary(lang);
 
-    // Find exact system name from slug
     const flatSystems = Object.values(groupedSystems).flat();
     const systemName = flatSystems.find(s => s.toLowerCase().replace(/ /g, '-') === system_slug) || unslugify(system_slug);
 
-    const products = await getProductsByConsole(systemName, 100, undefined, 'game');
+    // FETCH ACCESSORIES ONLY
+    const products = await getProductsByConsole(systemName, 100, undefined, 'accessory');
 
     const getSlug = (key: string) => routeMap[key]?.[lang] || key;
-    const gamesSlug = getSlug('games');
+    const accessoriesSlug = getSlug('accessories');
 
     const breadcrumbItems = [
-        { label: dict.header.nav.video_games, href: `/${lang}/${gamesSlug}` },
-        { label: systemName, href: `/${lang}/${gamesSlug}/console/${system_slug}` }
+        { label: dict.header.nav.accessories, href: `/${lang}/${accessoriesSlug}` },
+        { label: systemName, href: `/${lang}/${accessoriesSlug}/console/${system_slug}` }
     ];
 
     return (
@@ -47,7 +46,7 @@ export default async function ConsolePage({ params }: { params: Promise<{ system
             <div className="max-w-[1400px] mx-auto px-4">
                 <Breadcrumbs items={breadcrumbItems} />
 
-                <h1 className="text-3xl font-bold mb-8 text-white">{systemName} {dict.home.categories.items.video_games.title}</h1>
+                <h1 className="text-3xl font-bold mb-8 text-white">{systemName} {dict.header.nav.accessories}</h1>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
                     {products.map((product) => (
@@ -80,7 +79,7 @@ export default async function ConsolePage({ params }: { params: Promise<{ system
 
                 {products.length === 0 && (
                     <div className="text-center text-gray-400 py-12">
-                        No games found for {systemName} or loading...
+                        No accessories found for {systemName} or loading...
                     </div>
                 )}
             </div>
