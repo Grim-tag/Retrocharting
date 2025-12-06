@@ -28,7 +28,7 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
           </p>
           <div className="flex justify-center gap-4">
             <Link
-              href={getPath('video-games')}
+              href={getPath('games')}
               className="bg-[#ff6600] text-white px-8 py-3 rounded font-bold hover:bg-[#e65c00] transition-colors uppercase tracking-wide"
             >
               {dict.home.hero.cta_browse}
@@ -46,7 +46,7 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
           <h2 className="text-3xl font-bold mb-8 border-l-4 border-[#ff6600] pl-4">{dict.home.categories.title}</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Link
-              href={getPath('video-games')}
+              href={getPath('games')}
               className="bg-[#1f2533] p-8 rounded border border-[#2a3142] hover:border-[#ff6600] transition-colors group"
             >
               <h3 className="text-2xl font-bold group-hover:text-[#ff6600] transition-colors">{dict.home.categories.items.video_games.title}</h3>

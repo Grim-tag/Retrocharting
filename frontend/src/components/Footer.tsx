@@ -33,7 +33,7 @@ export default function Footer({ dict, lang }: { dict: any; lang: string }) {
                 <div>
                     <h3 className="text-white font-bold uppercase mb-4">{dict.footer.links.title}</h3>
                     <ul className="space-y-2 text-sm">
-                        <li><Link href={getPath("video-games")} className="hover:text-white transition-colors">{dict.footer.links.video_games}</Link></li>
+                        <li><Link href={getPath("games")} className="hover:text-white transition-colors">{dict.footer.links.video_games}</Link></li>
                         <li><Link href={getPath("consoles")} className="hover:text-white transition-colors">{dict.footer.links.consoles}</Link></li>
                         <li><Link href={getPath("accessories")} className="hover:text-white transition-colors">{dict.footer.links.accessories}</Link></li>
                         <li><Link href={getPath("collectibles")} className="hover:text-white transition-colors">{dict.footer.links.collectibles}</Link></li>

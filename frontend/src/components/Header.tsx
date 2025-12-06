@@ -34,7 +34,7 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
         {
             id: 'video-games',
             label: dict.header.nav.video_games,
-            href: getPath('video-games'),
+            href: getPath('games'),
         },
         { id: 'consoles', label: dict.header.nav.consoles, href: getPath('consoles') },
         { id: 'accessories', label: dict.header.nav.accessories, href: getPath('accessories') },

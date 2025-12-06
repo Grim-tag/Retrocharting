@@ -1,9 +1,8 @@
 export const routeMap: Record<string, Record<string, string>> = {
-    'video-games': { en: 'video-games', fr: 'jeux-video' },
+    'games': { en: 'games', fr: 'jeux-video' },
     'consoles': { en: 'consoles', fr: 'consoles' },
     'accessories': { en: 'accessories', fr: 'accessoires' },
     'collectibles': { en: 'collectibles', fr: 'objets-de-collection' },
-    'games': { en: 'games', fr: 'jeux' },
 };
 
 export const reverseRouteMap: Record<string, Record<string, string>> = {};

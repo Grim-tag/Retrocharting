@@ -37,3 +37,33 @@ export function getRegion(name: string): "NTSC" | "PAL" | "JP" {
     if (name.startsWith("JP ") || lower.includes("famicom") || lower.includes("asian") || lower.includes("japan")) return "JP";
     return "NTSC";
 }
+
+import { routeMap } from "./route-config";
+
+// --- URL Generation Helper ---
+// Generates: /[lang]/[games-slug]/[game-title]-[console]-[id]
+// Example EN: /games/metal-gear-solid-ps1-4402
+// Example FR: /fr/jeux-video/metal-gear-solid-ps1-4402
+export function getGameUrl(product: { id: number; product_name: string; console_name: string }, lang: string = 'en') {
+    // 1. Get localized 'games' segment
+    const gamesSlug = routeMap['games']?.[lang] || 'games';
+
+    // 2. Generate clean product slug (title-console)
+    // We treat title as universal (no translation), just slugified
+    const titleSlug = product.product_name.toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+
+    const consoleSlug = formatConsoleName(product.console_name).toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+
+    // 3. Append ID at the end
+    const fullSlug = `${titleSlug}-${consoleSlug}-${product.id}`;
+
+    // 4. Construct path (handle root for EN)
+    if (lang === 'en') {
+        return `/${gamesSlug}/${fullSlug}`;
+    }
+    return `/${lang}/${gamesSlug}/${fullSlug}`;
+}
