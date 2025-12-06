@@ -30,12 +30,15 @@ def check_counts():
     product_count = db.query(Product).count()
     print(f"Total Products: {product_count}")
     
-    if Console:
-        console_count = db.query(Console).count()
-        print(f"Total Consoles (Table): {console_count}")
-    else:
-        print("Console model not found.")
-        
+    products_with_images = db.query(Product).filter(Product.image_url.isnot(None)).count()
+    print(f"Products with Images: {products_with_images} ({products_with_images/product_count*100:.2f}%)")
+
+    products_with_desc = db.query(Product).filter(Product.description.isnot(None)).count()
+    print(f"Products with Descriptions: {products_with_desc} ({products_with_desc/product_count*100:.2f}%)")
+
+    history_count = db.query(PriceHistory).count()
+    print(f"Total Price History Points: {history_count}")
+
     # Check distinct consoles in Product
     distinct_consoles = db.query(Product.console_name).distinct().count()
     print(f"Distinct Console Names in Products: {distinct_consoles}")

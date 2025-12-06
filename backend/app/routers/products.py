@@ -52,9 +52,20 @@ def update_listings_background(product_id: int):
         # Construct query: Product Name + Console
         query = f"{product.product_name} {product.console_name}"
         
+        # Determine eBay Category ID based on Product Genre
+        # 139971 = Video Game Consoles
+        # 54968  = Video Game Accessories & Controllers
+        # 139973 = Video Games (Software)
+        category_id = "139973" # Default to Games
+        
+        if product.genre == 'Systems':
+            category_id = "139971"
+        elif product.genre in ['Accessories', 'Controllers']:
+            category_id = "54968"
+            
         try:
             # Fetch listings from eBay
-            ebay_results = ebay_client.search_items(query, limit=10, category_ids="139973")
+            ebay_results = ebay_client.search_items(query, limit=10, category_ids=category_id)
             
             # Process and save to DB
             for item in ebay_results:
