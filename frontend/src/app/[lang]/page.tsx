@@ -15,8 +15,24 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
     return `/${lang}/${slug}`;
   };
 
+  const schema = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "RetroCharting",
+    "url": "https://retrocharting.com",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "https://retrocharting.com/search?q={search_term_string}",
+      "query-input": "required name=search_term_string"
+    }
+  };
+
   return (
     <main className="flex-grow">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      />
       {/* Hero Section */}
       <section className="bg-[#1f2533] py-20 border-b border-[#2a3142]">
         <div className="max-w-[1400px] mx-auto px-4 text-center">

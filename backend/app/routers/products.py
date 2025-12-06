@@ -203,5 +203,28 @@ def get_related_products(product_id: int, db: Session = Depends(get_db)):
         ProductModel.product_name == current_product.product_name,
         ProductModel.id != product_id
     ).all()
+@router.get("/sitemap", response_model=List[dict])
+def sitemap_products(
+    limit: int = 10000, 
+    db: Session = Depends(get_db)
+):
+    """
+    Returns lightweight product data for XML sitemap generation.
+    Limited to top matching items to prevent timeout.
+    """
+    # Prefer products with images or prices as they are 'high quality' pages
+    products = db.query(ProductModel.id, ProductModel.product_name, ProductModel.console_name, ProductModel.genre, ProductModel.loose_price)\
+        .order_by(ProductModel.loose_price.desc().nullslast())\
+        .limit(limit)\
+        .all()
     
-    return related
+    return [
+        {
+            "id": p.id,
+            "product_name": p.product_name,
+            "console_name": p.console_name,
+            "genre": p.genre,
+            "updated_at": datetime.utcnow().isoformat() # We don't track update time per product yet, use now or rough estimate
+        }
+        for p in products
+    ]

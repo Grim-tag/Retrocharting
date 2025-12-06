@@ -135,3 +135,13 @@ export async function saveTranslation(locale: string, key: string, value: string
         return false;
     }
 }
+
+export async function getSitemapProducts(limit: number = 10000): Promise<any[]> {
+    try {
+        const response = await axios.get(`${API_URL}/products/sitemap?limit=${limit}`);
+        return response.data;
+    } catch (error) {
+        console.error("Error fetching sitemap products:", error);
+        return [];
+    }
+}
