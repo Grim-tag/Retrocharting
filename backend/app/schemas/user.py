@@ -13,6 +13,7 @@ class TokenData(BaseModel):
 # --- User Schemas ---
 class UserBase(BaseModel):
     email: str
+    username: Optional[str] = None
     full_name: Optional[str] = None
     avatar_url: Optional[str] = None
 
@@ -26,6 +27,11 @@ class UserResponse(UserBase):
     
     class Config:
         from_attributes = True
+
+class UserUpdate(BaseModel):
+    username: Optional[str] = None
+    full_name: Optional[str] = None
+    avatar_url: Optional[str] = None
 
 # --- Google Auth Request ---
 class GoogleAuthRequest(BaseModel):

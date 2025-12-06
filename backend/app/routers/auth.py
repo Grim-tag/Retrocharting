@@ -97,3 +97,29 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Security(securi
 @router.get("/me", response_model=UserResponse)
 def read_users_me(current_user: User = Depends(get_current_user)):
     return current_user
+
+from app.schemas.user import UserUpdate
+
+@router.put("/me", response_model=UserResponse)
+def update_user_me(
+    user_update: UserUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if user_update.username:
+        # Check uniqueness
+        if user_update.username != current_user.username:
+            existing = db.query(User).filter(User.username == user_update.username).first()
+            if existing:
+                raise HTTPException(status_code=400, detail="Username already taken")
+            current_user.username = user_update.username
+            
+    if user_update.full_name:
+        current_user.full_name = user_update.full_name
+    
+    if user_update.avatar_url:
+        current_user.avatar_url = user_update.avatar_url
+        
+    db.commit()
+    db.refresh(current_user)
+    return current_user

@@ -8,6 +8,7 @@ import { fetchMe, loginWithGoogle } from '../lib/api';
 interface User {
     id: number;
     email: string;
+    username: string | null;
     full_name: string;
     avatar_url: string;
     is_admin: boolean;
@@ -18,6 +19,7 @@ interface AuthContextType {
     token: string | null;
     login: (credential: string) => Promise<void>;
     logout: () => void;
+    refreshUser: () => Promise<void>;
     isAuthenticated: boolean;
 }
 
@@ -62,9 +64,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error("CRITICAL: NEXT_PUBLIC_GOOGLE_CLIENT_ID is missing. Google Login will fail.");
     }
 
+    const refreshUser = async () => {
+        if (token) {
+            const u = await fetchMe(token);
+            setUser(u);
+        }
+    };
+
     return (
         <GoogleOAuthProvider clientId={clientId}>
-            <AuthContext.Provider value={{ user, token, login, logout, isAuthenticated: !!user }}>
+            <AuthContext.Provider value={{ user, token, login, logout, refreshUser, isAuthenticated: !!user }}>
                 {children}
             </AuthContext.Provider>
         </GoogleOAuthProvider>

@@ -221,3 +221,14 @@ export async function deleteFromCollection(token: string, itemId: number): Promi
         return false;
     }
 }
+
+export async function updateUser(token: string, data: { username?: string, full_name?: string }): Promise<any> {
+    try {
+        const response = await axios.put(`${API_URL}/auth/me`, data, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+}

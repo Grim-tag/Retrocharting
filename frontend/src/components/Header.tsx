@@ -21,6 +21,13 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
     const [query, setQuery] = useState('');
     const [suggestions, setSuggestions] = useState<Product[]>([]);
 
+    // Force Onboarding if username is missing
+    useEffect(() => {
+        if (user && !user.username && !pathname.includes('/onboarding')) {
+            router.push(`/${lang}/onboarding`);
+        }
+    }, [user, pathname, router, lang]);
+
     // ... existing locale switch logic ...
     const switchLocale = (targetLang: string) => {
         if (!pathname) return '/';
@@ -195,13 +202,26 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
 
                             {/* Auth Section */}
                             {user ? (
-                                <div className="flex items-center gap-2">
-                                    <img src={user.avatar_url} alt={user.full_name} className="w-8 h-8 rounded-full border border-gray-600" />
+                                <div className="flex items-center gap-3 bg-[#2a3142] px-3 py-1.5 rounded-full border border-[#3a4152]">
+                                    {user.avatar_url && (
+                                        <button onClick={() => router.push(`/${lang}/profile`)}>
+                                            <img src={user.avatar_url} alt="User" className="w-8 h-8 rounded-full border border-[#ff6600]" />
+                                        </button>
+                                    )}
+                                    <div className="hidden md:block text-sm">
+                                        <button
+                                            onClick={() => router.push(`/${lang}/profile`)}
+                                            className="font-bold text-white hover:text-[#ff6600] transition-colors"
+                                        >
+                                            {user.username || "Choose Pseudo"}
+                                        </button>
+                                    </div>
                                     <button
                                         onClick={logout}
-                                        className="text-sm text-[#ff6600] hover:text-white"
+                                        className="text-xs text-gray-400 hover:text-white border-l border-gray-600 pl-3 ml-1"
+                                        title="Logout"
                                     >
-                                        Logout
+                                        ✕
                                     </button>
                                 </div>
                             ) : (
