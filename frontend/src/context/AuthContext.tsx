@@ -58,6 +58,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
 
+    if (!clientId) {
+        console.error("CRITICAL: NEXT_PUBLIC_GOOGLE_CLIENT_ID is missing. Google Login will fail.");
+    }
+
     return (
         <GoogleOAuthProvider clientId={clientId}>
             <AuthContext.Provider value={{ user, token, login, logout, isAuthenticated: !!user }}>

@@ -170,9 +170,54 @@ export async function fetchMe(token: string): Promise<any> {
 }
 
 // --- Collection APIs ---
-// These will be implemented when backend implementation is complete
-// For now, placeholders or simple implementation plan reference
-export async function addToCollection(token: string, productId: number, condition: string): Promise<boolean> {
-    // Placeholder: Need to implement POST /collection Endpoint
-    return false;
+
+export interface CollectionItem {
+    id: number;
+    product_id: number;
+    condition: 'LOOSE' | 'CIB' | 'NEW' | 'GRADED';
+    notes?: string;
+    product_name: string;
+    console_name: string;
+    image_url?: string;
+    estimated_value?: number;
+}
+
+export async function getCollection(token: string): Promise<CollectionItem[]> {
+    try {
+        const response = await axios.get(`${API_URL}/collection/`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Failed to fetch collection", error);
+        return [];
+    }
+}
+
+export async function addToCollection(token: string, productId: number, condition: string, notes?: string): Promise<CollectionItem | null> {
+    try {
+        const response = await axios.post(`${API_URL}/collection/`, {
+            product_id: productId,
+            condition,
+            notes
+        }, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Failed to add to collection", error);
+        return null;
+    }
+}
+
+export async function deleteFromCollection(token: string, itemId: number): Promise<boolean> {
+    try {
+        await axios.delete(`${API_URL}/collection/${itemId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return true;
+    } catch (error) {
+        console.error("Failed to delete item", error);
+        return false;
+    }
 }

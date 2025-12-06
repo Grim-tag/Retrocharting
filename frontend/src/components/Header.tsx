@@ -183,7 +183,10 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
                     {/* Right: Actions */}
                     <div className="flex items-center gap-4">
                         <div className="hidden md:flex items-center gap-4">
-                            <button className="text-sm font-medium text-gray-300 hover:text-white transition-colors">
+                            <button
+                                onClick={() => router.push(`/${lang}/collection`)}
+                                className="text-sm font-medium text-gray-300 hover:text-white transition-colors"
+                            >
                                 {dict.header.actions.collection}
                             </button>
                             <button className="text-sm font-medium text-gray-300 hover:text-white transition-colors">
