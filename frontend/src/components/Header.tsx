@@ -7,6 +7,7 @@ import {
     MagnifyingGlassIcon
 } from '@heroicons/react/24/outline';
 import { searchProducts, Product } from '@/lib/api';
+import { routeMap } from '@/lib/route-config';
 
 
 
@@ -18,18 +19,26 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
     const searchRef = useRef<HTMLDivElement>(null);
 
     // Helper for localized path
-    const getPath = (path: string) => `/${lang}${path}`;
+    const getSlug = (key: string) => routeMap[key]?.[lang] || key;
+    const getPath = (key: string) => {
+        const slug = getSlug(key);
+        // If lang is 'en', we want to serve from root /, so don't prepend /en/
+        if (lang === 'en') {
+            return `/${slug}`;
+        }
+        return `/${lang}/${slug}`;
+    };
 
     // Dynamic Menu Items from Dictionary
     const menuItems = [
         {
             id: 'video-games',
             label: dict.header.nav.video_games,
-            href: getPath('/video-games'),
+            href: getPath('video-games'),
         },
-        { id: 'consoles', label: dict.header.nav.consoles, href: getPath('/consoles') },
-        { id: 'accessories', label: dict.header.nav.accessories, href: getPath('/accessories') },
-        { id: 'collectibles', label: dict.header.nav.collectibles, href: getPath('/collectibles') },
+        { id: 'consoles', label: dict.header.nav.consoles, href: getPath('consoles') },
+        { id: 'accessories', label: dict.header.nav.accessories, href: getPath('accessories') },
+        { id: 'collectibles', label: dict.header.nav.collectibles, href: getPath('collectibles') },
     ];
 
     useEffect(() => {
@@ -70,7 +79,12 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
     const handleSuggestionClick = (productId: number) => {
         setQuery('');
         setShowSuggestions(false);
-        router.push(`/${lang}/games/${productId}`);
+        const gamesSlug = getSlug('games');
+        if (lang === 'en') {
+            router.push(`/${gamesSlug}/${productId}`);
+        } else {
+            router.push(`/${lang}/${gamesSlug}/${productId}`);
+        }
     };
 
     return (
@@ -80,7 +94,7 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
 
                     {/* Left: Logo */}
                     <div className="flex items-center gap-4">
-                        <Link href={`/${lang}`} className="flex items-center gap-2 group">
+                        <Link href={lang === 'en' ? '/' : `/${lang}`} className="flex items-center gap-2 group">
                             <span className="text-2xl font-bold text-white tracking-tight">
                                 Retro<span className="text-[#ff6600]">Charting</span>
                             </span>

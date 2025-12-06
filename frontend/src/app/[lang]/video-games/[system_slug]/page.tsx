@@ -4,6 +4,8 @@ import { systems } from "@/data/systems";
 import { Metadata } from "next";
 import Breadcrumbs from "@/components/seo/Breadcrumbs";
 import JsonLd, { generateCollectionSchema } from "@/components/seo/JsonLd";
+import { formatConsoleName } from "@/lib/utils";
+import { getDictionary } from "@/lib/get-dictionary";
 
 // Helper to convert slug back to system name
 function getSystemNameFromSlug(slug: string): string {
@@ -13,9 +15,7 @@ function getSystemNameFromSlug(slug: string): string {
     return match || slug.replace(/-/g, ' '); // Fallback to formatted slug
 }
 
-import { formatConsoleName } from "@/lib/utils";
-
-export async function generateMetadata({ params }: { params: Promise<{ system_slug: string }> }): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ system_slug: string; lang: string }> }): Promise<Metadata> {
     const { system_slug } = await params;
     const systemName = getSystemNameFromSlug(system_slug);
     const shortSystemName = formatConsoleName(systemName);
@@ -25,21 +25,22 @@ export async function generateMetadata({ params }: { params: Promise<{ system_sl
     };
 }
 
-export default async function SystemPage({ params }: { params: Promise<{ system_slug: string }> }) {
-    const { system_slug } = await params;
+export default async function SystemPage({ params }: { params: Promise<{ system_slug: string; lang: string }> }) {
+    const { system_slug, lang } = await params;
+    const dict = await getDictionary(lang);
     const systemName = getSystemNameFromSlug(system_slug);
     const products = await getProductsByConsole(systemName);
     const shortSystemName = formatConsoleName(systemName);
 
     const breadcrumbItems = [
-        { label: "Video Games", href: "/video-games" },
-        { label: systemName, href: `/video-games/${system_slug}` }
+        { label: dict.header.nav.video_games, href: `/${lang}/video-games` },
+        { label: systemName, href: `/${lang}/video-games/${system_slug}` }
     ];
 
     const schema = generateCollectionSchema(
         `${systemName} Price Guide`,
         `Current prices and value for ${systemName} games. Track your collection and see historic prices.`,
-        `https://retrocharting.com/video-games/${system_slug}`
+        `https://retrocharting.com/${lang}/video-games/${system_slug}`
     );
 
     return (
@@ -65,9 +66,9 @@ export default async function SystemPage({ params }: { params: Promise<{ system_
                     {/* Table Header */}
                     <div className="grid grid-cols-12 gap-4 p-3 bg-[#2a3142] border-b border-[#2a3142] text-xs font-bold text-gray-400 uppercase tracking-wider">
                         <div className="col-span-6 md:col-span-5">Product Name</div>
-                        <div className="col-span-2 text-right hidden md:block">Loose</div>
-                        <div className="col-span-2 text-right hidden md:block">CIB</div>
-                        <div className="col-span-3 md:col-span-2 text-right">New</div>
+                        <div className="col-span-2 text-right hidden md:block">{dict.product.prices.loose}</div>
+                        <div className="col-span-2 text-right hidden md:block">{dict.product.prices.cib}</div>
+                        <div className="col-span-3 md:col-span-2 text-right">{dict.product.prices.new}</div>
                         <div className="col-span-3 md:col-span-1 text-center">Action</div>
                     </div>
 
@@ -76,7 +77,7 @@ export default async function SystemPage({ params }: { params: Promise<{ system_
                         {products.length > 0 ? (
                             products.map((product) => (
                                 <div key={product.id} className="grid grid-cols-12 gap-4 p-3 items-center hover:bg-[#252b3b] transition-colors group relative">
-                                    <Link href={`/games/${product.id}`} className="absolute inset-0 z-10" aria-label={`View details for ${product.product_name}`}></Link>
+                                    <Link href={`/${lang}/games/${product.id}`} className="absolute inset-0 z-10" aria-label={`View details for ${product.product_name}`}></Link>
 
                                     {/* Name & Image */}
                                     <div className="col-span-6 md:col-span-5 flex items-center gap-3">
@@ -117,7 +118,7 @@ export default async function SystemPage({ params }: { params: Promise<{ system_
                             ))
                         ) : (
                             <div className="p-8 text-center text-gray-400">
-                                No products found for this system.
+                                {dict.list.no_results}
                             </div>
                         )}
                     </div>

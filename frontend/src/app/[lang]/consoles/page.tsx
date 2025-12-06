@@ -3,16 +3,24 @@ import { groupedSystems } from "@/data/systems";
 import { getRegion } from "@/lib/utils";
 import Breadcrumbs from "@/components/seo/Breadcrumbs";
 import JsonLd, { generateCollectionSchema } from "@/components/seo/JsonLd";
+import { getDictionary } from "@/lib/get-dictionary";
+import { routeMap } from "@/lib/route-config";
 
-export default function ConsolesPage() {
+export default async function ConsolesPage({ params }: { params: Promise<{ lang: string }> }) {
+    const { lang } = await params;
+    const dict = await getDictionary(lang);
+
+    const getSlug = (key: string) => routeMap[key]?.[lang] || key;
+    const consolesSlug = getSlug('consoles');
+
     const breadcrumbItems = [
-        { label: "Consoles", href: "/consoles" }
+        { label: dict.header.nav.consoles, href: `/${lang}/${consolesSlug}` }
     ];
 
     const schema = generateCollectionSchema(
-        "Console Hardware Price Guide",
-        "Browse video game consoles, controllers, and hardware. Current market values and history.",
-        "https://retrocharting.com/consoles"
+        dict.home.categories.items.consoles.title,
+        dict.home.categories.items.consoles.desc,
+        `https://retrocharting.com/${lang}/${consolesSlug}`
     );
 
     return (
@@ -22,10 +30,9 @@ export default function ConsolesPage() {
                 <JsonLd data={schema} />
                 <Breadcrumbs items={breadcrumbItems} />
 
-                <h1 className="text-3xl font-bold mb-4 text-white">Console Hardware Price Guide</h1>
+                <h1 className="text-3xl font-bold mb-4 text-white">{dict.home.categories.items.consoles.title}</h1>
                 <p className="text-gray-400 mb-8 max-w-3xl">
-                    Browse video game consoles, controllers, and hardware.
-                    Select a system to see available hardware and current market values.
+                    {dict.home.categories.items.consoles.desc}
                 </p>
 
                 {/* Grouped Systems Grid */}
@@ -54,7 +61,7 @@ export default function ConsolesPage() {
                                                 )}
                                                 <Link
                                                     key={system}
-                                                    href={`/consoles/${system.toLowerCase().replace(/ /g, '-')}`}
+                                                    href={`/${lang}/${consolesSlug}/${system.toLowerCase().replace(/ /g, '-')}`}
                                                     className="bg-[#1f2533] p-4 rounded border border-[#2a3142] hover:border-[#ff6600] hover:bg-[#252b3b] transition-all group"
                                                 >
                                                     <h3 className="font-medium text-gray-300 group-hover:text-white truncate" title={system}>

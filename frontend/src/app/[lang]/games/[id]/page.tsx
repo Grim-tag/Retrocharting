@@ -7,7 +7,8 @@ import { formatConsoleName } from "@/lib/utils";
 import CrossPlatformLinks from "@/components/CrossPlatformLinks";
 import Breadcrumbs from "@/components/seo/Breadcrumbs";
 import JsonLd, { generateProductSchema } from "@/components/seo/JsonLd";
-import { getDictionary } from "@/lib/get-dictionary"; // ADDED
+import { getDictionary } from "@/lib/get-dictionary";
+import { routeMap } from "@/lib/route-config";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string; lang: string }> }): Promise<Metadata> {
     const { id } = await params;
@@ -33,11 +34,13 @@ export default async function GamePage({ params }: { params: Promise<{ id: strin
     const product = await getProductById(parseInt(id));
     const history = await getProductHistory(parseInt(id));
 
+    const getSlug = (key: string) => routeMap[key]?.[lang] || key;
+
     if (!product) {
         return (
             <main className="flex-grow bg-[#0f121e] py-20 text-center text-white">
                 <h1 className="text-3xl font-bold">{dict.product.not_found.title}</h1>
-                <Link href="/video-games" className="text-[#ff6600] hover:underline mt-4 inline-block">
+                <Link href={`/${lang}/${getSlug('video-games')}`} className="text-[#ff6600] hover:underline mt-4 inline-block">
                     {dict.product.not_found.back}
                 </Link>
             </main>
@@ -46,13 +49,16 @@ export default async function GamePage({ params }: { params: Promise<{ id: strin
 
     const shortConsoleName = formatConsoleName(product.console_name);
 
+    const videoGamesSlug = getSlug('video-games');
+    const gamesSlug = getSlug('games');
+
     const breadcrumbItems = [
-        { label: dict.header.nav.video_games, href: "/video-games" },
-        { label: product.console_name, href: `/video-games/${product.console_name.toLowerCase().replace(/ /g, '-')}` },
-        { label: product.product_name, href: `/games/${product.id}` }
+        { label: dict.header.nav.video_games, href: `/${lang}/${videoGamesSlug}` },
+        { label: product.console_name, href: `/${lang}/${videoGamesSlug}/${product.console_name.toLowerCase().replace(/ /g, '-')}` },
+        { label: product.product_name, href: `/${lang}/${gamesSlug}/${product.id}` }
     ];
 
-    const schema = generateProductSchema(product, `https://retrocharting.com/games/${product.id}`);
+    const schema = generateProductSchema(product, `https://retrocharting.com/${lang}/${gamesSlug}/${product.id}`);
 
     return (
         <main className="flex-grow bg-[#0f121e] py-8">

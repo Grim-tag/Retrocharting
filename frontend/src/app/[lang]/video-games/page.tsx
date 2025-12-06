@@ -3,16 +3,24 @@ import { groupedSystems } from "@/data/systems";
 import { getRegion } from "@/lib/utils";
 import Breadcrumbs from "@/components/seo/Breadcrumbs";
 import JsonLd, { generateCollectionSchema } from "@/components/seo/JsonLd";
+import { getDictionary } from "@/lib/get-dictionary";
+import { routeMap } from "@/lib/route-config";
 
-export default function VideoGamesPage() {
+export default async function VideoGamesPage({ params }: { params: Promise<{ lang: string }> }) {
+    const { lang } = await params;
+    const dict = await getDictionary(lang);
+
+    const getSlug = (key: string) => routeMap[key]?.[lang] || key;
+    const videoGamesSlug = getSlug('video-games');
+
     const breadcrumbItems = [
-        { label: "Video Games", href: "/video-games" }
+        { label: dict.header.nav.video_games, href: `/${lang}/${videoGamesSlug}` }
     ];
 
     const schema = generateCollectionSchema(
-        "Video Game Price Guide",
-        "Comprehensive price guide for video games across all systems. Track your collection value.",
-        "https://retrocharting.com/video-games"
+        dict.home.categories.items.video_games.title,
+        dict.home.categories.items.video_games.desc,
+        `https://retrocharting.com/${lang}/${videoGamesSlug}`
     );
 
     return (
@@ -22,11 +30,12 @@ export default function VideoGamesPage() {
                 <JsonLd data={schema} />
                 <Breadcrumbs items={breadcrumbItems} />
 
-                <h1 className="text-3xl font-bold mb-4 text-white">Video Game Price Guide</h1>
+                <h1 className="text-3xl font-bold mb-4 text-white">{dict.home.categories.items.video_games.title}</h1>
                 <p className="text-gray-400 mb-8 max-w-3xl">
-                    Click on any Video Game Systems to see a Game list and their current value.
-                    From there you can also add a Game to your collection or wishlist.
-                    Go to any Game detail page to see current prices for different grades and historic prices too.
+                    {lang === 'fr'
+                        ? "Cliquez sur une console pour voir la liste des jeux et leur valeur. Ajoutez des jeux à votre collection ou liste de souhaits."
+                        : "Click on any Video Game Systems to see a Game list and their current value. From there you can also add a Game to your collection or wishlist."
+                    }
                 </p>
 
                 {/* Grouped Systems Grid */}
@@ -54,7 +63,7 @@ export default function VideoGamesPage() {
                                                     </div>
                                                 )}
                                                 <Link
-                                                    href={`/video-games/${system.toLowerCase().replace(/ /g, '-')}`}
+                                                    href={`/${lang}/${videoGamesSlug}/${system.toLowerCase().replace(/ /g, '-')}`}
                                                     className="bg-[#1f2533] p-4 rounded border border-[#2a3142] hover:border-[#ff6600] hover:bg-[#252b3b] transition-all group"
                                                 >
                                                     <h3 className="font-medium text-gray-300 group-hover:text-white truncate" title={system}>
