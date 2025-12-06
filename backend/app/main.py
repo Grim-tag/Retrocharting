@@ -8,8 +8,8 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="RetroCharting API")
 
+from app.routers import products, admin, translations, auth, collection
 app.include_router(products.router, prefix="/api/v1/products", tags=["products"])
-from app.routers import admin, translations, auth, collection
 app.include_router(admin.router, prefix="/api/v1/admin", tags=["admin"])
 app.include_router(translations.router, prefix="/api/v1/translations", tags=["translations"])
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
