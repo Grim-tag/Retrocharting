@@ -2,7 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Poppins } from "next/font/google";
-import "../../globals.css";
+import "../globals.css";
 
 const poppins = Poppins({
     variable: "--font-poppins",
