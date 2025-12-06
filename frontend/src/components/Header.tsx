@@ -1,20 +1,61 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
 import {
     MagnifyingGlassIcon
 } from '@heroicons/react/24/outline';
 import { searchProducts, Product } from '@/lib/api';
-import { routeMap } from '@/lib/route-config';
+import { routeMap, reverseRouteMap } from '@/lib/route-config';
 
 
 
 export default function Header({ dict, lang }: { dict: any; lang: string }) {
     const router = useRouter();
+    const pathname = usePathname();
     const [query, setQuery] = useState('');
     const [suggestions, setSuggestions] = useState<Product[]>([]);
+
+    // --- Switch Locale Helper ---
+    const switchLocale = (targetLang: string) => {
+        if (!pathname) return '/';
+
+        // 1. Remove current locale prefix if present
+        const segments = pathname.split('/').filter(Boolean);
+        const currentLocale = ['en', 'fr'].includes(segments[0]) ? segments[0] : 'en';
+
+        const pathBodySegments = (currentLocale === 'en' || !['en', 'fr'].includes(segments[0]))
+            ? segments
+            : segments.slice(1);
+
+        // 2. Translate segments (e.g. video-games -> jeux-video)
+        // We first map to internal keys using reverseRouteMap of CURRENT locale
+        const internalSegments = pathBodySegments.map(segment => {
+            // Check if this segment is a localized key
+            // Careful: reverseRouteMap[currentLocale] keys are localized slugs.
+            const key = reverseRouteMap[currentLocale]?.[segment];
+            return key || segment; // If not found, keep as is (e.g. IDs, console names)
+        });
+
+        // 3. Map internal keys to TARGET locale
+        const targetSegments = internalSegments.map(key => {
+            // Check if segment is a key in routeMap
+            // But 'key' might just be a param like 'ps1'.
+            // We check routeMap to see if 'key' exists as a top-level key.
+            if (routeMap[key]) {
+                return routeMap[key][targetLang] || key;
+            }
+            return key;
+        });
+
+        // 4. Construct new path
+        const newPath = `/${targetSegments.join('/')}`;
+        if (targetLang === 'en') {
+            return newPath || '/';
+        }
+        return `/${targetLang}${newPath}`;
+    };
     const [showSuggestions, setShowSuggestions] = useState(false);
     const searchRef = useRef<HTMLDivElement>(null);
 
@@ -160,6 +201,23 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
                             <button className="text-sm font-medium text-gray-300 hover:text-white transition-colors">
                                 {dict.header.actions.wishlist}
                             </button>
+
+                            {/* Language Switcher */}
+                            <div className="flex items-center gap-2 border-l border-[#2a3142] pl-4 ml-2">
+                                <Link
+                                    href={switchLocale('en')}
+                                    className={`text-sm font-bold ${lang === 'en' ? 'text-[#ff6600]' : 'text-gray-400 hover:text-white'}`}
+                                >
+                                    EN
+                                </Link>
+                                <span className="text-gray-600">/</span>
+                                <Link
+                                    href={switchLocale('fr')}
+                                    className={`text-sm font-bold ${lang === 'fr' ? 'text-[#ff6600]' : 'text-gray-400 hover:text-white'}`}
+                                >
+                                    FR
+                                </Link>
+                            </div>
                         </div>
                     </div>
                 </div>
