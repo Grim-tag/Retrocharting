@@ -1,0 +1,32 @@
+from pydantic import BaseModel
+from typing import Optional
+from datetime import datetime
+
+# --- Token Schemas ---
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class TokenData(BaseModel):
+    user_id: Optional[int] = None
+
+# --- User Schemas ---
+class UserBase(BaseModel):
+    email: str
+    full_name: Optional[str] = None
+    avatar_url: Optional[str] = None
+
+class UserCreate(UserBase):
+    google_id: str
+
+class UserResponse(UserBase):
+    id: int
+    is_admin: bool
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+# --- Google Auth Request ---
+class GoogleAuthRequest(BaseModel):
+    credential: str # The ID Token from Google

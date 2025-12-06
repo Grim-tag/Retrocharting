@@ -45,42 +45,6 @@ def debug_status():
         product_count = str(e)
     finally:
         db.close()
-        
-    return {
-        "cwd": os.getcwd(),
-        "app_dir": app_dir,
-        "csv_path": csv_path,
-        "csv_exists": csv_exists,
-        "product_count": product_count,
-        "files_in_data": os.listdir(os.path.join(app_dir, 'data')) if os.path.exists(os.path.join(app_dir, 'data')) else "Data dir not found"
-    }
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-app.include_router(products.router, prefix="/api/v1/products", tags=["products"])
-from app.routers import admin, translations
-app.include_router(admin.router, prefix="/api/v1/admin", tags=["admin"])
-app.include_router(translations.router, prefix="/api/v1/translations", tags=["translations"])
-
-@app.get("/")
-def read_root():
-    return {"message": "Welcome to RetroCharting API"}
-
-@app.get("/debug")
-def debug_root():
-    return {"status": "ok", "message": "Backend is reachable"}
-
-@app.get("/version")
-def read_version():
-    return {"version": "1.0.2", "deployed_at": "2025-12-04"}
-
-@app.get("/debug-consoles")
 @app.get("/api/debug/consoles")
 def debug_consoles():
     from app.db.session import SessionLocal

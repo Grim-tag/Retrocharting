@@ -11,51 +11,41 @@ import { routeMap, reverseRouteMap } from '@/lib/route-config';
 
 
 
+import { GoogleLogin } from '@react-oauth/google';
+import { useAuth } from '@/context/AuthContext';
+
 export default function Header({ dict, lang }: { dict: any; lang: string }) {
     const router = useRouter();
     const pathname = usePathname();
+    const { user, login, logout } = useAuth();
     const [query, setQuery] = useState('');
     const [suggestions, setSuggestions] = useState<Product[]>([]);
 
-    // --- Switch Locale Helper ---
+    // ... existing locale switch logic ...
     const switchLocale = (targetLang: string) => {
         if (!pathname) return '/';
-
-        // 1. Remove current locale prefix if present
         const segments = pathname.split('/').filter(Boolean);
         const currentLocale = ['en', 'fr'].includes(segments[0]) ? segments[0] : 'en';
-
         const pathBodySegments = (currentLocale === 'en' || !['en', 'fr'].includes(segments[0]))
             ? segments
             : segments.slice(1);
-
-        // 2. Translate segments (e.g. video-games -> jeux-video)
-        // We first map to internal keys using reverseRouteMap of CURRENT locale
         const internalSegments = pathBodySegments.map(segment => {
-            // Check if this segment is a localized key
-            // Careful: reverseRouteMap[currentLocale] keys are localized slugs.
             const key = reverseRouteMap[currentLocale]?.[segment];
-            return key || segment; // If not found, keep as is (e.g. IDs, console names)
+            return key || segment;
         });
-
-        // 3. Map internal keys to TARGET locale
         const targetSegments = internalSegments.map(key => {
-            // Check if segment is a key in routeMap
-            // But 'key' might just be a param like 'ps1'.
-            // We check routeMap to see if 'key' exists as a top-level key.
             if (routeMap[key]) {
                 return routeMap[key][targetLang] || key;
             }
             return key;
         });
-
-        // 4. Construct new path
         const newPath = `/${targetSegments.join('/')}`;
         if (targetLang === 'en') {
             return newPath || '/';
         }
         return `/${targetLang}${newPath}`;
     };
+
     const [showSuggestions, setShowSuggestions] = useState(false);
     const searchRef = useRef<HTMLDivElement>(null);
 
@@ -63,7 +53,6 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
     const getSlug = (key: string) => routeMap[key]?.[lang] || key;
     const getPath = (key: string) => {
         const slug = getSlug(key);
-        // If lang is 'en', we want to serve from root /, so don't prepend /en/
         if (lang === 'en') {
             return `/${slug}`;
         }
@@ -113,7 +102,6 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && query) {
             setShowSuggestions(false);
-            // Optional: Implement a full search page if needed, for now just close
         }
     };
 
@@ -142,7 +130,7 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
                         </Link>
                     </div>
 
-                    {/* Desktop Navigation (Visible Parents) */}
+                    {/* Desktop Navigation */}
                     <nav className="flex items-center gap-6 overflow-x-auto no-scrollbar">
                         {menuItems.map((item) => (
                             <Link
@@ -201,6 +189,36 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
                             <button className="text-sm font-medium text-gray-300 hover:text-white transition-colors">
                                 {dict.header.actions.wishlist}
                             </button>
+
+                            {/* Auth Section */}
+                            {user ? (
+                                <div className="flex items-center gap-2">
+                                    <img src={user.avatar_url} alt={user.full_name} className="w-8 h-8 rounded-full border border-gray-600" />
+                                    <button
+                                        onClick={logout}
+                                        className="text-sm text-[#ff6600] hover:text-white"
+                                    >
+                                        Logout
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="rounded overflow-hidden">
+                                    <GoogleLogin
+                                        onSuccess={async (credentialResponse) => {
+                                            if (credentialResponse.credential) {
+                                                await login(credentialResponse.credential);
+                                            }
+                                        }}
+                                        onError={() => {
+                                            console.log('Login Failed');
+                                        }}
+                                        type="icon"
+                                        theme="filled_black"
+                                        size="medium"
+                                        shape="circle"
+                                    />
+                                </div>
+                            )}
 
                             {/* Language Switcher */}
                             <div className="flex items-center gap-2 border-l border-[#2a3142] pl-4 ml-2">

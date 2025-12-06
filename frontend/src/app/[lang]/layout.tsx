@@ -38,6 +38,8 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
     };
 }
 
+import { AuthProvider } from "@/context/AuthContext";
+
 export default async function PublicLayout({
     children,
     params,
@@ -51,13 +53,15 @@ export default async function PublicLayout({
     return (
         <html lang={lang}>
             <body className={`${poppins.variable} antialiased bg-[#1f2533] text-white font-sans flex flex-col min-h-screen`}>
-                <Header dict={dict} lang={lang} />
+                <AuthProvider>
+                    <Header dict={dict} lang={lang} />
 
-                <div className="flex-grow">
-                    {children}
-                </div>
+                    <div className="flex-grow">
+                        {children}
+                    </div>
 
-                <Footer dict={dict} lang={lang} />
+                    <Footer dict={dict} lang={lang} />
+                </AuthProvider>
             </body>
         </html>
     );

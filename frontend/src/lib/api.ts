@@ -145,3 +145,34 @@ export async function getSitemapProducts(limit: number = 10000): Promise<any[]> 
         return [];
     }
 }
+
+// --- Auth APIs ---
+
+export async function loginWithGoogle(credential: string): Promise<{ access_token: string, token_type: string } | null> {
+    try {
+        const response = await axios.post(`${API_URL}/auth/google`, { credential });
+        return response.data;
+    } catch (error) {
+        console.error("Google Login failed", error);
+        return null;
+    }
+}
+
+export async function fetchMe(token: string): Promise<any> {
+    try {
+        const response = await axios.get(`${API_URL}/auth/me`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        return null;
+    }
+}
+
+// --- Collection APIs ---
+// These will be implemented when backend implementation is complete
+// For now, placeholders or simple implementation plan reference
+export async function addToCollection(token: string, productId: number, condition: string): Promise<boolean> {
+    // Placeholder: Need to implement POST /collection Endpoint
+    return false;
+}
