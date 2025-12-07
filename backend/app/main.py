@@ -1,7 +1,13 @@
 from fastapi import FastAPI, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from app.db.session import engine, Base
+# Import ALL models so Base.metadata.create_all sees them
 from app.models.sales_transaction import SalesTransaction
+from app.models.user import User
+from app.models.translation import Translation
+from app.models.product import Product
+from app.models.listing import Listing
+from app.models.price_history import PriceHistory
 
 # Create tables on startup
 Base.metadata.create_all(bind=engine)
