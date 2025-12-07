@@ -80,14 +80,21 @@ app.include_router(collection.router, prefix="/api/v1/collection", tags=["collec
 
 @app.on_event("startup")
 def startup_event():
-    from app.services.import_dump import import_csv_dump
-    # Run synchronously on startup to ensure data is there? Or background?
-    # Let's run it directly but it might block.
-    # For safety, let's just print a message and maybe run it if we can.
-    # Actually, let's rely on the manual trigger if startup fails or is too slow.
-    # But user wants it auto.
-    # import_csv_dump()
-    print("Skipping auto-import on startup to prevent timeout. Use /api/debug/import to trigger manually.")
+    # Initialize Scheduler for automated scraping
+    try:
+        from apscheduler.schedulers.background import BackgroundScheduler
+        from app.services.scraper import scrape_products
+        
+        scheduler = BackgroundScheduler()
+        # Run scraping every 6 hours, starting in 5 minutes
+        scheduler.add_job(scrape_products, 'interval', hours=6, args=[50], id='auto_scrape', replace_existing=True)
+        scheduler.start()
+        print("APScheduler started: Scraping job registered (every 6 hours).")
+    except Exception as e:
+        print(f"Failed to start scheduler: {e}")
+
+    # Auto-migration logs
+    print("Startup complete. Tables ready.")
 
 @app.post("/api/debug/import")
 def debug_import(background_tasks: BackgroundTasks):
