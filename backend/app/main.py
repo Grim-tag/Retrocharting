@@ -43,6 +43,21 @@ async def global_exception_handler(request: Request, exc: Exception):
         },
     )
 
+from fastapi.exceptions import HTTPException
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"message": exc.detail},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "*",
+            "Access-Control-Allow-Headers": "*",
+        },
+    )
+
 from app.routers import products, admin, translations, auth, collection
 app.include_router(products.router, prefix="/api/v1/products", tags=["products"])
 app.include_router(admin.router, prefix="/api/v1/admin", tags=["admin"])
