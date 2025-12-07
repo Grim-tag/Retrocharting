@@ -8,6 +8,22 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="RetroCharting API")
 
+# CORS Configuration
+origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://retrocharting-frontend.onrender.com",
+    "https://retrocharting.onrender.com" # In case domain varies
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 from app.routers import products, admin, translations, auth, collection
 app.include_router(products.router, prefix="/api/v1/products", tags=["products"])
 app.include_router(admin.router, prefix="/api/v1/admin", tags=["admin"])
