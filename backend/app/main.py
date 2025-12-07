@@ -18,11 +18,30 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Global Exception Handler
+from fastapi import Request
+from fastapi.responses import JSONResponse
+import logging
+import traceback
+
+logging.basicConfig(level=logging.ERROR)
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logging.error(f"Global error: {exc}")
+    logging.error(traceback.format_exc())
+    return JSONResponse(
+        status_code=500,
+        content={"message": "Internal Server Error", "detail": str(exc)},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "*",
+            "Access-Control-Allow-Headers": "*",
+        },
+    )
 
 from app.routers import products, admin, translations, auth, collection
 app.include_router(products.router, prefix="/api/v1/products", tags=["products"])
