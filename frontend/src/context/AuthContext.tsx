@@ -49,6 +49,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setToken(data.access_token);
             const u = await fetchMe(data.access_token);
             setUser(u);
+        } else {
+            throw new Error("L'authentification Google a échoué (Token invalide ou erreur serveur).");
         }
     };
 
