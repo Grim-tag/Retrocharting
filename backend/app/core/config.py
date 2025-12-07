@@ -25,6 +25,12 @@ class Settings(BaseSettings):
     CLOUDINARY_API_SECRET: str
 
     class Config:
-        env_file = ".env"
+        import os
+        # Calculate absolute path to .env (project root)
+        # config.py is in backend/app/core/
+        _current_dir = os.path.dirname(os.path.abspath(__file__))
+        _project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(_current_dir))))
+        env_file = os.path.join(_project_root, ".env")
+        env_file_encoding = 'utf-8'
 
 settings = Settings()

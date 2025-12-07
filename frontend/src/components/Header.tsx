@@ -229,11 +229,16 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
                                     <GoogleLogin
                                         onSuccess={async (credentialResponse) => {
                                             if (credentialResponse.credential) {
-                                                await login(credentialResponse.credential);
+                                                try {
+                                                    await login(credentialResponse.credential);
+                                                } catch (e) {
+                                                    alert("Échec de la connexion. Vérifiez que le serveur est lancé.");
+                                                }
                                             }
                                         }}
                                         onError={() => {
                                             console.log('Login Failed');
+                                            alert("Échec de la connexion Google.");
                                         }}
                                         type="icon"
                                         theme="filled_black"

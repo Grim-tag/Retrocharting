@@ -12,9 +12,12 @@ load_dotenv(env_path)
 
 print(f"Loaded DATABASE_URL: {os.getenv('DATABASE_URL')}")
 
+from app.models.listing import Listing
+from app.models.price_history import PriceHistory
+from app.models.product import Product
+from app.models.sales_transaction import SalesTransaction
 from sqlalchemy.orm import Session
 from app.db.session import SessionLocal
-from app.models.product import Product
 from sqlalchemy import func
 
 def check_db():
