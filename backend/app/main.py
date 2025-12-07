@@ -183,5 +183,44 @@ def debug_reset_db():
 @app.post("/api/debug/scrape")
 def debug_scrape(background_tasks: BackgroundTasks, limit: int = 50):
     from app.services.scraper import scrape_products
-    background_tasks.add_task(scrape_products, limit)
     return {"message": f"Scraping started in background (limit={limit})"}
+
+@app.post("/api/debug/init-db")
+def debug_init_db():
+    from app.db.session import engine, Base
+    # Import ALL models
+    from app.models.sales_transaction import SalesTransaction
+    from app.models.user import User
+    from app.models.translation import Translation
+    from app.models.product import Product
+    from app.models.listing import Listing
+    from app.models.price_history import PriceHistory
+    from app.models.collection_item import CollectionItem
+
+    try:
+        # Check if tables exist
+        from sqlalchemy import inspect
+        inspector = inspect(engine)
+        existing_tables = inspector.get_table_names()
+        
+        # Create tables
+        Base.metadata.create_all(bind=engine)
+        
+        # Check again
+        new_inspector = inspect(engine)
+        new_tables = new_inspector.get_table_names()
+        
+        return {
+            "status": "success", 
+            "tables_before": existing_tables, 
+            "tables_after": new_tables,
+            "message": "Database initialized successfully"
+        }
+    except Exception as e:
+        import traceback
+        logging.error(traceback.format_exc())
+        return {
+            "status": "error",
+            "message": str(e),
+            "traceback": traceback.format_exc()
+        }
