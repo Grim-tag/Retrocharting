@@ -8,6 +8,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { searchProductsGrouped, GroupedProducts, Product } from '@/lib/api';
 import { routeMap, reverseRouteMap } from '@/lib/route-config';
+import { getGameUrl } from '@/lib/utils';
 
 
 
@@ -112,15 +113,11 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
         }
     };
 
-    const handleSuggestionClick = (productId: number) => {
+    const handleSuggestionClick = (product: Product) => {
         setQuery('');
         setShowSuggestions(false);
-        const gamesSlug = getSlug('games');
-        if (lang === 'en') {
-            router.push(`/${gamesSlug}/${productId}`);
-        } else {
-            router.push(`/${lang}/${gamesSlug}/${productId}`);
-        }
+        const url = getGameUrl(product, lang);
+        router.push(url);
     };
 
     return (
@@ -174,7 +171,7 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
                                         {products.map((product) => (
                                             <div
                                                 key={product.id}
-                                                onClick={() => handleSuggestionClick(product.id)}
+                                                onClick={() => handleSuggestionClick(product)}
                                                 className="p-3 hover:bg-[#2a3142] cursor-pointer flex items-center gap-3"
                                             >
                                                 <div className="relative">
