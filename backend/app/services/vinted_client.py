@@ -74,6 +74,8 @@ class VintedClient:
                 # Fallback: aggressive search for any link that looks like an item
                 grid_items = soup.select('a[href^="/items/"]')
             
+            seen_urls = set() # Initialize set before loop
+
             for item_node in grid_items:
                 if len(items) >= limit:
                     break
