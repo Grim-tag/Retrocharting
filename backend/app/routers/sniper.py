@@ -29,8 +29,16 @@ def search_vinted(
     if not query:
         raise HTTPException(status_code=400, detail="Query is required")
         
-    raw_items = vinted_client.search(query, limit)
+    # Call client (now returns dict with items and debug)
+    search_result = vinted_client.search(query, limit)
+    raw_items = search_result.get("items", [])
+    debug_info = search_result.get("debug", {})
     
+    # If error and no items, raise HTTP exception so frontend sees it
+    if not raw_items and "error" in debug_info:
+        error_msg = f"Vinted Error: {debug_info.get('error')} (Code: {debug_info.get('http_code')})"
+        raise HTTPException(status_code=502, detail=error_msg)
+
     results = []
     for item in raw_items:
         # Map Vinted JSON to our Schema

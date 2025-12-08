@@ -37,15 +37,18 @@ class VintedClient:
             print(f"Failed to refresh Vinted cookies: {e}")
             return False
 
-    def search(self, query: str, limit: int = 20) -> List[Dict[str, Any]]:
+    def search(self, query: str, limit: int = 20):
         """
         Searches for items on Vinted.
+        Returns: Dict with 'items' (list) and 'debug' (dict with status/error).
         """
+        debug_info = {"status": "unknown"}
+        
         # Ensure cookies are fresh
         if time.time() - self.last_cookie_refresh > self.cookie_refresh_interval or not self.session.cookies:
             if not self._refresh_cookies():
                 print("Aborting search due to cookie failure.")
-                return []
+                return {"items": [], "debug": {"error": "Cookie fetch failed", "status": "cookie_error"}}
 
         params = {
             "search_text": query,
@@ -58,18 +61,22 @@ class VintedClient:
             time.sleep(random.uniform(0.5, 1.5))
             
             response = self.session.get(self.API_URL, headers=self.headers, params=params, timeout=10)
+            debug_info["http_code"] = response.status_code
             
             if response.status_code == 401:
                 print("Vinted 401 Unauthorized. Retrying cookie refresh...")
                 self._refresh_cookies()
                 response = self.session.get(self.API_URL, headers=self.headers, params=params, timeout=10)
+                debug_info["retry_http_code"] = response.status_code
 
             response.raise_for_status()
             data = response.json()
-            return data.get("items", [])
+            return {"items": data.get("items", []), "debug": debug_info}
             
         except Exception as e:
             print(f"Vinted Search Error: {e}")
-            return []
+            import traceback
+            traceback.print_exc()
+            return {"items": [], "debug": {"error": str(e), "http_code": debug_info.get("http_code"), "trace": traceback.format_exc()}}
 
 vinted_client = VintedClient()
