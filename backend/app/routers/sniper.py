@@ -1,9 +1,9 @@
 
 from fastapi import APIRouter, HTTPException, Query, Depends
-from typing import List, Optional
+from typing import List, Optional, Any, Dict
 from pydantic import BaseModel
 from app.services.vinted_client import vinted_client
-from app.routers.auth import get_current_user # Optional: Protect this route?
+from app.routers.auth import get_current_user 
 
 router = APIRouter()
 
@@ -17,31 +17,39 @@ class SniperItem(BaseModel):
     source: str = "Vinted"
     created_at_ts: Optional[str] = None
 
-@router.get("/search/vinted", response_model=List[SniperItem])
+class SniperResponse(BaseModel):
+    success: bool
+    items: List[SniperItem] = []
+    error: Optional[str] = None
+    debug: Optional[Dict[str, Any]] = None
+
+@router.get("/search/vinted", response_model=SniperResponse)
 def search_vinted(
     query: str, 
     limit: int = 20, 
-    # current_user = Depends(get_current_user) # Uncomment to protect
+    # current_user = Depends(get_current_user) 
 ):
     """
-    Live search on Vinted.
+    Live search on Vinted. Always returns 200 OK with success flag.
     """
     if not query:
-        raise HTTPException(status_code=400, detail="Query is required")
+        return SniperResponse(success=False, error="Query is required")
         
-    # Call client (now returns dict with items and debug)
+    # Call client
     search_result = vinted_client.search(query, limit)
     raw_items = search_result.get("items", [])
     debug_info = search_result.get("debug", {})
     
-    # If error and no items, raise HTTP exception so frontend sees it
+    # Check for functional error
     if not raw_items and "error" in debug_info:
-        error_msg = f"Vinted Error: {debug_info.get('error')} (Code: {debug_info.get('http_code')})"
-        raise HTTPException(status_code=502, detail=error_msg)
+        return SniperResponse(
+            success=False, 
+            error=f"Vinted API Error: {debug_info.get('error')}", 
+            debug=debug_info
+        )
 
     results = []
     for item in raw_items:
-        # Map Vinted JSON to our Schema
         try:
             price_amount = float(item.get('price', {}).get('amount', 0))
             currency_code = item.get('price', {}).get('currency_code', 'EUR')
@@ -61,4 +69,4 @@ def search_vinted(
             print(f"Error parsing item {item.get('id')}: {e}")
             continue
             
-    return results
+    return SniperResponse(success=True, items=results, debug=debug_info)
