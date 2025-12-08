@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException, Query, Depends
 from typing import List, Optional
 from pydantic import BaseModel
 from app.services.vinted_client import vinted_client
-from app.core.security import get_current_user # Optional: Protect this route?
+from app.routers.auth import get_current_user # Optional: Protect this route?
 
 router = APIRouter()
 
