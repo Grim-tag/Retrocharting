@@ -30,8 +30,9 @@ class VintedClient:
         params = {
             "apikey": self.ZENROWS_API_KEY,
             "url": target_url,
-            "js_render": "false", # API usually returns JSON, no need for JS render overhead if not HTML
-            "premium_proxy": "true", # Often needed for heavy targets like Vinted
+            "js_render": "false", 
+            "premium_proxy": "true", 
+            "antibot": "true", # Enable Datadome/Cloudflare bypass
         }
         
         try:
@@ -43,11 +44,11 @@ class VintedClient:
             
             if response.status_code != 200:
                 print(f"ZenRows Error: {response.text}")
+                # return error with body included for debugging
                 return {
                     "items": [], 
                     "debug": {
-                        "error": f"ZenRows returned {response.status_code}", 
-                        "body": response.text[:200],
+                        "error": f"ZenRows {response.status_code}: {response.text}", 
                         "http_code": response.status_code
                     }
                 }
