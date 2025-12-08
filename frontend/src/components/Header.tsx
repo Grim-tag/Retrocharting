@@ -233,6 +233,13 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
                                         </button>
                                     </div>
                                     <button
+                                        onClick={() => router.push(`/${lang}/sniper`)}
+                                        className="hidden md:flex items-center gap-1 text-xs font-bold bg-[#09b1ba]/20 text-[#09b1ba] hover:bg-[#09b1ba] hover:text-white px-2 py-1 rounded border border-[#09b1ba]/30 transition-all"
+                                        title="Sniper Mode"
+                                    >
+                                        🎯 Sniper
+                                    </button>
+                                    <button
                                         onClick={logout}
                                         className="text-xs text-gray-400 hover:text-white border-l border-gray-600 pl-3 ml-1"
                                         title="Logout"
@@ -284,6 +291,6 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
                     </div>
                 </div>
             </div>
-        </header>
+        </header >
     );
 }

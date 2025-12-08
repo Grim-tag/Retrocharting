@@ -71,12 +71,13 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
         },
     )
 
-from app.routers import products, admin, translations, auth, collection
+from app.routers import products, admin, translations, auth, collection, sniper
 app.include_router(products.router, prefix="/api/v1/products", tags=["products"])
 app.include_router(admin.router, prefix="/api/v1/admin", tags=["admin"])
 app.include_router(translations.router, prefix="/api/v1/translations", tags=["translations"])
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(collection.router, prefix="/api/v1/collection", tags=["collection"])
+app.include_router(sniper.router, prefix="/api/v1/sniper", tags=["sniper"])
 
 @app.on_event("startup")
 def startup_event():
