@@ -63,8 +63,8 @@ export function getGameUrl(product: { id: number; product_name: string; console_
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/(^-|-$)/g, '');
 
-    // 3. Append ID at the end
-    const fullSlug = `${titleSlug}-${consoleSlug}-${product.id}`;
+    // 3. Append ID at the end with "prices" keyword
+    const fullSlug = `${titleSlug}-${consoleSlug}-prices-${product.id}`;
 
     // 4. Construct path (handle root for EN)
     if (lang === 'en') {
