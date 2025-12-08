@@ -89,6 +89,23 @@
         "not_found": {
             "title": "Product Not Found",
             "back": "Back to Video Games"
+        },
+        "why_price": {
+            "title": "Why this price?",
+            "real_data": {
+                "title": "Real Sales Data",
+                "desc": "Our algorithm tracks {{count}} verified sales from eBay and other marketplaces. We don't use asking prices, only what buyers actually pay."
+            },
+            "outlier": {
+                "title": "Outlier Protection",
+                "desc": "We automatically exclude damaged items, reproductions, and extreme outliers to ensure the average is representative of the true market value."
+            },
+            "updated": {
+                "title": "Updated Daily",
+                "desc": "The retro market moves fast. Our database refreshes every day to capture the latest trends and shifts in collector demand."
+            },
+            "confidence": "Confidence Score",
+            "based_on": "Based on {{count}} verified transactions"
         }
     },
     "list": {

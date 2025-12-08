@@ -155,7 +155,7 @@ export default async function GamePage({ params }: { params: Promise<{ slug: str
                         </div>
 
                         {/* Why This Price - Trust Booster */}
-                        <WhyThisPrice salesCount={product.sales_count || 0} />
+                        <WhyThisPrice salesCount={product.sales_count || 0} dict={dict} />
 
                         {/* Actions */}
                         <div className="flex gap-4 mb-8">

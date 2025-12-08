@@ -89,6 +89,23 @@
         "not_found": {
             "title": "Produit Introuvable",
             "back": "Retour aux Jeux Vidéo"
+        },
+        "why_price": {
+            "title": "Pourquoi ce prix ?",
+            "real_data": {
+                "title": "Données de Ventes Réelles",
+                "desc": "Notre algorithme suit {{count}} ventes vérifiées sur eBay et d'autres places de marché. Nous n'utilisons pas les prix demandés, seulement ce que les acheteurs paient réellement."
+            },
+            "outlier": {
+                "title": "Protection Anti-Aberrations",
+                "desc": "Nous excluons automatiquement les objets endommagés, les reproductions et les valeurs extrêmes pour garantir une moyenne représentative."
+            },
+            "updated": {
+                "title": "Mis à Jour Quotidiennement",
+                "desc": "Le marché rétro évolue vite. Notre base de données s'actualise chaque jour pour capturer les dernières tendances."
+            },
+            "confidence": "Score de Confiance",
+            "based_on": "Basé sur {{count}} transactions vérifiées"
         }
     },
     "list": {
