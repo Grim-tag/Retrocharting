@@ -120,8 +120,24 @@ class VintedClient:
                     "created_at_ts": "Just now"
                 })
 
-            if items:
-                return {"items": items, "debug": debug_info}
+            # Relevancy Filter
+            # Since scraping might pick up Promoted/Recommended items not relevant to query
+            filtered_items = []
+            query_words = [w.lower() for w in query.split() if len(w) > 2] # Ignore small words
+            
+            for item in items:
+                title_lower = item['title'].lower()
+                # Pass if strict match of at least one significant word, 
+                # OR if query has no significant words (weird edge case)
+                if not query_words or any(w in title_lower for w in query_words):
+                     filtered_items.append(item)
+            
+            if filtered_items:
+                return {"items": filtered_items, "debug": debug_info}
+            
+            # If we filtered everything, maybe return raw items but warn?
+            # Or just return empty. Let's return raw for now if filter is too aggressive? 
+            # No, user complained about irrelevant items. Better empty than noise.
             
             # Strategy 2: JSON Extraction (Backup)
             # Try to find script with data-js-react-on-rails-store="MainStore"
