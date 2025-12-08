@@ -17,3 +17,4 @@ class User(Base):
 
     # Relationships
     collection_items = relationship("CollectionItem", back_populates="user")
+    sniper_watches = relationship("SniperWatch", back_populates="user")

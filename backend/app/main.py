@@ -8,6 +8,7 @@ from app.models.translation import Translation
 from app.models.product import Product
 from app.models.listing import Listing
 from app.models.price_history import PriceHistory
+from app.models.sniper import SniperQuery, SniperWatch, SniperResult
 
 # Create tables on startup
 Base.metadata.create_all(bind=engine)
@@ -207,6 +208,7 @@ def debug_init_db():
     from app.models.listing import Listing
     from app.models.price_history import PriceHistory
     from app.models.collection_item import CollectionItem
+    from app.models.sniper import SniperQuery, SniperWatch, SniperResult
 
     try:
         # Check if tables exist
