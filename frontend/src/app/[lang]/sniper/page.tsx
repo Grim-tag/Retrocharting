@@ -30,12 +30,18 @@ export default function SniperPage({ params }: { params: { lang: string } }) {
     const fetchResults = async () => {
         try {
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/sniper/search/vinted?query=${encodeURIComponent(query)}`);
-            if (!res.ok) throw new Error("API Error");
             const data = await res.json();
-            setResults(data);
+
+            if (!data.success) {
+                throw new Error(data.error || "Unknown Sniper Error");
+            }
+
+            setResults(data.items);
             setLastUpdated(new Date().toLocaleTimeString());
-        } catch (e) {
+        } catch (e: any) {
             console.error(e);
+            alert(`Pépin technique : ${e.message}`);
+            setResults([]);
         }
     };
 
@@ -68,8 +74,8 @@ export default function SniperPage({ params }: { params: { lang: string } }) {
                             onClick={handleSearch}
                             disabled={isRunning || !query}
                             className={`px-8 py-3 rounded font-bold transition-all flex items-center gap-2 ${isRunning
-                                    ? 'bg-gray-600 cursor-not-allowed text-gray-400'
-                                    : 'bg-[#09b1ba] hover:bg-[#0799a0] text-white shadow-[0_0_15px_rgba(9,177,186,0.3)]'
+                                ? 'bg-gray-600 cursor-not-allowed text-gray-400'
+                                : 'bg-[#09b1ba] hover:bg-[#0799a0] text-white shadow-[0_0_15px_rgba(9,177,186,0.3)]'
                                 }`}
                         >
                             {isRunning ? (
