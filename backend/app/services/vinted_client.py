@@ -1,20 +1,24 @@
 
-import requests
 import time
 import random
 from typing import List, Dict, Any, Optional
+try:
+    from curl_cffi import requests
+except ImportError:
+    import requests # Fallback if not installed (but we will install it)
 
 class VintedClient:
     BASE_URL = "https://www.vinted.fr"
     API_URL = "https://www.vinted.fr/api/v2/catalog/items"
     
     def __init__(self):
+        # Use curl_cffi Session if available, else standard
         self.session = requests.Session()
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             "Accept": "application/json, text/plain, */*",
             "Accept-Language": "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7",
-            "X-Requested-With": "XMLHttpRequest" 
+            # "X-Requested-With": "XMLHttpRequest" # Sometimes triggers bot detection on stealth?
         }
         self.last_cookie_refresh = 0
         self.cookie_refresh_interval = 600 # 10 minutes
@@ -22,15 +26,15 @@ class VintedClient:
     def _refresh_cookies(self):
         """Fetches the homepage to refresh session cookies."""
         try:
-            # Standard browser headers for the page load
-            page_headers = self.headers.copy()
-            page_headers["Accept"] = "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
-            del page_headers["X-Requested-With"]
-
-            print(f"Refreshing Vinted cookies...")
-            resp = self.session.get(self.BASE_URL, headers=page_headers, timeout=10)
-            resp.raise_for_status()
+            print(f"Refreshing Vinted cookies with Stealth...")
+            # imporsonate chrome to bypass TLS fingerprinting
+            if hasattr(self.session, 'impersonate'):
+                 resp = self.session.get(self.BASE_URL, impersonate="chrome120", timeout=10)
+            else:
+                 # Fallback
+                 resp = self.session.get(self.BASE_URL, headers=self.headers, timeout=10)
             
+            resp.raise_for_status()
             self.last_cookie_refresh = time.time()
             return True
         except Exception as e:
@@ -60,13 +64,20 @@ class VintedClient:
             # Human jitter
             time.sleep(random.uniform(0.5, 1.5))
             
-            response = self.session.get(self.API_URL, headers=self.headers, params=params, timeout=10)
+            if hasattr(self.session, 'impersonate'):
+                response = self.session.get(self.API_URL, params=params, impersonate="chrome120", timeout=10)
+            else:
+                response = self.session.get(self.API_URL, headers=self.headers, params=params, timeout=10)
+                
             debug_info["http_code"] = response.status_code
             
             if response.status_code == 401:
                 print("Vinted 401 Unauthorized. Retrying cookie refresh...")
                 self._refresh_cookies()
-                response = self.session.get(self.API_URL, headers=self.headers, params=params, timeout=10)
+                if hasattr(self.session, 'impersonate'):
+                     response = self.session.get(self.API_URL, params=params, impersonate="chrome120", timeout=10)
+                else:
+                     response = self.session.get(self.API_URL, headers=self.headers, params=params, timeout=10)
                 debug_info["retry_http_code"] = response.status_code
 
             response.raise_for_status()
