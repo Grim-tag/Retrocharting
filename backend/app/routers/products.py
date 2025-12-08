@@ -5,6 +5,7 @@ from typing import List, Optional
 from app.db.session import get_db
 from app.models.product import Product as ProductModel
 from app.models.price_history import PriceHistory
+from app.models.sales_transaction import SalesTransaction
 from app.schemas.product import Product as ProductSchema
 from app.services.ebay_client import ebay_client
 
@@ -247,6 +248,10 @@ def read_product(product_id: int, db: Session = Depends(get_db)):
     product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
     if product is None:
         raise HTTPException(status_code=404, detail="Product not found")
+        
+    # Manually populate computed fields not in DB table but in Schema
+    product.sales_count = db.query(SalesTransaction).filter(SalesTransaction.product_id == product_id).count()
+    
     return product
 
 @router.get("/{product_id}/related", response_model=List[ProductSchema])

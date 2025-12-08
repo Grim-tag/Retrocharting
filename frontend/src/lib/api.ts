@@ -30,6 +30,7 @@ export interface Product {
     ean?: string;
     gtin?: string;
     release_date?: string; // ISO date string
+    sales_count?: number;
 }
 
 export interface PriceHistoryPoint {

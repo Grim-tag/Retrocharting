@@ -16,7 +16,9 @@ class ProductBase(BaseModel):
     publisher: Optional[str] = None
     developer: Optional[str] = None
     esrb_rating: Optional[str] = None
+    esrb_rating: Optional[str] = None
     players: Optional[str] = None
+    sales_count: Optional[int] = 0
 
 class ProductCreate(ProductBase):
     pass

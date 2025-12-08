@@ -4,6 +4,7 @@ import ListingsTable from "@/components/ListingsTable";
 import AddToCollectionButton from "@/components/AddToCollectionButton";
 import PriceHistoryChart from "@/components/PriceHistoryChart";
 import PriceCard from "@/components/PriceCard";
+import WhyThisPrice from "@/components/WhyThisPrice";
 import { Metadata } from "next";
 import { formatConsoleName, getGameUrl } from "@/lib/utils";
 import CrossPlatformLinks from "@/components/CrossPlatformLinks";
@@ -152,6 +153,9 @@ export default async function GamePage({ params }: { params: Promise<{ slug: str
                                 definition="Brand new, sealed in original factory packaging."
                             />
                         </div>
+
+                        {/* Why This Price - Trust Booster */}
+                        <WhyThisPrice salesCount={product.sales_count || 0} />
 
                         {/* Actions */}
                         <div className="flex gap-4 mb-8">
