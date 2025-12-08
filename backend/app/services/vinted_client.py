@@ -66,80 +66,70 @@ class VintedClient:
             
             items = []
             
-            # Strategy 1: Look for the JSON data embedded in the page (most reliable)
-            # Vinted often stores state in a script tag with data-js-react-on-rails-store="MainStore"
-            # or similar.
-            # Let's try to find product items in the grid first through DOM as it's more stable across versions often.
+            # Strategy 1: CSS Selectors (Updated for 2024 Layout)
+            # Vinted items usually have data-testid="grid-item"
+            grid_items = soup.select('[data-testid="grid-item"]')
             
-            # DOM Strategy:
-            # We look for links that look like item links "/items/..."
-            product_links = soup.select('a[href^="/items/"]')
+            if not grid_items:
+                # Fallback: aggressive search for any link that looks like an item
+                grid_items = soup.select('a[href^="/items/"]')
             
-            # Deduplicate by URL
-            seen_urls = set()
-            
-            for link in product_links:
+            for item_node in grid_items:
                 if len(items) >= limit:
                     break
+                
+                # If node is 'a', use it. If 'div', find 'a' inside.
+                link = item_node if item_node.name == 'a' else item_node.select_one('a')
+                if not link:
+                    continue
                     
                 url = link.get('href')
-                if not url or url in seen_urls:
-                    continue
+                if not url: continue
                 
-                # Check if it has a title (often in nested img alt or div)
-                # Structure varies. Let's try to extract what we can.
-                # Often the link contains the image and info.
-                
-                # Try to find parent wrapper for better context if needed, but link usually wraps the tile.
-                # Extract Title
-                title = "Unknown Item" 
-                user_box = link.select_one('[class*="UserBox_container"]')
-                if user_box:
-                     # This is a user profile link, skip
-                     continue
+                full_url = url if url.startswith('http') else f"https://www.vinted.fr{url}"
+                if full_url in seen_urls: continue
 
-                # Find Image
-                img = link.select_one('img')
+                # Title & Image
+                img = item_node.select_one('img')
                 image_url = img.get('src') if img else None
                 title = img.get('alt') if img else "Vinted Item"
                 
-                # Find Price
-                # Price is usually in a div with some class, often with currency symbol
-                # For simplicity in this raw scrape, we might miss price if class obfuscated.
-                # Let's try finding text starting with € or ending with €
-                price_texts = [s for s in link.stripped_strings if '€' in s]
-                price_raw = price_texts[0] if price_texts else "0.00 €"
+                # Price - look for specific currency symbols or patterns
+                # Vinted prices often in a <p> or <span> with no clear class
+                price_amount = 0.0
+                price_text = ""
+                for s in item_node.stripped_strings:
+                    if '€' in s:
+                        price_text = s
+                        break
                 
-                # Clean price
                 try:
-                    price_amount = float(price_raw.replace('€', '').replace(',', '.').strip())
+                    price_amount = float(price_text.replace('€', '').replace(',', '.').replace(' ', '').strip())
                 except:
-                    price_amount = 0.0
-                
-                full_url = url if url.startswith('http') else f"https://www.vinted.fr{url}"
-                
-                seen_urls.add(url)
+                    pass
+
+                seen_urls.add(full_url)
                 items.append({
-                    "id": random.randint(100000, 999999), # Fake ID as we don't have it easily
+                    "id": random.randint(100000, 999999), 
                     "title": title,
                     "price": {"amount": price_amount, "currency_code": "EUR"},
                     "photo": {"url": image_url},
                     "url": full_url,
-                    "created_at_ts": "Just now" # Scraped live
+                    "created_at_ts": "Just now"
                 })
-            
-            # Verification: If DOM worked, return.
+
             if items:
                 return {"items": items, "debug": debug_info}
-                
-            # Strategy 2: Fallback to JSON extraction if DOM failed (Vinted changes classes often)
-            # This is harder to implement "blindly" without seeing the source code.
-            # Let's trust DOM for now but add a specific error if empty.
+            
+            # Strategy 2: JSON Extraction (Backup)
+            # Try to find script with data-js-react-on-rails-store="MainStore"
+            # This is complex to parse safely without exact structure knowledge, 
+            # but usually it's a big JSON blob.
             
             return {
                 "items": [], 
                 "debug": {
-                    "error": "No items found in HTML. Selectors might be outdated.",
+                    "error": f"No items found. HTML Preview: {html_content[:200]}...",
                     "html_preview": html_content[:500]
                 }
             }
