@@ -30,9 +30,9 @@ class VintedClient:
         params = {
             "apikey": self.ZENROWS_API_KEY,
             "url": target_url,
-            "js_render": "false", 
+            "js_render": "true", # REQUIRED for Vinted
             "premium_proxy": "true", 
-            "antibot": "true", # Enable Datadome/Cloudflare bypass
+            "antibot": "true",
         }
         
         try:
