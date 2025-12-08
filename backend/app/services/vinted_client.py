@@ -1,93 +1,68 @@
 
-import time
+import requests
 import random
-from typing import List, Dict, Any, Optional
-try:
-    from curl_cffi import requests
-except ImportError:
-    import requests # Fallback if not installed (but we will install it)
+import time
+import urllib.parse
 
 class VintedClient:
-    BASE_URL = "https://www.vinted.fr"
-    API_URL = "https://www.vinted.fr/api/v2/catalog/items"
-    
-    def __init__(self):
-        # Use curl_cffi Session if available, else standard
-        self.session = requests.Session()
-        self.headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Accept": "application/json, text/plain, */*",
-            "Accept-Language": "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7",
-            # "X-Requested-With": "XMLHttpRequest" # Sometimes triggers bot detection on stealth?
-        }
-        self.last_cookie_refresh = 0
-        self.cookie_refresh_interval = 600 # 10 minutes
-
-    def _refresh_cookies(self):
-        """Fetches the homepage to refresh session cookies."""
-        try:
-            print(f"Refreshing Vinted cookies with Stealth...")
-            # imporsonate chrome to bypass TLS fingerprinting
-            if hasattr(self.session, 'impersonate'):
-                 resp = self.session.get(self.BASE_URL, impersonate="chrome120", timeout=10)
-            else:
-                 # Fallback
-                 resp = self.session.get(self.BASE_URL, headers=self.headers, timeout=10)
-            
-            resp.raise_for_status()
-            self.last_cookie_refresh = time.time()
-            return True
-        except Exception as e:
-            print(f"Failed to refresh Vinted cookies: {e}")
-            return False
+    ZENROWS_API_KEY = "d4e9a47779876433a451ed50a536670d97e56182"
+    ZENROWS_URL = "https://api.zenrows.com/v1/"
+    VINTED_API_URL = "https://www.vinted.fr/api/v2/catalog/items"
 
     def search(self, query: str, limit: int = 20):
         """
-        Searches for items on Vinted.
-        Returns: Dict with 'items' (list) and 'debug' (dict with status/error).
+        Searches for items on Vinted using ZenRows to bypass 403 blocks.
         """
-        debug_info = {"status": "unknown"}
-        
-        # Ensure cookies are fresh
-        if time.time() - self.last_cookie_refresh > self.cookie_refresh_interval or not self.session.cookies:
-            if not self._refresh_cookies():
-                print("Aborting search due to cookie failure.")
-                return {"items": [], "debug": {"error": "Cookie fetch failed", "status": "cookie_error"}}
+        debug_info = {"status": "unknown", "provider": "ZenRows"}
 
-        params = {
+        # Construct target Vinted URL
+        # Vinted params
+        vinted_params = {
             "search_text": query,
             "order": "newest_first",
             "per_page": limit,
         }
+        # Encode params manually to append to the URL string passed to ZenRows
+        encoded_params = urllib.parse.urlencode(vinted_params)
+        target_url = f"{self.VINTED_API_URL}?{encoded_params}"
+
+        # ZenRows Params
+        params = {
+            "apikey": self.ZENROWS_API_KEY,
+            "url": target_url,
+            "js_render": "false", # API usually returns JSON, no need for JS render overhead if not HTML
+            "premium_proxy": "true", # Often needed for heavy targets like Vinted
+        }
         
         try:
-            # Human jitter
-            time.sleep(random.uniform(0.5, 1.5))
+            # No cookies needed, ZenRows handles the rotation/session
+            print(f"Calling ZenRows for: {target_url}")
+            response = requests.get(self.ZENROWS_URL, params=params, timeout=30)
             
-            if hasattr(self.session, 'impersonate'):
-                response = self.session.get(self.API_URL, params=params, impersonate="chrome120", timeout=10)
-            else:
-                response = self.session.get(self.API_URL, headers=self.headers, params=params, timeout=10)
-                
             debug_info["http_code"] = response.status_code
             
-            if response.status_code == 401:
-                print("Vinted 401 Unauthorized. Retrying cookie refresh...")
-                self._refresh_cookies()
-                if hasattr(self.session, 'impersonate'):
-                     response = self.session.get(self.API_URL, params=params, impersonate="chrome120", timeout=10)
-                else:
-                     response = self.session.get(self.API_URL, headers=self.headers, params=params, timeout=10)
-                debug_info["retry_http_code"] = response.status_code
+            if response.status_code != 200:
+                print(f"ZenRows Error: {response.text}")
+                return {
+                    "items": [], 
+                    "debug": {
+                        "error": f"ZenRows returned {response.status_code}", 
+                        "body": response.text[:200],
+                        "http_code": response.status_code
+                    }
+                }
 
-            response.raise_for_status()
             data = response.json()
+            # ZenRows returns the raw content of the target URL. 
+            # If target returns JSON, ZenRows body might be JSON.
+            # However, sometimes ZenRows wraps it? No, usually raw content.
+            
             return {"items": data.get("items", []), "debug": debug_info}
             
         except Exception as e:
-            print(f"Vinted Search Error: {e}")
+            print(f"Vinted/ZenRows Fatal Error: {e}")
             import traceback
             traceback.print_exc()
-            return {"items": [], "debug": {"error": str(e), "http_code": debug_info.get("http_code"), "trace": traceback.format_exc()}}
+            return {"items": [], "debug": {"error": str(e), "trace": traceback.format_exc()}}
 
 vinted_client = VintedClient()
