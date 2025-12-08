@@ -38,7 +38,7 @@ class VintedClient:
         try:
             # No cookies needed, ZenRows handles the rotation/session
             print(f"Calling ZenRows for: {target_url}")
-            response = requests.get(self.ZENROWS_URL, params=params, timeout=30)
+            response = requests.get(self.ZENROWS_URL, params=params, timeout=60)
             
             debug_info["http_code"] = response.status_code
             
