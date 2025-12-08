@@ -59,7 +59,7 @@ services:
     rootDir: .
     schedule: "*/15 * * * *" # Every 15 minutes
     buildCommand: pip install -r backend/requirements.txt
-    startCommand: python data_scripts/scrape_data.py
+    startCommand: python data_scripts/fast_scrape.py
     envVars:
       - key: DATABASE_URL
         sync: false
