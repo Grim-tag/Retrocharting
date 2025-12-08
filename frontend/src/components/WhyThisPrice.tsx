@@ -24,7 +24,7 @@ export default function WhyThisPrice({ salesCount = 0, dict }: WhyThisPriceProps
         based_on: "Based on {{count}} verified transactions"
     };
 
-    const count = salesCount > 0 ? salesCount : "thousands";
+    const count = salesCount > 0 ? salesCount : (t.thousands || "thousands of");
 
     // Simple helper for replacement
     const replaceCount = (text: string) => text.replace("{{count}}", count.toString());

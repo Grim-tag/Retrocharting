@@ -105,7 +105,8 @@
                 "desc": "Le marché rétro évolue vite. Notre base de données s'actualise chaque jour pour capturer les dernières tendances."
             },
             "confidence": "Score de Confiance",
-            "based_on": "Basé sur {{count}} transactions vérifiées"
+            "based_on": "Basé sur {{count}} transactions vérifiées",
+            "thousands": "des milliers de"
         }
     },
     "list": {

@@ -105,7 +105,8 @@
                 "desc": "The retro market moves fast. Our database refreshes every day to capture the latest trends and shifts in collector demand."
             },
             "confidence": "Confidence Score",
-            "based_on": "Based on {{count}} verified transactions"
+            "based_on": "Based on {{count}} verified transactions",
+            "thousands": "thousands of"
         }
     },
     "list": {

@@ -250,7 +250,9 @@ def read_product(product_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Product not found")
         
     # Manually populate computed fields not in DB table but in Schema
-    product.sales_count = db.query(SalesTransaction).filter(SalesTransaction.product_id == product_id).count()
+    # Manually populate computed fields not in DB table but in Schema
+    # Use PriceHistory count as a proxy for "Market Data Points" since SalesTransaction table is not yet live.
+    product.sales_count = db.query(PriceHistory).filter(PriceHistory.product_id == product_id).count()
     
     return product
 
