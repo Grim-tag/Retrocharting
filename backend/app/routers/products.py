@@ -41,6 +41,62 @@ def read_products(
     products = query.offset(skip).limit(limit).all()
     return products
 
+@router.get("/search/grouped", response_model=dict)
+def search_products_grouped(
+    query: str,
+    limit: int = 50,
+    db: Session = Depends(get_db)
+):
+    """
+    Returns search results grouped by Console Name/Region.
+    Prioritizes Games over Accessories.
+    """
+    if not query or len(query) < 2:
+        return {}
+        
+    # 1. Fetch raw matches
+    sql_query = db.query(ProductModel).filter(ProductModel.product_name.ilike(f"%{query}%"))
+    
+    # 2. Sort Logic (Memory-based for complex grouping vs SQL)
+    # Ideally SQL, but for grouping we need to fetch enough then bucket.
+    raw_results = sql_query.limit(limit * 2).all() # Fetch more to sort
+    
+    grouped = {}
+    
+    # Helpers
+    def get_region(p):
+        name = p.console_name
+        if "PAL" in name or "PAL" in p.product_name: return "EU (PAL)"
+        if "Japan" in name or "JP" in name or "Famicom" in name or "Saturn" in name and "JP" in p.product_name: return "JP"
+        return "US (NTSC)"
+
+    # Sort Priority: 
+    # 1. Exact Name Match
+    # 2. Games vs Accessories (Amiibo/Controller down)
+    # 3. Region Preference (US/EU > JP) ?? - Let's just group first.
+    
+    for p in raw_results:
+        # Filter Amiibo/Accessories to bottom unless query explicitly asks?
+        # For now, separate 'Games' vs 'Others'
+        
+        region = get_region(p)
+        clean_console = p.console_name.replace("PAL ", "").replace("JP ", "")
+        
+        # Group Key: "Nintendo 64"
+        key = clean_console
+        
+        if key not in grouped:
+            grouped[key] = []
+            
+        p_dict = ProductSchema.from_orm(p).dict()
+        p_dict['region'] = region # augment schema
+        
+        grouped[key].append(p_dict)
+        
+    # Sort within groups?
+    # Sort keys?
+    return grouped
+
 from app.models.listing import Listing
 from datetime import datetime, timedelta
 

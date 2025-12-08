@@ -89,6 +89,22 @@ export async function searchProducts(query: string): Promise<Product[]> {
     }
 }
 
+export interface GroupedProducts {
+    [console: string]: (Product & { region?: string })[];
+}
+
+export async function searchProductsGrouped(query: string): Promise<GroupedProducts> {
+    try {
+        const response = await axios.get(`${API_URL}/products/search/grouped`, {
+            params: { query }
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Error searching products grouped:", error);
+        return {};
+    }
+}
+
 export async function getListings(id: number): Promise<{ data: any[], isStale: boolean }> {
     try {
         const response = await axios.get(`${API_URL}/products/${id}/listings`);
