@@ -8,6 +8,8 @@ from app.models.price_history import PriceHistory
 from app.models.sales_transaction import SalesTransaction
 from app.schemas.product import Product as ProductSchema
 from app.services.ebay_client import ebay_client
+from app.models.user import User
+from app.routers.auth import get_current_admin_user
 
 router = APIRouter()
 
@@ -351,6 +353,4 @@ def get_incomplete_products(
         
     return query.offset(skip).limit(limit).all()
 
-# Import User model for type hint forward ref resolution if needed
-from app.models.user import User
-from app.routers.auth import get_current_admin_user
+# Imports moved to top
