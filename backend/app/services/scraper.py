@@ -159,8 +159,8 @@ def scrape_products(limit: int = 50):
                 db.commit()
                 print(f"  Committed batch of 5.")
                 
-            # Random delay
-            time.sleep(random.uniform(1.0, 3.0))
+            # Random delay (Optimized for speed while safe-ish)
+            time.sleep(random.uniform(0.5, 1.5))
             
         # Final commit
         db.commit()
