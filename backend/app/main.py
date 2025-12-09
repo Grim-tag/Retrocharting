@@ -101,9 +101,6 @@ def startup_event():
     # --- AUTO-MIGRATION: Check for new columns and add them if missing ---
     try:
         from app.db.session import engine
-    # --- AUTO-MIGRATION: Check for new columns and add them if missing ---
-    try:
-        from app.db.session import engine
         from sqlalchemy import inspect, text
         
         print("Checking DB Schema...")
