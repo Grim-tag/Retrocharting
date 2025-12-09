@@ -103,11 +103,10 @@ def search_vinted(
             # Match Product in DB to get market price
             # Heuristic: Try to find a product where the name is extremely similar
             # For efficiency, we only search if we have a title.
-            # We can also limit search to the 'query' if it looks like a specific game name, 
-            # but rely on title matching is safer per item.
             
             market_price = None
             potential_product = None
+            is_deal = False # RESET STATE for each item!
             
             # Simple normalization for matching
             clean_title = item['title'].lower().replace("video game", "").strip()

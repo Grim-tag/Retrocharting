@@ -107,75 +107,99 @@ class VintedClient:
                 # 2. Look for "marque:" in img alt text.
                 # 3. Scan Title and other texts for Known Console Keywords.
                 
-                platform_title = None # Default to None if not found
+                # Knowledge Base
+                known_platforms = {
+                    "Nintendo Switch": ["switch", "nintendo switch"],
+                    "PlayStation 5": ["ps5", "playstation 5"],
+                    "PlayStation 4": ["ps4", "playstation 4"],
+                    "PlayStation 3": ["ps3", "playstation 3"],
+                    "PlayStation 2": ["ps2", "playstation 2"],
+                    "PlayStation 1": ["ps1", "psx", "playstation 1", "playstation one", "psone"],
+                    "PSP": ["psp", "playstation portable"],
+                    "PS Vita": ["vita", "ps vita", "playstation vita"],
+                    "Nintendo Wii U": ["wii u", "wiiu"],
+                    "Nintendo Wii": ["wii", "nintendo wii"],
+                    "Nintendo 3DS": ["3ds", "nintendo 3ds"],
+                    "Nintendo DS": ["ds", "nintendo ds", "nds"],
+                    "GameCube": ["gamecube", "ngc", "nintendo gamecube"],
+                    "Nintendo 64": ["n64", "nintendo 64"],
+                    "SNES": ["snes", "super nintendo", "super nes"],
+                    "NES": ["nes", "nintendo entertainment system"],
+                    "Game Boy": ["game boy", "gameboy", "gba", "gbc", "gameboy advance", "gameboy color"],
+                    "Xbox Series": ["xbox series", "series x", "series s", "xbox series x", "xbox series s"],
+                    "Xbox One": ["xbox one", "xboxone"],
+                    "Xbox 360": ["xbox 360", "xbox360"],
+                    "Xbox": ["xbox", "original xbox"],
+                    "Sega Megadrive": ["megadrive", "mega drive", "genesis"],
+                    "Sega Dreamcast": ["dreamcast"],
+                    "Sega Saturn": ["saturn"],
+                    "Neo Geo": ["neo geo", "neogeo"],
+                    "PlayStation": ["playstation"] # Generic
+                }
                 
-                # 1. Try specific selector (Rare in Grid, but possible)
+                raw_platform = None
+                final_platform = None
+                
+                # 1. Try specific selector
                 platform_node = item_node.select_one('[data-testid$="video_game_platform-link"]')
                 if platform_node:
-                    platform_title = platform_node.get_text(strip=True)
+                    raw_platform = platform_node.get_text(strip=True)
                 
-                # 2. Heuristic: Parse 'marque:' from alt text or text nodes
-                # Example alt: "... marque: PlayStation, état: Bon état ..."
-                if not platform_title:
+                # 2. Heuristic: Parse 'marque:'
+                if not raw_platform:
                     alt_text = img.get('alt', '') if img else ""
                     if "marque:" in alt_text.lower():
                         try:
-                            # Extract text after "marque:" up to next comma or end
                             start = alt_text.lower().find("marque:") + 7
                             rest = alt_text[start:]
                             end = rest.find(",")
                             if end == -1: end = len(rest)
                             candidate = rest[:end].strip()
                             if candidate:
-                                platform_title = candidate
+                                raw_platform = candidate
                         except:
                             pass
 
-                # 3. Keyword Scanning in Title (Strong Fallback for Games)
-                # If we haven't found a platform yet, or if it's generic "Vinted"
-                if not platform_title or platform_title == "Vinted":
-                    known_platforms = {
-                        "Nintendo Switch": ["switch"],
-                        "PlayStation 5": ["ps5", "playstation 5"],
-                        "PlayStation 4": ["ps4", "playstation 4"],
-                        "PlayStation 3": ["ps3", "playstation 3"],
-                        "PlayStation 2": ["ps2", "playstation 2"],
-                        "PlayStation 1": ["ps1", "psx", "playstation 1", "playstation one"],
-                        "PSP": ["psp", "playstation portable"],
-                        "PS Vita": ["vita", "ps vita"],
-                        "Nintendo Wii U": ["wii u"],
-                        "Nintendo Wii": ["wii"],
-                        "Nintendo 3DS": ["3ds"],
-                        "Nintendo DS": ["ds", "nintendo ds"],
-                        "GameCube": ["gamecube", "ngc"],
-                        "Nintendo 64": ["n64", "nintendo 64"],
-                        "SNES": ["snes", "super nintendo"],
-                        "NES": ["nes", "nintendo entertainment system"],
-                        "Game Boy": ["game boy", "gameboy", "gba", "gbc"],
-                        "Xbox Series": ["xbox series", "series x", "series s"],
-                        "Xbox One": ["xbox one"],
-                        "Xbox 360": ["xbox 360"],
-                        "Xbox": ["xbox"],
-                        "Sega Megadrive": ["megadrive", "mega drive", "genesis"],
-                        "Sega Dreamcast": ["dreamcast"],
-                        "Sega Saturn": ["saturn"],
-                        "Neo Geo": ["neo geo", "neogeo"],
-                        "PlayStation": ["playstation"]
-                    }
+                # Helper to validate against known list
+                def match_known_platform(text):
+                    if not text: return None
+                    text_lower = text.lower()
+                    for p_name, keywords in known_platforms.items():
+                        if p_name.lower() == text_lower: return p_name
+                        if any(k == text_lower for k in keywords): return p_name
+                    return None
+
+                # Validate Extracted Platform
+                if raw_platform:
+                    final_platform = match_known_platform(raw_platform)
+                    # Note: If Vinted says "Nintendo", we might want to keep digging for "Switch"?
+                    # But if Vinted says "PlayStation 4", that's good.
                     
-                    # Search valid text sources: Title, Alt text, and visible text
+                # 3. Keyword Scanning (Fallback OR Refinement)
+                # If we have no platform, OR if the platform is too generic (e.g. "Nintendo", "PlayStation")
+                # we search the title for a better match.
+                
+                is_generic = final_platform in ["PlayStation", "Nintendo", "Xbox", "Sega"]
+                
+                if not final_platform or is_generic:
                     search_source = title + " " + " ".join(item_node.stripped_strings)
                     search_source = search_source.lower()
                     
                     found_platform = None 
                     
+                    # Prioritize longer keywords? No, dict order.
                     for p_name, keywords in known_platforms.items():
+                        # Skip generic check in this pass if we already have generic
+                        if p_name in ["PlayStation", "Nintendo", "Xbox", "Sega"]: continue
+                        
                         if any(k in search_source for k in keywords):
                             found_platform = p_name
                             break # Found a match
                     
                     if found_platform:
-                        platform_title = found_platform
+                        final_platform = found_platform
+                
+                platform_title = final_platform
 
                 
                 # Fee Calculation (Standard Vinted: 0.70€ + 5%)
