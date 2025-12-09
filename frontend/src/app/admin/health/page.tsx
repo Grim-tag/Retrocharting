@@ -155,8 +155,36 @@ export default function AdminHealthPage() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-[#2a3142] text-sm">
-                            </div>
+                                {items.map(item => (
+                                    <tr key={item.id} className="hover:bg-[#252b3b]">
+                                        <td className="p-4 text-gray-500">{item.id}</td>
+                                        <td className="p-4 font-bold text-white">{item.product_name}</td>
+                                        <td className="p-4 text-gray-300">{item.console_name}</td>
+                                        <td className="p-4 text-center">
+                                            <div className="flex justify-center gap-3">
+                                                <Link
+                                                    href={`/admin/games/${item.id}/edit`}
+                                                    className="text-gray-400 hover:text-[#ff6600] transition-colors"
+                                                    title="Edit Details"
+                                                >
+                                                    ✎
+                                                </Link>
+                                                <Link
+                                                    href={`/admin/games/${item.id}/listings`}
+                                                    className="text-blue-400 hover:text-white"
+                                                    title="Manage Listings"
+                                                >
+                                                    Listings
+                                                </Link>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
+                </div>
             )}
-                        </div>
-                    );
+        </div>
+    );
 }
