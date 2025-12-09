@@ -1,5 +1,6 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import ProductSearch from "@/components/ProductSearch";
 import React from "react";
 import { getDictionary } from "@/lib/get-dictionary";
 import { Poppins } from "next/font/google";
@@ -55,6 +56,8 @@ export default async function PublicLayout({
             <body className={`${poppins.variable} antialiased bg-[#1f2533] text-white font-sans flex flex-col min-h-screen`}>
                 <AuthProvider>
                     <Header dict={dict} lang={lang} />
+
+                    <ProductSearch placeholder={dict.header.search_placeholder} lang={lang} />
 
                     <div className="flex-grow">
                         {children}

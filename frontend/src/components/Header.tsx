@@ -2,13 +2,8 @@
 
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { useState, useEffect, useRef } from 'react';
-import {
-    MagnifyingGlassIcon
-} from '@heroicons/react/24/outline';
-import { searchProductsGrouped, GroupedProducts, Product } from '@/lib/api';
+import { useEffect, useState } from 'react';
 import { routeMap, reverseRouteMap } from '@/lib/route-config';
-import { getGameUrl } from '@/lib/utils';
 
 
 
@@ -19,8 +14,6 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
     const router = useRouter();
     const pathname = usePathname();
     const { user, login, logout } = useAuth();
-    const [query, setQuery] = useState('');
-    const [suggestions, setSuggestions] = useState<GroupedProducts>({});
 
     // Force Onboarding if username is missing
     useEffect(() => {
@@ -55,7 +48,6 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
     };
 
     const [showSuggestions, setShowSuggestions] = useState(false);
-    const searchRef = useRef<HTMLDivElement>(null);
 
     // Helper for localized path
     const getSlug = (key: string) => routeMap[key]?.[lang] || key;
@@ -79,46 +71,7 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
         { id: 'collectibles', label: dict.header.nav.collectibles, href: getPath('collectibles') },
     ];
 
-    useEffect(() => {
-        const delayDebounceFn = setTimeout(async () => {
-            if (query.length > 2) {
-                const results = await searchProductsGrouped(query);
-                setSuggestions(results);
-                setShowSuggestions(true);
-            } else {
-                setSuggestions({});
-                setShowSuggestions(false);
-            }
-        }, 300);
 
-        return () => clearTimeout(delayDebounceFn);
-    }, [query]);
-
-    // Close suggestions when clicking outside
-    useEffect(() => {
-        function handleClickOutside(event: MouseEvent) {
-            if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
-                setShowSuggestions(false);
-            }
-        }
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
-        };
-    }, [searchRef]);
-
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' && query) {
-            setShowSuggestions(false);
-        }
-    };
-
-    const handleSuggestionClick = (product: Product) => {
-        setQuery('');
-        setShowSuggestions(false);
-        const url = getGameUrl(product, lang);
-        router.push(url);
-    };
 
     return (
         <header className="bg-[#1f2533] border-b border-[#2a3142] sticky top-0 z-50 shadow-lg font-sans">
@@ -147,60 +100,9 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
                         ))}
                     </nav>
 
-                    {/* Center: Search Bar */}
-                    <div className="hidden md:block flex-1 max-w-xl mx-4 relative" ref={searchRef}>
-                        <input
-                            type="text"
-                            value={query}
-                            onChange={(e) => setQuery(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                            onFocus={() => query.length > 2 && setShowSuggestions(true)}
-                            placeholder={dict.header.search_placeholder}
-                            className="w-full bg-[#0f121e] text-white border border-[#2a3142] rounded px-4 py-2 pl-10 focus:outline-none focus:border-[#ff6600] transition-colors"
-                        />
-                        <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 absolute left-3 top-2.5" />
-
-                        {/* Suggestions Dropdown */}
-                        {showSuggestions && Object.keys(suggestions).length > 0 && (
-                            <div className="absolute top-full left-0 w-full bg-[#1f2533] border border-[#2a3142] rounded-b shadow-xl mt-1 z-50 max-h-96 overflow-y-auto">
-                                {Object.entries(suggestions).map(([console, products]) => (
-                                    <div key={console} className="border-b border-[#2a3142] last:border-0">
-                                        <div className="bg-[#151922] px-3 py-1 text-xs font-bold text-[#ff6600] uppercase tracking-wider sticky top-0">
-                                            {console}
-                                        </div>
-                                        {products.map((product) => (
-                                            <div
-                                                key={product.id}
-                                                onClick={() => handleSuggestionClick(product)}
-                                                className="p-3 hover:bg-[#2a3142] cursor-pointer flex items-center gap-3"
-                                            >
-                                                <div className="relative">
-                                                    {product.image_url ? (
-                                                        <img src={product.image_url} alt={product.product_name} className="w-10 h-10 object-cover rounded" />
-                                                    ) : (
-                                                        <div className="w-10 h-10 bg-[#0f121e] rounded flex items-center justify-center text-xs text-gray-500">No Img</div>
-                                                    )}
-                                                    {product.region && (
-                                                        <span className={`absolute -bottom-1 -right-1 text-[9px] px-1 rounded font-bold ${product.region.includes('EU') ? 'bg-blue-600 text-white' :
-                                                            product.region.includes('JP') ? 'bg-red-600 text-white' : 'bg-green-600 text-white'
-                                                            }`}>
-                                                            {product.region.includes('EU') ? 'EU' : product.region.includes('JP') ? 'JP' : 'US'}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <div>
-                                                    <div className="text-white font-medium text-sm">{product.product_name}</div>
-                                                    <div className="text-gray-400 text-xs flex gap-2">
-                                                        <span>{product.console_name}</span>
-                                                        {product.genre && <span className="text-gray-500">• {product.genre}</span>}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                ))}
-                            </div>
-                        )}
+                    {/* Center: Search Bar Removed (Relocated to Layout) */}
+                    <div className="hidden md:block flex-1 max-w-xl mx-4 relative">
+                        {/* Placeholder or Empty Spacer */}
                     </div>
 
                     {/* Right: Actions */}
