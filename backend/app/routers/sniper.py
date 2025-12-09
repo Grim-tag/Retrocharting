@@ -211,6 +211,7 @@ def search_vinted(
                 "image_url": item.get('photo', {}).get('url'),
                 "is_cached": False,
                 "is_potential_deal": is_deal,
+                "platform": item.get('brand', 'Vinted'), # Pass scraped brand as platform
                 # Pass back estimated details for UI
                 "total_estimate": {"amount": price_amt + fee + ship, "currency_code": "EUR"}
             })

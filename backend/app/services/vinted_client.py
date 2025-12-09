@@ -144,7 +144,8 @@ class VintedClient:
                     "url": full_url,
                     "platform": "Vinted", # The source platform
                     "brand": "N/A", # TODO: Better scraping
-                    "created_at_ts": "Just now"
+                    "created_at_ts": "Just now",
+                    "_all_texts": texts # DEBUG
                 })
 
             # Relevancy Filter
