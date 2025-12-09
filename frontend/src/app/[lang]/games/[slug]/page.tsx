@@ -106,7 +106,7 @@ export default async function GamePage({ params }: { params: Promise<{ slug: str
                     <div className="md:col-span-8">
                         <div className="flex items-start justify-between gap-4 mb-2">
                             <h1 className="text-4xl font-bold text-white leading-tight">
-                                {product.product_name}
+                                {product.product_name} {shortConsoleName} Prices
                             </h1>
                             {/* Region Flag Badge */}
                             {(product.console_name.includes("PAL") || product.product_name.includes("PAL")) && (
