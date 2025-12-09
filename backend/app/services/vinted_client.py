@@ -153,6 +153,66 @@ class VintedClient:
                         "NES": ["nes", "nintendo entertainment system"],
                         "Game Boy": ["game boy", "gameboy", "gba", "gbc"],
                         "Xbox Series": ["xbox series", "series x", "series s"],
+                        "Xbox One": ["xbox one"],
+                        "Xbox 360": ["xbox 360"],
+                        "Xbox": ["xbox"],
+                        "Sega Megadrive": ["megadrive", "mega drive", "genesis"],
+                        "Sega Dreamcast": ["dreamcast"],
+                        "Sega Saturn": ["saturn"],
+                        "Neo Geo": ["neo geo", "neogeo"],
+                        "PlayStation": ["playstation"]
+                    }
+                    
+                    # Search valid text sources: Title, Alt text, and visible text
+                    search_source = title + " " + " ".join(item_node.stripped_strings)
+                    search_source = search_source.lower()
+                    
+                    found_platform = None 
+                    
+                    for p_name, keywords in known_platforms.items():
+                        if any(k in search_source for k in keywords):
+                            found_platform = p_name
+                            break # Found a match
+                    
+                    if found_platform:
+                        platform_title = found_platform
+
+                
+                # Fee Calculation (Standard Vinted: 0.70€ + 5%)
+                protection_fee = 0.70 + (price_amount * 0.05)
+                
+                # Shipping: specific scraping is hard on grid, usually it's distinct.
+                # We will set a default or try to parse if we see "+ X.XX €"
+                shipping_amount = 0.0 # Unknown/To be confirmed
+                
+                seen_urls.add(full_url)
+                
+                # Debug texts
+                texts = list(item_node.stripped_strings)
+
+                items.append({
+                    "id": random.randint(100000, 999999), 
+                    "title": title,
+                    "price": {"amount": price_amount, "currency_code": "EUR"},
+                    "fee": {"amount": round(protection_fee, 2), "currency_code": "EUR"},
+                    "shipping": {"amount": shipping_amount, "currency_code": "EUR"}, # Placeholder for now
+                    "total_estimate": {"amount": round(price_amount + protection_fee + (2.99 if shipping_amount == 0 else shipping_amount), 2), "currency_code": "EUR"}, # 2.99 default shipping
+                    "photo": {"url": image_url},
+                    "url": full_url,
+                    "platform": platform_title, # Extracted brand/platform
+                    "brand": platform_title, # Sync brand with platform
+                    "created_at_ts": "Just now",
+                    "is_potential_deal": False # Will be set by sniper service
+                })
+
+            # Relevancy Filter
+            # Since scraping might pick up Promoted/Recommended items not relevant to query
+            filtered_items = []
+            query_words = [w.lower() for w in query.split() if len(w) > 2] # Ignore small words
+            
+            for item in items:
+                title_lower = item['title'].lower()
+                # Pass if strict match of at least one significant word, 
                 # OR if query has no significant words (weird edge case)
                 if not query_words or any(w in title_lower for w in query_words):
                      filtered_items.append(item)
