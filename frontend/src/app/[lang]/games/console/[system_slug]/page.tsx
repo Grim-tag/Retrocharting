@@ -94,57 +94,45 @@ export default async function ConsolePage({
                         {systemName} {dict.home.categories.items.video_games.title}
                         {genre && <span className="text-gray-500 ml-2 text-xl font-normal">/ {genre}</span>}
                     </h1>
-                    <div className="text-gray-400 text-sm">
-                        Showing {products.length} games
-                    </div>
-                </div>
-
-                <FilterChips />
-
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
-                    {products.map((product) => (
-                        <Link
-                            key={product.id}
-                            href={getGameUrl(product, lang)}
-                            className="bg-[#1f2533] border border-[#2a3142] rounded overflow-hidden hover:border-[#ff6600] transition-all group"
+                    className="bg-[#1f2533] border border-[#2a3142] rounded overflow-hidden hover:border-[#ff6600] transition-all group"
                         >
-                            <div className="aspect-[3/4] p-4 flex items-center justify-center bg-[#151922]">
-                                {product.image_url ? (
-                                    <img src={product.image_url} alt={product.product_name} className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform" />
-                                ) : (
-                                    <div className="text-gray-600 text-xs">No Image</div>
-                                )}
-                            </div>
-                            <div className="p-4">
-                                <h3 className="font-bold text-white text-sm line-clamp-2 mb-1 group-hover:text-[#ff6600] transition-colors">
-                                    {product.product_name}
-                                </h3>
-                                {product.genre && (
-                                    <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">
-                                        {product.genre}
-                                    </div>
-                                )}
-                                <div className="flex justify-between items-end mt-auto">
-                                    <div className="text-xs text-gray-400">Loose</div>
-                                    <div className="font-bold text-[#ff6600]">
-                                        {product.loose_price ? `$${product.loose_price.toFixed(2)}` : '-'}
-                                    </div>
-                                </div>
-                            </div>
-                        </Link>
-                    ))}
-                </div>
-
-                {products.length === 0 && (
-                    <div className="text-center text-gray-400 py-12 bg-[#1f2533] rounded border border-[#2a3142]">
-                        <p className="text-xl mb-2">No games found for this filter.</p>
-                        <Link href={`/${lang}/${gamesSlug}/console/${system_slug}`} className="text-[#ff6600] hover:underline">
-                            Clear Filters
-                        </Link>
+                    <div className="aspect-[3/4] p-4 flex items-center justify-center bg-[#151922]">
+                        {product.image_url ? (
+                            <img src={product.image_url} alt={product.product_name} className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform" />
+                        ) : (
+                            <div className="text-gray-600 text-xs">No Image</div>
+                        )}
                     </div>
-                )}
+                    <div className="p-4">
+                        <h3 className="font-bold text-white text-sm line-clamp-2 mb-1 group-hover:text-[#ff6600] transition-colors">
+                            {product.product_name}
+                        </h3>
+                        {product.genre && (
+                            <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">
+                                {product.genre}
+                            </div>
+                        )}
+                        <div className="flex justify-between items-end mt-auto">
+                            <div className="text-xs text-gray-400">Loose</div>
+                            <div className="font-bold text-[#ff6600]">
+                                {product.loose_price ? `$${product.loose_price.toFixed(2)}` : '-'}
+                            </div>
+                        </div>
+                    </div>
+                </Link>
+                    ))}
             </div>
-        </main>
+
+            {products.length === 0 && (
+                <div className="text-center text-gray-400 py-12 bg-[#1f2533] rounded border border-[#2a3142]">
+                    <p className="text-xl mb-2">No games found for this filter.</p>
+                    <Link href={`/${lang}/${gamesSlug}/console/${system_slug}`} className="text-[#ff6600] hover:underline">
+                        Clear Filters
+                    </Link>
+                </div>
+            )}
+        </div>
+        </main >
     );
 }
 
