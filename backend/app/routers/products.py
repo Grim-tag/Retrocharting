@@ -300,3 +300,57 @@ def sitemap_products(
         }
         for p in products
     ]
+
+# Valid Filters
+from enum import Enum
+class IncompleteType(str, Enum):
+    image = "image"
+    description = "description"
+    price = "price"
+
+@router.get("/stats/health", response_model=dict)
+def get_catalog_health(
+    current_user: 'User' = Depends(get_current_admin_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Returns statistics on catalog completeness (Admin only).
+    """
+    total = db.query(ProductModel).count()
+    missing_images = db.query(ProductModel).filter(ProductModel.image_url == None).count()
+    missing_desc = db.query(ProductModel).filter(ProductModel.description == None).count()
+    # Missing price: check if loose_price is None or 0
+    missing_price = db.query(ProductModel).filter((ProductModel.loose_price == None) | (ProductModel.loose_price == 0)).count()
+    
+    return {
+        "total_products": total,
+        "missing_images": missing_images,
+        "missing_descriptions": missing_desc,
+        "missing_prices": missing_price
+    }
+
+@router.get("/incomplete", response_model=List[ProductSchema])
+def get_incomplete_products(
+    type: IncompleteType,
+    limit: int = 50,
+    skip: int = 0,
+    current_user: 'User' = Depends(get_current_admin_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get list of products missing specific data.
+    """
+    query = db.query(ProductModel)
+    
+    if type == IncompleteType.image:
+        query = query.filter(ProductModel.image_url == None)
+    elif type == IncompleteType.description:
+        query = query.filter(ProductModel.description == None)
+    elif type == IncompleteType.price:
+        query = query.filter((ProductModel.loose_price == None) | (ProductModel.loose_price == 0))
+        
+    return query.offset(skip).limit(limit).all()
+
+# Import User model for type hint forward ref resolution if needed
+from app.models.user import User
+from app.routers.auth import get_current_admin_user
