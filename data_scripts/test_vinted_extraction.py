@@ -14,6 +14,13 @@ def test_vinted_parsing():
             f.write(result["debug"]["html_preview"])
             print("Saved vinted_dump.html")
 
+    if result['items']:
+        first_item = result['items'][0]
+        if '_debug_html' in first_item:
+            with open("item_card_dump.html", "w", encoding="utf-8") as f:
+                f.write(first_item['_debug_html'])
+            print("Saved item_card_dump.html (First Item)")
+
     for item in result['items']:
         print(f"Title: {item['title']}")
         print(f"Brand (Current): {item.get('brand')}")

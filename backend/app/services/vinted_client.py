@@ -104,79 +104,55 @@ class VintedClient:
                 # Platform / Brand Extraction
                 # Strategy:
                 # 1. Look for specific data-testid="item-attributes-video_game_platform-link" (User suggestion)
-                #    This is often an <a> tag inside the item card.
-                # 2. Look for "Plateforme" / "Platform" text prefix? (Hard in grid)
-                # 3. Fallback to heuristic (Brand extraction)
+                # 2. Look for "marque:" in img alt text.
+                # 3. Scan Title and other texts for Known Console Keywords.
                 
                 platform_title = "Vinted" # Default
                 
-                # Try specific selector provided by user
-                # <a ... data-testid="item-attributes-video_game_platform-link">PlayStation 2</a>
+                # 1. Try specific selector (Rare in Grid, but possible)
                 platform_node = item_node.select_one('[data-testid$="video_game_platform-link"]')
                 if platform_node:
                     platform_title = platform_node.get_text(strip=True)
-                else:
-                    # Heuristic Fallback: Filter out prices, known UI text, and title to find the brand.
-                    texts = list(item_node.stripped_strings)
-                    candidate_brands = []
-                    
-                    ignore_list = ["Protection acheteurs incluse", "Pro", "Dressing", "Top", "vendu", "réservé", "nouveau", "neuf"]
-                    
-                    for t in texts:
-                        t_clean = t.strip()
-                        if not t_clean: continue
-                        if '€' in t_clean: continue # Price
-                        if len(t_clean) < 2: continue
-                        if any(ign in t_clean.lower() for ign in ignore_list): continue
-                        if t_clean.lower() == title.lower(): continue # Title copy
-                        
-                        # If it looks like a brand (short, capitalized?)
-                        candidate_brands.append(t_clean)
-                    
-                    # Verify commonly known console brands
-                    priority_brands = ["Nintendo", "Sony", "Microsoft", "Sega", "PlayStation", "Xbox", "Atari", "Game Boy", "Switch", "DS", "3DS", "Wii", "Wii U", "GameCube", "N64", "NES", "SNES", "PS1", "PS2", "PS3", "PS4", "PS5", "PSP", "Vita"]
-                    
-                    for cand in candidate_brands:
-                        # Exact match or strong partial match
-                        if any(pb.lower() == cand.lower() or pb.lower() in cand.lower() for pb in priority_brands):
-                            platform_title = cand
-                            break
-
-                # Fee Calculation (Standard Vinted: 0.70€ + 5%)
-                protection_fee = 0.70 + (price_amount * 0.05)
                 
-                # Shipping: specific scraping is hard on grid, usually it's distinct.
-                # We will set a default or try to parse if we see "+ X.XX €"
-                shipping_amount = 0.0 # Unknown/To be confirmed
-                
-                seen_urls.add(full_url)
-                
-                # Debug texts
-                texts = list(item_node.stripped_strings)
+                # 2. Heuristic: Parse 'marque:' from alt text or text nodes
+                # Example alt: "... marque: PlayStation, état: Bon état ..."
+                if platform_title == "Vinted":
+                    alt_text = img.get('alt', '') if img else ""
+                    if "marque:" in alt_text.lower():
+                        try:
+                            # Extract text after "marque:" up to next comma or end
+                            start = alt_text.lower().find("marque:") + 7
+                            rest = alt_text[start:]
+                            end = rest.find(",")
+                            if end == -1: end = len(rest)
+                            candidate = rest[:end].strip()
+                            if candidate:
+                                platform_title = candidate
+                        except:
+                            pass
 
-                items.append({
-                    "id": random.randint(100000, 999999), 
-                    "title": title,
-                    "price": {"amount": price_amount, "currency_code": "EUR"},
-                    "fee": {"amount": round(protection_fee, 2), "currency_code": "EUR"},
-                    "shipping": {"amount": shipping_amount, "currency_code": "EUR"}, # Placeholder for now
-                    "total_estimate": {"amount": round(price_amount + protection_fee + (2.99 if shipping_amount == 0 else shipping_amount), 2), "currency_code": "EUR"}, # 2.99 default shipping
-                    "photo": {"url": image_url},
-                    "url": full_url,
-                    "platform": "Vinted", # The source platform
-                    "brand": platform_title, # Extracted brand/platform
-                    "created_at_ts": "Just now",
-                    "_all_texts": texts # DEBUG
-                })
-
-            # Relevancy Filter
-            # Since scraping might pick up Promoted/Recommended items not relevant to query
-            filtered_items = []
-            query_words = [w.lower() for w in query.split() if len(w) > 2] # Ignore small words
-            
-            for item in items:
-                title_lower = item['title'].lower()
-                # Pass if strict match of at least one significant word, 
+                # 3. Keyword Scanning in Title (Strong Fallback for Games)
+                # If we haven't found a platform yet, or if it's generic "Vinted"
+                if platform_title == "Vinted":
+                    known_platforms = {
+                        "Nintendo Switch": ["switch"],
+                        "PlayStation 5": ["ps5", "playstation 5"],
+                        "PlayStation 4": ["ps4", "playstation 4"],
+                        "PlayStation 3": ["ps3", "playstation 3"],
+                        "PlayStation 2": ["ps2", "playstation 2"],
+                        "PlayStation 1": ["ps1", "psx", "playstation 1", "playstation one"],
+                        "PSP": ["psp", "playstation portable"],
+                        "PS Vita": ["vita", "ps vita"],
+                        "Nintendo Wii U": ["wii u"],
+                        "Nintendo Wii": ["wii"],
+                        "Nintendo 3DS": ["3ds"],
+                        "Nintendo DS": ["ds", "nintendo ds"],
+                        "GameCube": ["gamecube", "ngc"],
+                        "Nintendo 64": ["n64", "nintendo 64"],
+                        "SNES": ["snes", "super nintendo"],
+                        "NES": ["nes", "nintendo entertainment system"],
+                        "Game Boy": ["game boy", "gameboy", "gba", "gbc"],
+                        "Xbox Series": ["xbox series", "series x", "series s"],
                 # OR if query has no significant words (weird edge case)
                 if not query_words or any(w in title_lower for w in query_words):
                      filtered_items.append(item)
