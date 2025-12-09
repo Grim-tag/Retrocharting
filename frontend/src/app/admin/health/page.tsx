@@ -23,13 +23,27 @@ export default function AdminHealthPage() {
     const [items, setItems] = useState<Product[]>([]);
     const [loadingItems, setLoadingItems] = useState(false);
 
+    const [error, setError] = useState<string | null>(null);
+
     useEffect(() => {
         const fetchStats = async () => {
-            const token = localStorage.getItem('token');
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/products/stats/health`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (res.ok) setStats(await res.json());
+            const token = localStorage.getItem('rc_token');
+            if (!token) {
+                setError("No auth token found. Please log in.");
+                return;
+            }
+            try {
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/products/stats/health`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    setStats(await res.json());
+                } else {
+                    setError(`Failed to load stats: ${res.status}`);
+                }
+            } catch (err) {
+                setError("Network error loading stats.");
+            }
         };
         fetchStats();
     }, []);
@@ -38,7 +52,7 @@ export default function AdminHealthPage() {
         setSelectedType(type);
         setLoadingItems(true);
         try {
-            const token = localStorage.getItem('token');
+            const token = localStorage.getItem('rc_token');
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/products/incomplete?type=${type}&limit=50`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -48,6 +62,7 @@ export default function AdminHealthPage() {
         }
     };
 
+    if (error) return <div className="text-red-500 p-8">{error}</div>;
     if (!stats) return <div className="text-white p-8">Loading stats...</div>;
 
     const cards = [

@@ -56,7 +56,7 @@ export default function AdminListingsPage() {
     const handleAdd = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const token = localStorage.getItem('token'); // Use auth
+            const token = localStorage.getItem('rc_token'); // Use auth
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/products/${id}/listings/manual`, {
                 method: 'POST',
                 headers: {
