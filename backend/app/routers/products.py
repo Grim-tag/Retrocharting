@@ -147,6 +147,13 @@ def update_listings_background(product_id: int):
                 if 'price' in item and 'value' in item['price']:
                     price_val = float(item['price']['value'])
                     currency = item['price']['currency']
+
+                # Good Deal Logic
+                is_good_deal = False
+                if product.loose_price and price_val > 0:
+                    # If listing price is < 70% of loose price, it's a good deal
+                    if price_val < (product.loose_price * 0.7):
+                        is_good_deal = True
                 
                 image_url = None
                 if 'thumbnailImages' in item and item['thumbnailImages']:
@@ -161,6 +168,7 @@ def update_listings_background(product_id: int):
                     existing.image_url = image_url
                     existing.last_updated = datetime.utcnow()
                     existing.status = 'active'
+                    existing.is_good_deal = is_good_deal
                 else:
                     # Insert
                     new_listing = Listing(
@@ -175,6 +183,7 @@ def update_listings_background(product_id: int):
                         image_url=image_url,
                         seller_name='eBay User',
                         status='active',
+                        is_good_deal=is_good_deal,
                         last_updated=datetime.utcnow()
                     )
                     db.add(new_listing)

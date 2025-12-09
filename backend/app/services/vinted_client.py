@@ -111,12 +111,39 @@ class VintedClient:
                     pass
 
                 seen_urls.add(full_url)
+                # Platform / Brand (often in a specific secondary slot)
+                # Try to find a secondary meaningful text that is NOT the price or title
+                platform_title = "Unknown"
+                user_name = "Vinted User"
+                
+                # Basic text extraction strategy
+                texts = list(item_node.stripped_strings)
+                # content usually: [Image], "Brand", "Title", "Size", "Price", "size/brand"
+                
+                if len(texts) > 2:
+                    # Heuristic: 2nd or 3rd item is often Brand/Platform
+                    # But it varies. Let's just grab the one that isn't title or price logic.
+                    pass
+
+                # Fee Calculation (Standard Vinted: 0.70€ + 5%)
+                protection_fee = 0.70 + (price_amount * 0.05)
+                
+                # Shipping: specific scraping is hard on grid, usually it's distinct.
+                # We will set a default or try to parse if we see "+ X.XX €"
+                shipping_amount = 0.0 # Unknown/To be confirmed
+                
+                seen_urls.add(full_url)
                 items.append({
                     "id": random.randint(100000, 999999), 
                     "title": title,
                     "price": {"amount": price_amount, "currency_code": "EUR"},
+                    "fee": {"amount": round(protection_fee, 2), "currency_code": "EUR"},
+                    "shipping": {"amount": shipping_amount, "currency_code": "EUR"}, # Placeholder for now
+                    "total_estimate": {"amount": round(price_amount + protection_fee + (2.99 if shipping_amount == 0 else shipping_amount), 2), "currency_code": "EUR"}, # 2.99 default shipping
                     "photo": {"url": image_url},
                     "url": full_url,
+                    "platform": "Vinted", # The source platform
+                    "brand": "N/A", # TODO: Better scraping
                     "created_at_ts": "Just now"
                 })
 

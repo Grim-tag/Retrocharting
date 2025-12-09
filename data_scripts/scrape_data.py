@@ -54,7 +54,7 @@ def scrape_data():
                 break
                 
             # Get products without description OR without price history
-            from sqlalchemy import or_
+            from sqlalchemy import or_, text
             
             # Fetch a batch
             products = db.query(Product).outerjoin(PriceHistory).filter(

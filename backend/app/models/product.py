@@ -21,7 +21,7 @@ class Product(Base):
     esrb_rating = Column(String, nullable=True)
     # ean = Column(String, nullable=True)
     # gtin = Column(String, nullable=True)
-    # players = Column(String, nullable=True)
+    players = Column(String, nullable=True)
 
     price_history = relationship("PriceHistory", back_populates="product", cascade="all, delete-orphan")
     listings = relationship("Listing", back_populates="product", cascade="all, delete-orphan")

@@ -44,5 +44,13 @@ def check_db():
         genres = db.query(Product.genre).filter(Product.product_name.ilike("%Console%")).distinct().all()
         print(f"Genres found for 'Console' items: {[g[0] for g in genres]}")
 
+    # Check Price History
+    history_count = db.query(PriceHistory).count()
+    print(f"\nTotal Price History Records: {history_count}")
+    
+    if history_count > 0:
+        example = db.query(PriceHistory).first()
+        print(f"Example History: Product {example.product_id} | {example.date} | ${example.price} | {example.condition}")
+
 if __name__ == "__main__":
     check_db()

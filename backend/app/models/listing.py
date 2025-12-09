@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from app.db.session import Base
 from datetime import datetime
@@ -18,6 +18,7 @@ class Listing(Base):
     image_url = Column(String, nullable=True)
     seller_name = Column(String, nullable=True)
     status = Column(String, default="active") # 'active', 'ended'
+    is_good_deal = Column(Boolean, default=False)
     last_updated = Column(DateTime, default=datetime.utcnow)
 
     product = relationship("Product", back_populates="listings")

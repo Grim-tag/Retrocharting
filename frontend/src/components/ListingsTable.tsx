@@ -13,6 +13,7 @@ interface Listing {
     url: string;
     image_url?: string;
     seller_name?: string;
+    is_good_deal?: boolean;
 }
 
 export default function ListingsTable({ productId }: { productId: number }) {
@@ -84,6 +85,11 @@ export default function ListingsTable({ productId }: { productId: number }) {
                                 </td>
                                 <td className="px-4 py-3 text-white font-medium max-w-xs truncate" title={item.title}>
                                     {item.title}
+                                    {item.is_good_deal && (
+                                        <span className="ml-2 bg-green-500/20 text-green-400 text-[10px] font-bold px-1.5 py-0.5 rounded border border-green-500/50 uppercase tracking-wide">
+                                            🔥 Bonne Affaire
+                                        </span>
+                                    )}
                                 </td>
                                 <td className="px-4 py-3 text-gray-300">
                                     {item.seller_name || item.source}
