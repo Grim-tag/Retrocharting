@@ -255,6 +255,33 @@ def get_product_history(product_id: int, db: Session = Depends(get_db)):
     history = db.query(PriceHistory).filter(PriceHistory.product_id == product_id).order_by(PriceHistory.date).all()
     return history
 
+from app.schemas.product import ProductUpdate
+
+@router.put("/{product_id}", response_model=ProductSchema)
+def update_product(
+    product_id: int,
+    product_update: ProductUpdate,
+    db: Session = Depends(get_db),
+    current_user: 'User' = Depends(get_current_admin_user)
+):
+    """
+    Update a product's details (Admin only).
+    """
+    product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+        
+    for var, value in product_update.dict(exclude_unset=True).items():
+        if var == 'sales_count': continue # skip computed
+        if hasattr(product, var):
+            setattr(product, var, value)
+            
+    db.commit()
+    db.refresh(product)
+    # Re-calc sales count for schema
+    product.sales_count = db.query(PriceHistory).filter(PriceHistory.product_id == product_id).count()
+    return product
+
 @router.get("/{product_id}", response_model=ProductSchema)
 def read_product(product_id: int, db: Session = Depends(get_db)):
     product = db.query(ProductModel).filter(ProductModel.id == product_id).first()

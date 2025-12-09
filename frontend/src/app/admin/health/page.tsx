@@ -155,26 +155,8 @@ export default function AdminHealthPage() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-[#2a3142] text-sm">
-                                {items.map(item => (
-                                    <tr key={item.id} className="hover:bg-[#252b3b]">
-                                        <td className="p-4 text-gray-500">{item.id}</td>
-                                        <td className="p-4 font-bold text-white">{item.product_name}</td>
-                                        <td className="p-4 text-gray-300">{item.console_name}</td>
-                                        <td className="p-4 text-center">
-                                            <Link
-                                                href={`/admin/games/${item.id}/listings`}
-                                                className="text-blue-400 hover:text-white"
-                                            >
-                                                Manage
-                                            </Link>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    )}
-                </div>
+                            </div>
             )}
-        </div>
-    );
+                        </div>
+                    );
 }

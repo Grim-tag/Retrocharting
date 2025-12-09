@@ -23,6 +23,9 @@ class ProductBase(BaseModel):
 class ProductCreate(ProductBase):
     pass
 
+class ProductUpdate(ProductBase):
+    pass
+
 class Product(ProductBase):
     id: int
 
