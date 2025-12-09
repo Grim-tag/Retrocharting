@@ -9,6 +9,10 @@ load_dotenv(env_path)
 # Mock missing envs to satisfy Settings if needed (or ensure .env has them)
 # But .env should be enough.
 
+# Add backend to path BEFORE importing app
+backend_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'backend')
+sys.path.append(backend_path)
+
 from app.db.session import SessionLocal
 from sqlalchemy import text, inspect
 
