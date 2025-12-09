@@ -100,10 +100,88 @@ def search_vinted(
             
             price_val = float(item.get('price', {}).get('amount', 0))
             
-            # TODO: Add Deal Logic (Market Price Comparison) here
-            # market_price = get_market_price(item['title'])
-            # is_deal = price_val < market_price * 0.7
-            is_deal = False 
+            # Match Product in DB to get market price
+            # Heuristic: Try to find a product where the name is extremely similar
+            # For efficiency, we only search if we have a title.
+            # We can also limit search to the 'query' if it looks like a specific game name, 
+            # but rely on title matching is safer per item.
+            
+            market_price = None
+            potential_product = None
+            
+            # Simple normalization for matching
+            clean_title = item['title'].lower().replace("video game", "").strip()
+            
+            # Try 1: Exact / ILIKE match
+            # We assume the Vinted title contains the Product Name (e.g. "Super Mario 64 Nintendo")
+            # This is hard to do efficiently in SQL for ALL items. 
+            # Optimization: Pre-fetch products roughly matching the SEARCH QUERY?
+            # Yes, let's use the 'q_norm' to fetch likely candidates once.
+            
+            # (Outside the loop, strictly speaking, would be better, but let's do simple per-item check first)
+            # To avoid N+1, we might rely on a memory cache or just do it. SQLite/Postgres is fast enough for 20 items.
+            from sqlalchemy import func
+            from app.models.product import Product
+            
+            # Find closest product
+            # 1. Product name is in Vinted Title
+            # 2. Vinted Title is in Product Name
+            # This is crude. Let's try exact first.
+            potential_product = db.query(Product).filter(
+                func.lower(Product.product_name) == clean_title
+            ).first()
+            
+            if not potential_product:
+                # Try partial: Product Name contained in Vinted Title
+                # Limit to 1 to avoid full scan, maybe filter by console if we knew it
+                # Using the query text to narrow down candidates could help?
+                # Let's try to match words.
+                pass 
+
+            # Refined Strategy: 
+            # If the User's Search Query matches a Product Name exactly, use THAT product for all items?
+            # E.g. User searches "Super Mario 64". We find Product "Super Mario 64". 
+            # We assume all results are that game (dangerous but common for specific searches).
+            # Let's try to find a 'Target Product' based on the Search Query first.
+            
+            target_product = db.query(Product).filter(
+               func.lower(Product.product_name) == q_norm 
+            ).first()
+            
+            if not target_product:
+                 # Try 'contains'
+                 target_product = db.query(Product).filter(
+                     Product.product_name.ilike(f"%{q_norm}%")
+                 ).first()
+
+            if target_product:
+                # Valid comparison
+                # Compare Price (Total) vs Loose Price
+                # Vinted Item Price + Protection + Shipping (approx 3+3=6?)
+                # We have fee/shipping from client if available, else estimate
+                
+                # item structure from VintedClient:
+                # 'price': {'amount': X, ...}, 'fee': ..., 'shipping': ...
+                # But here 'item' is the raw dict from client OR the simple dict ?
+                # The 'raw_items' come from vinted_client.search().
+                
+                price_amt = float(item.get('price', {}).get('amount', 0))
+                
+                # Try to get fees if present (VintedClient adds them now)
+                fee = float(item.get('fee', {}).get('amount', 0))
+                ship = float(item.get('shipping', {}).get('amount', 0))
+                
+                # If 0, assume defaults for estimation: Fee=5%+.7, Ship=2.99
+                if fee == 0: fee = (price_amt * 0.05) + 0.7
+                if ship == 0: ship = 2.99
+                
+                total_est = price_amt + fee + ship
+                
+                # Threshold: 70% of Loose Price (Good Deal)
+                market_ref = target_product.loose_price
+                if market_ref and market_ref > 0:
+                     if total_est < (market_ref * 0.7):
+                         is_deal = True
 
             if not existing:
                 new_result = SniperResult(
@@ -115,6 +193,9 @@ def search_vinted(
                     url=item['url'],
                     image_url=item.get('photo', {}).get('url'),
                     created_at=datetime.utcnow(),
+                    # Store structured data if model supports it? No, model is simple.
+                    # We lose fee/shipping info in DB currently unless we add cols.
+                    # But 'is_potential_deal' is saved.
                     is_potential_deal=is_deal
                 )
                 db.add(new_result)
@@ -129,7 +210,9 @@ def search_vinted(
                 "url": item['url'],
                 "image_url": item.get('photo', {}).get('url'),
                 "is_cached": False,
-                "is_potential_deal": is_deal
+                "is_potential_deal": is_deal,
+                # Pass back estimated details for UI
+                "total_estimate": {"amount": price_amt + fee + ship, "currency_code": "EUR"}
             })
             
         except Exception as e:

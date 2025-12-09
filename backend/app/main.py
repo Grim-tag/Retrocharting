@@ -88,10 +88,10 @@ def startup_event():
         from app.services.scraper import scrape_products
         
         scheduler = BackgroundScheduler()
-        # Run scraping every 6 hours, starting in 5 minutes
-        scheduler.add_job(scrape_products, 'interval', hours=6, args=[50], id='auto_scrape', replace_existing=True)
+        # Run scraping every 15 minutes to populate data faster
+        scheduler.add_job(scrape_products, 'interval', minutes=15, args=[50], id='auto_scrape', replace_existing=True)
         scheduler.start()
-        print("APScheduler started: Scraping job registered (every 6 hours).")
+        print("APScheduler started: Scraping job registered (every 15 minutes).")
     except Exception as e:
         print(f"Failed to start scheduler: {e}")
 
