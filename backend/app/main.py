@@ -101,33 +101,40 @@ def startup_event():
     # --- AUTO-MIGRATION: Check for new columns and add them if missing ---
     try:
         from app.db.session import engine
-        from sqlalchemy import text
+    # --- AUTO-MIGRATION: Check for new columns and add them if missing ---
+    try:
+        from app.db.session import engine
+        from sqlalchemy import inspect, text
         
-        with engine.connect() as conn:
-            # 1. Product 'players' column
-            try:
-                conn.execute(text("SELECT players FROM products LIMIT 1"))
-            except Exception:
-                # Postgres requires rollback if previous command failed in transaction
-                conn.rollback()
-                print("Migrating: Adding 'players' column to products table...")
+        print("Checking DB Schema...")
+        inspector = inspect(engine)
+        
+        # 1. Product 'players' column
+        product_cols = [c['name'] for c in inspector.get_columns('products')]
+        if 'players' not in product_cols:
+            print("Migrating: Adding 'players' column to products table...")
+            with engine.connect() as conn:
                 conn.execute(text("ALTER TABLE products ADD COLUMN players TEXT"))
                 conn.commit()
+        else:
+            print("Schema check: 'players' column exists.")
 
-            # 2. Listing 'is_good_deal' column
-            try:
-                conn.execute(text("SELECT is_good_deal FROM listings LIMIT 1"))
-            except Exception:
-                # Postgres requires rollback if previous command failed in transaction
-                conn.rollback()
-                print("Migrating: Adding 'is_good_deal' column to listings table...")
-                conn.execute(text("ALTER TABLE listings ADD COLUMN is_good_deal BOOLEAN DEFAULT 0"))
+        # 2. Listing 'is_good_deal' column
+        listing_cols = [c['name'] for c in inspector.get_columns('listings')]
+        if 'is_good_deal' not in listing_cols:
+            print("Migrating: Adding 'is_good_deal' column to listings table...")
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE listings ADD COLUMN is_good_deal BOOLEAN DEFAULT false"))
                 conn.commit()
+        else:
+            print("Schema check: 'is_good_deal' column exists.")
 
         print("Auto-migration checks complete.")
         
     except Exception as e:
         print(f"Auto-migration failed: {e}")
+        import traceback
+        traceback.print_exc()
     # ---------------------------------------------------------------------
 
 @app.get("/debug-csv")
