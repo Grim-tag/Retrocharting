@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Date
+from sqlalchemy import Column, Integer, String, Float, Date, DateTime
 from sqlalchemy.orm import relationship
 from app.db.session import Base
 
@@ -16,6 +16,8 @@ class Product(Base):
     release_date = Column(Date, nullable=True)
     image_url = Column(String, nullable=True)
     description = Column(String, nullable=True)
+    last_scraped = Column(DateTime, nullable=True)
+
     publisher = Column(String, nullable=True)
     developer = Column(String, nullable=True)
     esrb_rating = Column(String, nullable=True)

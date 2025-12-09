@@ -368,6 +368,10 @@ def get_catalog_health(
     # Use EXISTS for performance
     stmt_history = exists().where(PriceHistory.product_id == ProductModel.id)
     missing_history = db.query(ProductModel).filter(~stmt_history).count()
+    
+    # Last Activity (Max last_scraped)
+    from sqlalchemy import func
+    last_activity = db.query(func.max(ProductModel.last_scraped)).scalar()
 
     return {
         "total_products": total,
@@ -375,8 +379,23 @@ def get_catalog_health(
         "missing_descriptions": missing_desc,
         "missing_prices": missing_price,
         "missing_details": missing_details,
-        "missing_history": missing_history
+        "missing_history": missing_history,
+        "last_activity": last_activity
     }
+
+from app.services.scraper import scrape_missing_data
+
+@router.post("/stats/scrape")
+def run_scraper(
+    background_tasks: BackgroundTasks,
+    current_user: 'User' = Depends(get_current_admin_user)
+):
+    """
+    Trigger the scraper background job (Admin only).
+    """
+    # Run for 5 minutes in background
+    background_tasks.add_task(scrape_missing_data, max_duration=300, limit=50)
+    return {"status": "Scraper started in background"}
 
 @router.get("/incomplete", response_model=List[ProductSchema])
 def get_incomplete_products(

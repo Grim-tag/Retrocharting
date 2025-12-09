@@ -10,6 +10,7 @@ interface HealthStats {
     missing_prices: number;
     missing_details: number;
     missing_history: number;
+    last_activity?: string;
 }
 
 interface Product {
@@ -105,9 +106,47 @@ export default function AdminHealthPage() {
         }
     ];
 
+    const handleStartScraper = async () => {
+        try {
+            const token = localStorage.getItem('rc_token');
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/products/stats/scrape`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) alert("Scraper started in background!");
+        } catch (e) {
+            alert("Failed to start scraper");
+        }
+    };
+
     return (
         <div className="text-white">
-            <h2 className="text-2xl font-bold mb-6 text-white uppercase tracking-wider">Catalog Health</h2>
+            <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-white uppercase tracking-wider">Catalog Health</h2>
+                <div className="flex items-center gap-4">
+                    {stats && stats.last_activity ? (
+                        <div className="text-right">
+                            <p className="text-xs text-gray-400">Last Scraper Run</p>
+                            <p className="text-sm font-bold text-[#00ff00]">
+                                {new Date(stats.last_activity).toLocaleString()}
+                            </p>
+                            {/* Warning if inactive > 24h */
+                                (new Date().getTime() - new Date(stats.last_activity).getTime()) > 24 * 60 * 60 * 1000 && (
+                                    <p className="text-xs text-red-500 font-bold animate-pulse">inactive &gt; 24h</p>
+                                )
+                            }
+                        </div>
+                    ) : (
+                        <p className="text-xs text-gray-500">No activity recorded</p>
+                    )}
+                    <button
+                        onClick={handleStartScraper}
+                        className="bg-[#ff6600] hover:bg-[#ff8533] text-white px-4 py-2 rounded font-bold text-sm uppercase tracking-wide transition-colors"
+                    >
+                        ▶ Run Auto-Scraper
+                    </button>
+                </div>
+            </div>
 
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
