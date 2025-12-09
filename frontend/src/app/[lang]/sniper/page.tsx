@@ -173,9 +173,17 @@ export default function SniperPage({ params }: { params: { lang: string } }) {
                                     {/* Total Estimate */}
                                     <div className="flex flex-col">
                                         <span className="text-xl font-bold text-[#09b1ba]">
-                                            {item.total_estimate?.amount ? `${item.total_estimate.amount} €` : "Unknown"}
+                                            {item.total_estimate?.amount
+                                                ? `${item.total_estimate.amount} €`
+                                                : `${((item.price?.amount || 0) + (item.fee?.amount || 0) + (item.shipping?.amount || 2.99)).toFixed(2)} €`}
                                         </span>
-                                        <span className="text-[10px] text-[#09b1ba]/70 uppercase">Total Est.</span>
+                                        <div className="relative group/total cursor-help">
+                                            <span className="text-[10px] text-[#09b1ba]/70 uppercase border-b border-dotted border-[#09b1ba]/50">Total Est.</span>
+                                            {/* Tooltip */}
+                                            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover/total:block w-40 bg-black/90 text-white text-xs p-2 rounded z-10 border border-gray-700 shadow-xl whitespace-normal text-center">
+                                                Prix + Port (est.) + Protection
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

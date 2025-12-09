@@ -11,7 +11,16 @@ export default function ProductSearch({ placeholder, lang }: { placeholder: stri
     const [query, setQuery] = useState('');
     const [suggestions, setSuggestions] = useState<GroupedProducts>({});
     const [showSuggestions, setShowSuggestions] = useState(false);
+    const [isScrolled, setIsScrolled] = useState(false);
     const searchRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleScroll = () => {
+            setIsScrolled(window.scrollY > 80);
+        };
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
 
     useEffect(() => {
         const delayDebounceFn = setTimeout(async () => {
@@ -56,8 +65,14 @@ export default function ProductSearch({ placeholder, lang }: { placeholder: stri
     };
 
     return (
-        <div className="w-full max-w-3xl mx-auto px-4 relative z-40 my-6" ref={searchRef}>
-            <div className="relative group">
+        <div
+            className={`w-full mx-auto px-4 z-40 transition-all duration-300 ease-in-out ${isScrolled
+                    ? 'fixed top-20 left-1/2 -translate-x-1/2 max-w-xl'
+                    : 'relative max-w-3xl my-6'
+                }`}
+            ref={searchRef}
+        >
+            <div className={`relative group transition-all duration-300 ${isScrolled ? 'opacity-90 hover:opacity-100 scale-95 hover:scale-100' : ''}`}>
                 <input
                     type="text"
                     value={query}
@@ -65,9 +80,11 @@ export default function ProductSearch({ placeholder, lang }: { placeholder: stri
                     onKeyDown={handleKeyDown}
                     onFocus={() => query.length > 2 && setShowSuggestions(true)}
                     placeholder={placeholder}
-                    className="w-full bg-[#151922] text-white border border-[#2a3142] rounded-full px-6 py-4 pl-12 shadow-lg focus:outline-none focus:border-[#ff6600] focus:ring-1 focus:ring-[#ff6600] transition-all text-lg placeholder-gray-500"
+                    className={`w-full bg-[#151922] text-white border border-[#2a3142] rounded-full pl-12 shadow-lg focus:outline-none focus:border-[#ff6600] focus:ring-1 focus:ring-[#ff6600] transition-all placeholder-gray-500 ${isScrolled ? 'py-3 text-sm' : 'py-4 text-lg'
+                        }`}
                 />
-                <MagnifyingGlassIcon className="h-6 w-6 text-gray-400 absolute left-4 top-4 group-focus-within:text-[#ff6600] transition-colors" />
+                <MagnifyingGlassIcon className={`text-gray-400 absolute left-4 top-1/2 -translate-y-1/2 group-focus-within:text-[#ff6600] transition-colors ${isScrolled ? 'h-5 w-5' : 'h-6 w-6'
+                    }`} />
             </div>
 
             {/* Suggestions Dropdown */}
@@ -84,6 +101,7 @@ export default function ProductSearch({ placeholder, lang }: { placeholder: stri
                                     onClick={() => handleSuggestionClick(product)}
                                     className="p-3 hover:bg-[#2a3142] cursor-pointer flex items-center gap-4 transition-colors"
                                 >
+                                    {/* ... content ... */}
                                     <div className="relative flex-shrink-0">
                                         {product.image_url ? (
                                             <img src={product.image_url} alt={product.product_name} className="w-12 h-12 object-cover rounded-md shadow-sm" />

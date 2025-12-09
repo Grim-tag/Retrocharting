@@ -1,36 +1,35 @@
-import requests
-import pandas as pd
-import io
-import sys
-import os
+import sqlite3
 
-# Add backend directory to path to import app
-backend_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'backend')
-sys.path.append(backend_path)
-
-from dotenv import load_dotenv
-# Load .env from project root
-env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env')
-load_dotenv(env_path)
-
-from app.core.config import settings
-
-def check_columns():
-    token = settings.PRICECHARTING_API_TOKEN
-    if not token:
-        print("No token found in settings.")
-        return
-
-    url = f"https://www.pricecharting.com/price-guide/download-custom?t={token}&category=video-games&limit=5"
-    print(f"Downloading data from {url}...")
+def check_db():
     try:
-        response = requests.get(url)
-        response.raise_for_status()
-        df = pd.read_csv(io.BytesIO(response.content))
-        print("Columns found:", df.columns.tolist())
-        print("First row:", df.iloc[0].to_dict())
+        conn = sqlite3.connect('collector.db')
+        cursor = conn.cursor()
+        
+        # Check listings table info
+        print("--- Table: listings ---")
+        cursor.execute("PRAGMA table_info(listings)")
+        columns = cursor.fetchall()
+        found = False
+        for col in columns:
+            print(col)
+            if col[1] == 'is_good_deal':
+                found = True
+        
+        if found:
+            print("\nSUCCESS: 'is_good_deal' column found in 'listings'.")
+        else:
+            print("\nFAILURE: 'is_good_deal' column NOT found in 'listings'.")
+            
+        print("\n--- Table: products ---")
+        cursor.execute("PRAGMA table_info(products)")
+        columns = cursor.fetchall()
+        for col in columns:
+            if col[1] == 'players':
+                print(f"Found 'players' column: {col}")
+
+        conn.close()
     except Exception as e:
         print(f"Error: {e}")
 
 if __name__ == "__main__":
-    check_columns()
+    check_db()
