@@ -108,6 +108,8 @@ def startup_event():
             try:
                 conn.execute(text("SELECT players FROM products LIMIT 1"))
             except Exception:
+                # Postgres requires rollback if previous command failed in transaction
+                conn.rollback()
                 print("Migrating: Adding 'players' column to products table...")
                 conn.execute(text("ALTER TABLE products ADD COLUMN players TEXT"))
                 conn.commit()
@@ -116,6 +118,8 @@ def startup_event():
             try:
                 conn.execute(text("SELECT is_good_deal FROM listings LIMIT 1"))
             except Exception:
+                # Postgres requires rollback if previous command failed in transaction
+                conn.rollback()
                 print("Migrating: Adding 'is_good_deal' column to listings table...")
                 conn.execute(text("ALTER TABLE listings ADD COLUMN is_good_deal BOOLEAN DEFAULT 0"))
                 conn.commit()
