@@ -32,7 +32,7 @@ def read_products(
         # print(f"Filtering by console: '{console}'")
         query = query.filter(ProductModel.console_name == console)
     if genre:
-        query = query.filter(ProductModel.genre == genre)
+        query = query.filter(ProductModel.genre.ilike(genre))
         
     if type:
         if type == 'game':
