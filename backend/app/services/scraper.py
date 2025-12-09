@@ -93,7 +93,8 @@ def scrape_missing_data(max_duration: int = 600, limit: int = 50):
                 # print(f"Scraping {p.product_name}...")
                 
                 try:
-                    response = requests.get(url, headers=headers)
+                    # Add timeout to prevent hanging indefinitely
+                    response = requests.get(url, headers=headers, timeout=10)
                     if response.status_code == 200:
                         soup = BeautifulSoup(response.content, 'html.parser')
                         
@@ -175,7 +176,9 @@ def scrape_missing_data(max_duration: int = 600, limit: int = 50):
                     else:
                         print(f"  Failed: {response.status_code}")
                 except Exception as e:
-                    print(f"  Error: {e}")
+                    print(f"  Error processing item: {e}")
+                    # Ensure database is not in broken state
+                    db.rollback()
                     
                 time.sleep(random.uniform(0.5, 1.5))
             
