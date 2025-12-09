@@ -43,14 +43,14 @@ export interface PriceHistoryPoint {
 
 export async function getProductsByConsole(consoleName: string, limit = 50, genre?: string, type?: 'game' | 'console' | 'accessory'): Promise<Product[]> {
     try {
-        let url = `${API_URL}/products/?console=${encodeURIComponent(consoleName)}&limit=${limit}`;
-        if (genre) {
-            url += `&genre=${encodeURIComponent(genre)}`;
-        }
-        if (type) {
-            url += `&type=${encodeURIComponent(type)}`;
-        }
-        const response = await axios.get(url);
+        const response = await axios.get(`${API_URL}/products/`, {
+            params: {
+                console: consoleName,
+                limit,
+                genre,
+                type
+            }
+        });
         return response.data;
     } catch (error) {
         console.error("Error fetching products:", error);
@@ -60,11 +60,11 @@ export async function getProductsByConsole(consoleName: string, limit = 50, genr
 
 export async function getGenres(consoleName?: string): Promise<string[]> {
     try {
-        let url = `${API_URL}/products/genres`;
-        if (consoleName) {
-            url += `?console=${encodeURIComponent(consoleName)}`;
-        }
-        const response = await axios.get(url);
+        const response = await axios.get(`${API_URL}/products/genres`, {
+            params: {
+                console: consoleName
+            }
+        });
         return response.data;
     } catch (error) {
         console.error("Error fetching genres:", error);
