@@ -64,7 +64,7 @@ def scrape_missing_data(max_duration: int = 600, limit: int = 50):
                 Product.console_name != "",
                 Product.product_name != None,
                 Product.product_name != ""
-            ).distinct().limit(limit).all()
+            ).order_by(Product.last_scraped.asc().nullsfirst()).distinct().limit(limit).all()
             
             if not products:
                 print("No incomplete products found.")
@@ -165,24 +165,27 @@ def scrape_missing_data(max_duration: int = 600, limit: int = 50):
                                 except Exception:
                                     pass
                         
-                        # Update last_scraped
-                        p.last_scraped = datetime.utcnow()
                         processed_count += 1
                         
                         # Update Log every item (or query less often if perf hits, but for 1 item/sec it's fine)
                         db.query(ScraperLog).filter(ScraperLog.id == current_log_id).update({"items_processed": processed_count})
-                        
-                        db.commit()
+
                     else:
                         print(f"  Failed: {response.status_code}")
                 except Exception as e:
                     print(f"  Error processing item: {e}")
                     # Ensure database is not in broken state
                     db.rollback()
+                finally:
+                    # Update last_scraped REGARDLESS of success/failure
+                    # This rotates the item to the bottom of the queue
+                    p.last_scraped = datetime.utcnow()
+                    db.commit()
                     
                 time.sleep(random.uniform(0.5, 1.5))
             
-            db.commit()
+            # Commit handled inside loop for safe rotation
+            # db.commit()
         
         # Mark as completed
         db.query(ScraperLog).filter(ScraperLog.id == current_log_id).update({

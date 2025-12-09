@@ -197,7 +197,7 @@ def main():
             query = db.query(Product).outerjoin(PriceHistory).filter(
                 or_(Product.description == None, Product.image_url == None, PriceHistory.id == None),
                 Product.console_name != None
-            ).distinct().limit(request_limit)
+            ).order_by(Product.last_scraped.asc().nullsfirst()).distinct().limit(request_limit)
             
             products = query.all()
             
@@ -231,11 +231,21 @@ def main():
             # Write results to DB (Single Thread)
             print(f"Batch finished. Writing {len(results)} updates to DB...")
             
+            processed_in_this_batch = 0
+
+            # 1. First, mark ALL items in this batch as scraped (Timestamp update)
+            # This ensures even failed ones get rotated to the back of the line
+            for p in products:
+                p.last_scraped = datetime.utcnow()
+
+            # 2. Then apply successful updates
             for res in results:
-                if not res['success']: continue
+                if not res.get('success'): continue
                 
                 p = product_map.get(res['id'])
                 if not p: continue
+                
+                processed_in_this_batch += 1
                 
                 # Update Text Fields
                 if res['image_url']: p.image_url = res['image_url']
@@ -244,9 +254,6 @@ def main():
                 if res['details'].get('publisher'): p.publisher = res['details']['publisher']
                 if res['details'].get('developer'): p.developer = res['details']['developer']
                 if res['details'].get('esrb_rating'): p.esrb_rating = res['details']['esrb_rating']
-                
-                # Update last_scraped
-                p.last_scraped = datetime.utcnow()
 
                 # Update Price History
                 if res['price_history']:
