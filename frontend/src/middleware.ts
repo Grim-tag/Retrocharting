@@ -42,6 +42,9 @@ export function middleware(request: NextRequest) {
         // Rewrite to internal /en path.
         // We append a sentinel param so the next pass knows it's a rewrite.
         const url = new URL(`/en${pathname}`, request.url);
+        request.nextUrl.searchParams.forEach((value, key) => {
+            url.searchParams.set(key, value);
+        });
         url.searchParams.set('__next_rewrite', '1');
         return NextResponse.rewrite(url);
     }
@@ -59,7 +62,11 @@ export function middleware(request: NextRequest) {
         const internalPath = `/${locale}/${internalSegments.join('/')}`;
 
         if (internalPath !== pathname) {
-            return NextResponse.rewrite(new URL(internalPath, request.url));
+            const url = new URL(internalPath, request.url);
+            request.nextUrl.searchParams.forEach((value, key) => {
+                url.searchParams.set(key, value);
+            });
+            return NextResponse.rewrite(url);
         }
     }
 
