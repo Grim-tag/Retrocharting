@@ -102,9 +102,11 @@ export default async function ConsolePage({
                 <FilterChips />
 
                 {/* DEBUG: Remove after fixing */}
-                <div className="text-xs text-red-500 mb-4 font-mono bg-black p-2 border border-red-900">
-                    DEBUG: genre param = '{genre}' | encoded = '{encodeURIComponent(genre || '')}'<br />
-                    DEBUG: First genre = '{genres.find(g => g.includes('&'))}' | encoded = '{encodeURIComponent(genres.find(g => g.includes('&')) || '')}'
+                <div className="text-xs text-red-500 mb-4 font-mono bg-black p-2 border border-red-900 break-all">
+                    DEBUG: genre param = '{genre}'<br />
+                    DEBUG: searchParams keys = {JSON.stringify(Object.keys(await searchParams))}<br />
+                    DEBUG: full searchParams = {JSON.stringify(await searchParams)}<br />
+                    DEBUG: First genre = '{genres.find(g => g.includes('&'))}'
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
