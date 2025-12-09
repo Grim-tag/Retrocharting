@@ -55,13 +55,13 @@ export default async function ConsolePage({
 
     // Filter UI Component (Inline for simplicity)
     const FilterChips = () => (
-        <div className="mb-8 overflow-x-auto pb-4 no-scrollbar">
-            <div className="flex gap-2">
+        <div className="mb-8">
+            <div className="flex flex-wrap justify-center gap-2">
                 <Link
                     href={`/${lang}/${gamesSlug}/console/${system_slug}`}
                     className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-bold border transition-colors ${!genre
-                            ? 'bg-[#ff6600] text-white border-[#ff6600]'
-                            : 'bg-[#1f2533] text-gray-400 border-[#2a3142] hover:border-white hover:text-white'
+                        ? 'bg-[#ff6600] text-white border-[#ff6600]'
+                        : 'bg-[#1f2533] text-gray-400 border-[#2a3142] hover:border-white hover:text-white'
                         }`}
                 >
                     All Games
@@ -71,8 +71,8 @@ export default async function ConsolePage({
                         key={g}
                         href={`/${lang}/${gamesSlug}/console/${system_slug}?genre=${encodeURIComponent(g)}`}
                         className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-bold border transition-colors ${genre === g
-                                ? 'bg-[#ff6600] text-white border-[#ff6600]'
-                                : 'bg-[#1f2533] text-gray-400 border-[#2a3142] hover:border-white hover:text-white'
+                            ? 'bg-[#ff6600] text-white border-[#ff6600]'
+                            : 'bg-[#1f2533] text-gray-400 border-[#2a3142] hover:border-white hover:text-white'
                             }`}
                     >
                         {g}
@@ -114,10 +114,15 @@ export default async function ConsolePage({
                                 )}
                             </div>
                             <div className="p-4">
-                                <h3 className="font-bold text-white text-sm line-clamp-2 mb-2 group-hover:text-[#ff6600] transition-colors">
+                                <h3 className="font-bold text-white text-sm line-clamp-2 mb-1 group-hover:text-[#ff6600] transition-colors">
                                     {product.product_name}
                                 </h3>
-                                <div className="flex justify-between items-end">
+                                {product.genre && (
+                                    <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">
+                                        {product.genre}
+                                    </div>
+                                )}
+                                <div className="flex justify-between items-end mt-auto">
                                     <div className="text-xs text-gray-400">Loose</div>
                                     <div className="font-bold text-[#ff6600]">
                                         {product.loose_price ? `$${product.loose_price.toFixed(2)}` : '-'}
