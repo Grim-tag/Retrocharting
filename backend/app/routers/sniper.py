@@ -212,8 +212,8 @@ def search_vinted(
                 "is_cached": False,
                 "is_potential_deal": is_deal,
                 "platform": item.get('brand', 'Vinted'), # Pass scraped brand as platform
-                # Pass back estimated details for UI
-                "total_estimate": {"amount": price_amt + fee + ship, "currency_code": "EUR"}
+                # Pass back estimated details for UI. Rounding to 2 decimals is crucial.
+                "total_estimate": {"amount": round(price_amt + fee + ship, 2), "currency_code": "EUR"}
             })
             
         except Exception as e:

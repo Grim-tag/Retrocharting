@@ -3,15 +3,6 @@ import requests
 import random
 import time
 import urllib.parse
-
-class VintedClient:
-    ZENROWS_API_KEY = "d4e9a47779876433a451ed50a536670d97e56182"
-    ZENROWS_URL = "https://api.zenrows.com/v1/"
-
-import requests
-import random
-import time
-import urllib.parse
 import json
 from bs4 import BeautifulSoup
 
@@ -110,20 +101,46 @@ class VintedClient:
                 except:
                     pass
 
-                seen_urls.add(full_url)
-                # Platform / Brand (often in a specific secondary slot)
-                # Try to find a secondary meaningful text that is NOT the price or title
-                platform_title = "Unknown"
-                user_name = "Vinted User"
+                # Platform / Brand Extraction
+                # Strategy:
+                # 1. Look for specific data-testid="item-attributes-video_game_platform-link" (User suggestion)
+                #    This is often an <a> tag inside the item card.
+                # 2. Look for "Plateforme" / "Platform" text prefix? (Hard in grid)
+                # 3. Fallback to heuristic (Brand extraction)
                 
-                # Basic text extraction strategy
-                texts = list(item_node.stripped_strings)
-                # content usually: [Image], "Brand", "Title", "Size", "Price", "size/brand"
+                platform_title = "Vinted" # Default
                 
-                if len(texts) > 2:
-                    # Heuristic: 2nd or 3rd item is often Brand/Platform
-                    # But it varies. Let's just grab the one that isn't title or price logic.
-                    pass
+                # Try specific selector provided by user
+                # <a ... data-testid="item-attributes-video_game_platform-link">PlayStation 2</a>
+                platform_node = item_node.select_one('[data-testid$="video_game_platform-link"]')
+                if platform_node:
+                    platform_title = platform_node.get_text(strip=True)
+                else:
+                    # Heuristic Fallback: Filter out prices, known UI text, and title to find the brand.
+                    texts = list(item_node.stripped_strings)
+                    candidate_brands = []
+                    
+                    ignore_list = ["Protection acheteurs incluse", "Pro", "Dressing", "Top", "vendu", "réservé", "nouveau", "neuf"]
+                    
+                    for t in texts:
+                        t_clean = t.strip()
+                        if not t_clean: continue
+                        if '€' in t_clean: continue # Price
+                        if len(t_clean) < 2: continue
+                        if any(ign in t_clean.lower() for ign in ignore_list): continue
+                        if t_clean.lower() == title.lower(): continue # Title copy
+                        
+                        # If it looks like a brand (short, capitalized?)
+                        candidate_brands.append(t_clean)
+                    
+                    # Verify commonly known console brands
+                    priority_brands = ["Nintendo", "Sony", "Microsoft", "Sega", "PlayStation", "Xbox", "Atari", "Game Boy", "Switch", "DS", "3DS", "Wii", "Wii U", "GameCube", "N64", "NES", "SNES", "PS1", "PS2", "PS3", "PS4", "PS5", "PSP", "Vita"]
+                    
+                    for cand in candidate_brands:
+                        # Exact match or strong partial match
+                        if any(pb.lower() == cand.lower() or pb.lower() in cand.lower() for pb in priority_brands):
+                            platform_title = cand
+                            break
 
                 # Fee Calculation (Standard Vinted: 0.70€ + 5%)
                 protection_fee = 0.70 + (price_amount * 0.05)
@@ -133,6 +150,10 @@ class VintedClient:
                 shipping_amount = 0.0 # Unknown/To be confirmed
                 
                 seen_urls.add(full_url)
+                
+                # Debug texts
+                texts = list(item_node.stripped_strings)
+
                 items.append({
                     "id": random.randint(100000, 999999), 
                     "title": title,
@@ -143,7 +164,7 @@ class VintedClient:
                     "photo": {"url": image_url},
                     "url": full_url,
                     "platform": "Vinted", # The source platform
-                    "brand": "N/A", # TODO: Better scraping
+                    "brand": platform_title, # Extracted brand/platform
                     "created_at_ts": "Just now",
                     "_all_texts": texts # DEBUG
                 })
