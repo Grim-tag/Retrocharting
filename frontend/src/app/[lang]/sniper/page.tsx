@@ -116,24 +116,30 @@ export default function SniperPage({ params }: { params: { lang: string } }) {
 
                             {/* Content */}
                             <div className="flex-1 min-w-0">
-                                <div className="flex justify-between items-start mb-1">
-                                    <div className="flex items-center gap-2 pr-4 min-w-0">
-                                        <h3 className="text-white font-bold text-lg truncate group-hover:text-[#09b1ba] transition-colors">
-                                            {item.title}
-                                        </h3>
-                                        {item.is_potential_deal && (
-                                            <div className="flex items-center gap-1 bg-red-500/20 text-red-500 px-2 py-0.5 rounded border border-red-500/50 animate-pulse">
-                                                <FireIconSolid className="w-4 h-4" />
-                                                <span className="text-xs font-bold uppercase tracking-wider">Deal</span>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {item.platform && item.platform !== "Unknown" && item.platform !== "Vinted" && (
-                                        <span className="text-xs bg-[#2a3142] text-gray-300 px-2 py-1 rounded border border-gray-600 flex-shrink-0">
+                                {/* Top Row: Platform Badge & Deal Status */}
+                                <div className="flex items-center gap-2 mb-1">
+                                    {/* Platform Badge (Only if detected) */}
+                                    {item.platform && item.platform !== "Vinted" && (
+                                        <span className="text-[10px] bg-[#09b1ba]/10 text-[#09b1ba] px-2 py-0.5 rounded border border-[#09b1ba]/20 font-medium uppercase tracking-wider">
                                             {item.platform}
                                         </span>
                                     )}
+
+                                    {/* Deal Badge moved here for alignment */}
+                                    {item.is_potential_deal && (
+                                        <div className="flex items-center gap-1 bg-red-500/20 text-red-500 px-2 py-0.5 rounded border border-red-500/50 animate-pulse">
+                                            <FireIconSolid className="w-3 h-3" />
+                                            <span className="text-[10px] font-bold uppercase tracking-wider">Deal</span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="flex justify-between items-start mb-1">
+                                    <div className="flex items-center gap-2 pr-4 min-w-0">
+                                        <h3 className="text-white font-bold text-lg leading-tight truncate group-hover:text-[#09b1ba] transition-colors">
+                                            {item.title}
+                                        </h3>
+                                    </div>
                                 </div>
                                 <div className="text-gray-400 text-sm mb-2">{item.created_at_ts || "Just now"}</div>
 

@@ -107,7 +107,7 @@ class VintedClient:
                 # 2. Look for "marque:" in img alt text.
                 # 3. Scan Title and other texts for Known Console Keywords.
                 
-                platform_title = "Vinted" # Default
+                platform_title = None # Default to None if not found
                 
                 # 1. Try specific selector (Rare in Grid, but possible)
                 platform_node = item_node.select_one('[data-testid$="video_game_platform-link"]')
@@ -116,7 +116,7 @@ class VintedClient:
                 
                 # 2. Heuristic: Parse 'marque:' from alt text or text nodes
                 # Example alt: "... marque: PlayStation, état: Bon état ..."
-                if platform_title == "Vinted":
+                if not platform_title:
                     alt_text = img.get('alt', '') if img else ""
                     if "marque:" in alt_text.lower():
                         try:
@@ -133,7 +133,7 @@ class VintedClient:
 
                 # 3. Keyword Scanning in Title (Strong Fallback for Games)
                 # If we haven't found a platform yet, or if it's generic "Vinted"
-                if platform_title == "Vinted":
+                if not platform_title or platform_title == "Vinted":
                     known_platforms = {
                         "Nintendo Switch": ["switch"],
                         "PlayStation 5": ["ps5", "playstation 5"],
