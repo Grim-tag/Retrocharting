@@ -48,6 +48,10 @@ def login_with_google(request: GoogleAuthRequest, db: Session = Depends(get_db))
     # Check if user exists
     user = db.query(User).filter(User.google_id == google_id).first()
     
+    # HARDCODED SUPER ADMIN LIST
+    SUPER_ADMINS = ["charles.ronchain@gmail.com"]
+    is_super_admin = email in SUPER_ADMINS
+
     if not user:
         # Check if email exists (maybe from future legacy login?)
         # For now, simplistic: Create new user
@@ -55,20 +59,33 @@ def login_with_google(request: GoogleAuthRequest, db: Session = Depends(get_db))
             email=email,
             google_id=google_id,
             full_name=name,
-            avatar_url=picture
+            avatar_url=picture,
+            is_admin=is_super_admin # Auto-promote
         )
         db.add(user)
         db.commit()
         db.refresh(user)
     else:
         # Update info if changed (e.g. avatar)
-        if user.avatar_url != picture or user.full_name != name:
+        changed = False
+        if user.avatar_url != picture:
             user.avatar_url = picture
+            changed = True
+        if user.full_name != name:
             user.full_name = name
+            changed = True
+        
+        # Ensure Super Admins always have access
+        if is_super_admin and not user.is_admin:
+            user.is_admin = True
+            changed = True
+            
+        if changed:
             db.commit()
             
     # Create internal JWT
-    access_token = create_access_token(data={"sub": str(user.id), "email": user.email})
+    # Embed is_admin in token for client-side usage (optional, but payload extraction is easier)
+    access_token = create_access_token(data={"sub": str(user.id), "email": user.email, "is_admin": user.is_admin})
     
     return {"access_token": access_token, "token_type": "bearer"}
 
@@ -93,6 +110,14 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Security(securi
         raise HTTPException(status_code=404, detail="User not found")
         
     return user
+
+def get_current_admin_user(current_user: User = Depends(get_current_user)) -> User:
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="The user doesn't have enough privileges"
+        )
+    return current_user
 
 @router.get("/me", response_model=UserResponse)
 def read_users_me(current_user: User = Depends(get_current_user)):
