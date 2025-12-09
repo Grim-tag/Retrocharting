@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getProductsByConsole, Product } from "@/lib/api";
+import { getProductsByConsole, getGenres, Product } from "@/lib/api";
 import { getDictionary } from "@/lib/get-dictionary";
 import { routeMap } from "@/lib/route-config";
 import Breadcrumbs from "@/components/seo/Breadcrumbs";
@@ -24,15 +24,26 @@ export async function generateMetadata({ params }: { params: Promise<{ system_sl
     };
 }
 
-export default async function ConsolePage({ params }: { params: Promise<{ system_slug: string, lang: string }> }) {
+export default async function ConsolePage({
+    params,
+    searchParams
+}: {
+    params: Promise<{ system_slug: string, lang: string }>,
+    searchParams: Promise<{ genre?: string }>
+}) {
     const { system_slug, lang } = await params;
+    const { genre } = await searchParams;
     const dict = await getDictionary(lang);
 
     // Find exact system name from slug
     const flatSystems = Object.values(groupedSystems).flat();
     const systemName = flatSystems.find(s => s.toLowerCase().replace(/ /g, '-') === system_slug) || unslugify(system_slug);
 
-    const products = await getProductsByConsole(systemName, 100, undefined, 'game');
+    // Parallel Fetching
+    const [products, genres] = await Promise.all([
+        getProductsByConsole(systemName, 100, genre, 'game'),
+        getGenres(systemName)
+    ]);
 
     const getSlug = (key: string) => routeMap[key]?.[lang] || key;
     const gamesSlug = getSlug('games');
@@ -42,12 +53,51 @@ export default async function ConsolePage({ params }: { params: Promise<{ system
         { label: systemName, href: `/${lang}/${gamesSlug}/console/${system_slug}` }
     ];
 
+    // Filter UI Component (Inline for simplicity)
+    const FilterChips = () => (
+        <div className="mb-8 overflow-x-auto pb-4 no-scrollbar">
+            <div className="flex gap-2">
+                <Link
+                    href={`/${lang}/${gamesSlug}/console/${system_slug}`}
+                    className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-bold border transition-colors ${!genre
+                            ? 'bg-[#ff6600] text-white border-[#ff6600]'
+                            : 'bg-[#1f2533] text-gray-400 border-[#2a3142] hover:border-white hover:text-white'
+                        }`}
+                >
+                    All Games
+                </Link>
+                {genres.filter(g => g !== 'Systems' && g !== 'Accessories').map(g => (
+                    <Link
+                        key={g}
+                        href={`/${lang}/${gamesSlug}/console/${system_slug}?genre=${encodeURIComponent(g)}`}
+                        className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-bold border transition-colors ${genre === g
+                                ? 'bg-[#ff6600] text-white border-[#ff6600]'
+                                : 'bg-[#1f2533] text-gray-400 border-[#2a3142] hover:border-white hover:text-white'
+                            }`}
+                    >
+                        {g}
+                    </Link>
+                ))}
+            </div>
+        </div>
+    );
+
     return (
         <main className="flex-grow bg-[#0f121e] py-8">
             <div className="max-w-[1400px] mx-auto px-4">
                 <Breadcrumbs items={breadcrumbItems} />
 
-                <h1 className="text-3xl font-bold mb-8 text-white">{systemName} {dict.home.categories.items.video_games.title}</h1>
+                <div className="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4">
+                    <h1 className="text-3xl font-bold text-white">
+                        {systemName} {dict.home.categories.items.video_games.title}
+                        {genre && <span className="text-gray-500 ml-2 text-xl font-normal">/ {genre}</span>}
+                    </h1>
+                    <div className="text-gray-400 text-sm">
+                        Showing {products.length} games
+                    </div>
+                </div>
+
+                <FilterChips />
 
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
                     {products.map((product) => (
@@ -79,11 +129,15 @@ export default async function ConsolePage({ params }: { params: Promise<{ system
                 </div>
 
                 {products.length === 0 && (
-                    <div className="text-center text-gray-400 py-12">
-                        No games found for {systemName} or loading...
+                    <div className="text-center text-gray-400 py-12 bg-[#1f2533] rounded border border-[#2a3142]">
+                        <p className="text-xl mb-2">No games found for this filter.</p>
+                        <Link href={`/${lang}/${gamesSlug}/console/${system_slug}`} className="text-[#ff6600] hover:underline">
+                            Clear Filters
+                        </Link>
                     </div>
                 )}
             </div>
         </main>
     );
 }
+

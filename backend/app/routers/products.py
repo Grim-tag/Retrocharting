@@ -45,6 +45,27 @@ def read_products(
     products = query.offset(skip).limit(limit).all()
     return products
 
+    products = query.offset(skip).limit(limit).all()
+    return products
+
+@router.get("/genres", response_model=List[str])
+def get_genres(
+    console: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Get list of unique genres. 
+    Optional: Filter by console to show only relevant genres.
+    """
+    query = db.query(ProductModel.genre).filter(ProductModel.genre != None, ProductModel.genre != "")
+    
+    if console:
+        query = query.filter(ProductModel.console_name == console)
+        
+    genres = query.distinct().order_by(ProductModel.genre).all()
+    # Flatten list of tuples [('Action',), ('Adventure',)] -> ['Action', 'Adventure']
+    return [g[0] for g in genres]
+
 @router.get("/search/grouped", response_model=dict)
 def search_products_grouped(
     query: str,

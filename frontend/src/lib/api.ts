@@ -58,6 +58,21 @@ export async function getProductsByConsole(consoleName: string, limit = 50, genr
     }
 }
 
+export async function getGenres(consoleName?: string): Promise<string[]> {
+    try {
+        let url = `${API_URL}/products/genres`;
+        if (consoleName) {
+            url += `?console=${encodeURIComponent(consoleName)}`;
+        }
+        const response = await axios.get(url);
+        return response.data;
+    } catch (error) {
+        console.error("Error fetching genres:", error);
+        return [];
+    }
+}
+
+
 export async function getProductById(id: number): Promise<Product | null> {
     try {
         const response = await axios.get(`${API_URL}/products/${id}`);
