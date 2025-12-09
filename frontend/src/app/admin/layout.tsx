@@ -39,6 +39,7 @@ export default function AdminLayout({
                     <nav className="flex-1 overflow-y-auto p-4 space-y-2">
                         <NavItem href="/admin/dashboard" label="Dashboard" />
                         <NavItem href="/admin/games" label="Games Catalog" />
+                        <NavItem href="/admin/health" label="Catalog Health" />
                         <NavItem href="/admin/translations" label="Translations" />
                         <div className="pt-4 mt-4 border-t border-[#2a3142]">
                             <NavItem href="/" label="Back to Site" />
