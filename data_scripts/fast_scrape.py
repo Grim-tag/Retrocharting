@@ -232,7 +232,12 @@ def main():
                 if res['details'].get('genre'): p.genre = res['details']['genre']
                 if res['details'].get('publisher'): p.publisher = res['details']['publisher']
                 if res['details'].get('developer'): p.developer = res['details']['developer']
+                if res['details'].get('publisher'): p.publisher = res['details']['publisher']
+                if res['details'].get('developer'): p.developer = res['details']['developer']
                 if res['details'].get('esrb_rating'): p.esrb_rating = res['details']['esrb_rating']
+                
+                # Update last_scraped
+                p.last_scraped = datetime.utcnow()
 
                 # Update Price History
                 if res['price_history']:
