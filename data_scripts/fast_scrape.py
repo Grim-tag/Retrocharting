@@ -163,9 +163,18 @@ def scrape_single_product(product_info):
         
     return updates
 
+from app.models.scraper_log import ScraperLog
+
 def main():
     db = SessionLocal()
     print("Starting Fast Scraper...")
+    
+    # Create Log Entry
+    log_entry = ScraperLog(status="running", items_processed=0, start_time=datetime.utcnow())
+    db.add(log_entry)
+    db.commit()
+    db.refresh(log_entry)
+    current_log_id = log_entry.id
     
     # Run for max 12 minutes (720s) to fit in 15m cron schedule
     start_time = time.time()
@@ -181,12 +190,14 @@ def main():
                 break
 
             # Fetch batch of products needing update
+            request_limit = BATCH_SIZE
+            
             # Criteria: No Description OR No Image (we can add History check too but let's focus on these)
             # Efficient query
             query = db.query(Product).outerjoin(PriceHistory).filter(
                 or_(Product.description == None, Product.image_url == None, PriceHistory.id == None),
                 Product.console_name != None
-            ).distinct().limit(BATCH_SIZE)
+            ).distinct().limit(request_limit)
             
             products = query.all()
             
@@ -232,8 +243,6 @@ def main():
                 if res['details'].get('genre'): p.genre = res['details']['genre']
                 if res['details'].get('publisher'): p.publisher = res['details']['publisher']
                 if res['details'].get('developer'): p.developer = res['details']['developer']
-                if res['details'].get('publisher'): p.publisher = res['details']['publisher']
-                if res['details'].get('developer'): p.developer = res['details']['developer']
                 if res['details'].get('esrb_rating'): p.esrb_rating = res['details']['esrb_rating']
                 
                 # Update last_scraped
@@ -265,8 +274,35 @@ def main():
             total_processed += len(results)
             print(f"Committed. Total processed: {total_processed}")
             
+            # Update Log Live
+            db.query(ScraperLog).filter(ScraperLog.id == current_log_id).update({"items_processed": total_processed})
+            db.commit()
+
+        # Mark confirmed Completion
+        db.query(ScraperLog).filter(ScraperLog.id == current_log_id).update({
+            "status": "completed", 
+            "end_time": datetime.utcnow()
+        })
+        db.commit()
+            
     except KeyboardInterrupt:
         print("Stopping...")
+        db.query(ScraperLog).filter(ScraperLog.id == current_log_id).update({
+            "status": "stopped", 
+            "end_time": datetime.utcnow()
+        })
+        db.commit()
+    except Exception as e:
+        print(f"Global Error: {e}")
+        try:
+             db.query(ScraperLog).filter(ScraperLog.id == current_log_id).update({
+                "status": "error", 
+                "error_message": str(e),
+                "end_time": datetime.utcnow()
+            })
+             db.commit()
+        except:
+             pass
     finally:
         db.close()
 
