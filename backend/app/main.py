@@ -97,6 +97,38 @@ def startup_event():
 
     # Auto-migration logs
     print("Startup complete. Tables ready.")
+    
+    # --- AUTO-MIGRATION: Check for new columns and add them if missing ---
+    try:
+        from app.db.session import engine
+        from sqlalchemy import text
+        import sqlalchemy.exc
+        
+        with engine.connect() as conn:
+            # 1. Product 'players' column
+            try:
+                conn.execute(text("SELECT players FROM products LIMIT 1"))
+            except sqlalchemy.exc.OperationalError:
+                print("Migrating: Adding 'players' column to products table...")
+                # SQLite doesn't support IF NOT EXISTS in ADD COLUMN standardly well in all versions, 
+                # but the try/except handles the 'exists' check.
+                # However, since we caught the error knowing it DOESN'T exist:
+                conn.execute(text("ALTER TABLE products ADD COLUMN players TEXT"))
+                conn.commit()
+
+            # 2. Listing 'is_good_deal' column
+            try:
+                conn.execute(text("SELECT is_good_deal FROM listings LIMIT 1"))
+            except sqlalchemy.exc.OperationalError:
+                print("Migrating: Adding 'is_good_deal' column to listings table...")
+                conn.execute(text("ALTER TABLE listings ADD COLUMN is_good_deal BOOLEAN DEFAULT 0"))
+                conn.commit()
+
+        print("Auto-migration checks complete.")
+        
+    except Exception as e:
+        print(f"Auto-migration failed: {e}")
+    # ---------------------------------------------------------------------
 
 @app.post("/api/debug/import")
 def debug_import(background_tasks: BackgroundTasks):
