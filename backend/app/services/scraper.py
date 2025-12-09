@@ -22,6 +22,8 @@ cloudinary.config(
 import requests
 from bs4 import BeautifulSoup
 
+from app.models.scraper_log import ScraperLog
+
 def scrape_missing_data(max_duration: int = 600, limit: int = 50):
     """
     Scrapes data for products with missing information.
@@ -33,7 +35,14 @@ def scrape_missing_data(max_duration: int = 600, limit: int = 50):
     
     print(f"Starting scraper service. Max duration: {max_duration}s")
     
-    products_processed = 0
+    # Create Log Entry
+    log_entry = ScraperLog(status="running", items_processed=0, start_time=datetime.utcnow())
+    db.add(log_entry)
+    db.commit()
+    db.refresh(log_entry)
+    
+    current_log_id = log_entry.id
+    processed_count = 0
     
     try:
         while True:
@@ -81,13 +90,14 @@ def scrape_missing_data(max_duration: int = 600, limit: int = 50):
                     product_slug = product_slug.replace('--', '-')
                     
                 url = f"https://www.pricecharting.com/game/{console_slug}/{product_slug}"
-                print(f"Scraping {p.product_name}...")
+                # print(f"Scraping {p.product_name}...")
                 
                 try:
                     response = requests.get(url, headers=headers)
                     if response.status_code == 200:
                         soup = BeautifulSoup(response.content, 'html.parser')
                         
+                        # Data Extraction Logic (Same as before)
                         # 1. Image
                         if not p.image_url or "cloudinary" not in p.image_url:
                             img = soup.select_one('#product_images img') or soup.select_one('.cover img')
@@ -156,21 +166,39 @@ def scrape_missing_data(max_duration: int = 600, limit: int = 50):
                         
                         # Update last_scraped
                         p.last_scraped = datetime.utcnow()
+                        processed_count += 1
+                        
+                        # Update Log every item (or query less often if perf hits, but for 1 item/sec it's fine)
+                        db.query(ScraperLog).filter(ScraperLog.id == current_log_id).update({"items_processed": processed_count})
+                        
                         db.commit()
-                        products_processed += 1
                     else:
                         print(f"  Failed: {response.status_code}")
-                        # Mark scraped anyway to avoid loop if permanent error? Or maybe add error count?
-                        # For now, just skip.
                 except Exception as e:
                     print(f"  Error: {e}")
                     
                 time.sleep(random.uniform(0.5, 1.5))
             
             db.commit()
-            
+        
+        # Mark as completed
+        db.query(ScraperLog).filter(ScraperLog.id == current_log_id).update({
+            "status": "completed", 
+            "end_time": datetime.utcnow()
+        })
+        db.commit()
+
     except Exception as e:
         print(f"Global error: {e}")
+        try:
+            db.query(ScraperLog).filter(ScraperLog.id == current_log_id).update({
+                "status": "error", 
+                "error_message": str(e),
+                "end_time": datetime.utcnow()
+            })
+            db.commit()
+        except:
+            pass
     finally:
         db.close()
-        return products_processed
+        return processed_count

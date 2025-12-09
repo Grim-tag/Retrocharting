@@ -100,130 +100,84 @@ export default function AdminHealthPage() {
         {
             id: 'history',
             title: 'No Price History',
-            count: stats.missing_history,
-            color: 'bg-purple-500',
-            icon: '📉'
-        }
-    ];
-
-    const handleStartScraper = async () => {
-        try {
-            const token = localStorage.getItem('rc_token');
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/products/stats/scrape`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (res.ok) alert("Scraper started in background!");
-        } catch (e) {
-            alert("Failed to start scraper");
-        }
-    };
-
-    return (
-        <div className="text-white">
-            <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-white uppercase tracking-wider">Catalog Health</h2>
-                <div className="flex items-center gap-4">
-                    {stats && stats.last_activity ? (
-                        <div className="text-right">
-                            <p className="text-xs text-gray-400">Last Scraper Run</p>
-                            <p className="text-sm font-bold text-[#00ff00]">
-                                {new Date(stats.last_activity).toLocaleString()}
-                            </p>
-                            {/* Warning if inactive > 24h */
-                                (new Date().getTime() - new Date(stats.last_activity).getTime()) > 24 * 60 * 60 * 1000 && (
-                                    <p className="text-xs text-red-500 font-bold animate-pulse">inactive &gt; 24h</p>
-                                )
-                            }
-                        </div>
-                    ) : (
-                        <p className="text-xs text-gray-500">No activity recorded</p>
-                    )}
-                    <button
-                        onClick={handleStartScraper}
-                        className="bg-[#ff6600] hover:bg-[#ff8533] text-white px-4 py-2 rounded font-bold text-sm uppercase tracking-wide transition-colors"
+                {
+            cards.map(card => {
+                const pct = ((card.count / stats.total_products) * 100).toFixed(1);
+                const isSelected = selectedType === card.id;
+                return (
+                    <div
+                        key={card.id}
+                        onClick={() => fetchItems(card.id)}
+                        className={`p-6 rounded border cursor-pointer transition-all ${isSelected ? 'border-white bg-[#2a3142]' : 'border-[#2a3142] bg-[#1f2533] hover:border-gray-500'}`}
                     >
-                        ▶ Run Auto-Scraper
-                    </button>
-                </div>
-            </div>
-
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                {cards.map(card => {
-                    const pct = ((card.count / stats.total_products) * 100).toFixed(1);
-                    const isSelected = selectedType === card.id;
-                    return (
-                        <div
-                            key={card.id}
-                            onClick={() => fetchItems(card.id)}
-                            className={`p-6 rounded border cursor-pointer transition-all ${isSelected ? 'border-white bg-[#2a3142]' : 'border-[#2a3142] bg-[#1f2533] hover:border-gray-500'}`}
-                        >
-                            <div className="flex justify-between items-start mb-4">
-                                <span className="text-3xl">{card.icon}</span>
-                                <span className={`text-xs font-bold px-2 py-1 rounded text-white ${card.color}`}>
-                                    {pct}%
-                                </span>
-                            </div>
-                            <h3 className="text-gray-400 uppercase text-xs font-bold tracking-wider mb-1">{card.title}</h3>
-                            <p className="text-3xl font-bold text-white">{card.count.toLocaleString()}</p>
-                            <p className="text-xs text-gray-500 mt-2">items needing attention</p>
+                        <div className="flex justify-between items-start mb-4">
+                            <span className="text-3xl">{card.icon}</span>
+                            <span className={`text-xs font-bold px-2 py-1 rounded text-white ${card.color}`}>
+                                {pct}%
+                            </span>
                         </div>
-                    );
-                })}
-            </div>
-
-            {/* List */}
-            {selectedType && (
-                <div className="bg-[#1f2533] border border-[#2a3142] rounded overflow-hidden">
-                    <div className="p-4 border-b border-[#2a3142] flex justify-between items-center bg-[#2a3142]">
-                        <h3 className="font-bold text-white">
-                            Items with Missing {selectedType.charAt(0).toUpperCase() + selectedType.slice(1)} (First 50)
-                        </h3>
+                        <h3 className="text-gray-400 uppercase text-xs font-bold tracking-wider mb-1">{card.title}</h3>
+                        <p className="text-3xl font-bold text-white">{card.count.toLocaleString()}</p>
+                        <p className="text-xs text-gray-500 mt-2">items needing attention</p>
                     </div>
-                    {loadingItems ? (
-                        <div className="p-8 text-center text-gray-400">Loading details...</div>
-                    ) : (
-                        <table className="w-full text-left">
-                            <thead className="bg-[#151922] text-gray-400 text-xs uppercase">
-                                <tr>
-                                    <th className="p-4">ID</th>
-                                    <th className="p-4">Name</th>
-                                    <th className="p-4">Console</th>
-                                    <th className="p-4 text-center">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-[#2a3142] text-sm">
-                                {items.map(item => (
-                                    <tr key={item.id} className="hover:bg-[#252b3b]">
-                                        <td className="p-4 text-gray-500">{item.id}</td>
-                                        <td className="p-4 font-bold text-white">{item.product_name}</td>
-                                        <td className="p-4 text-gray-300">{item.console_name}</td>
-                                        <td className="p-4 text-center">
-                                            <div className="flex justify-center gap-3">
-                                                <Link
-                                                    href={`/admin/games/${item.id}/edit`}
-                                                    className="text-gray-400 hover:text-[#ff6600] transition-colors"
-                                                    title="Edit Details"
-                                                >
-                                                    ✎
-                                                </Link>
-                                                <Link
-                                                    href={`/admin/games/${item.id}/listings`}
-                                                    className="text-blue-400 hover:text-white"
-                                                    title="Manage Listings"
-                                                >
-                                                    Listings
-                                                </Link>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    )}
+                );
+            })
+        }
+            </div >
+
+        {/* List */ }
+    {
+        selectedType && (
+            <div className="bg-[#1f2533] border border-[#2a3142] rounded overflow-hidden">
+                <div className="p-4 border-b border-[#2a3142] flex justify-between items-center bg-[#2a3142]">
+                    <h3 className="font-bold text-white">
+                        Items with Missing {selectedType.charAt(0).toUpperCase() + selectedType.slice(1)} (First 50)
+                    </h3>
                 </div>
-            )}
-        </div>
+                {loadingItems ? (
+                    <div className="p-8 text-center text-gray-400">Loading details...</div>
+                ) : (
+                    <table className="w-full text-left">
+                        <thead className="bg-[#151922] text-gray-400 text-xs uppercase">
+                            <tr>
+                                <th className="p-4">ID</th>
+                                <th className="p-4">Name</th>
+                                <th className="p-4">Console</th>
+                                <th className="p-4 text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#2a3142] text-sm">
+                            {items.map(item => (
+                                <tr key={item.id} className="hover:bg-[#252b3b]">
+                                    <td className="p-4 text-gray-500">{item.id}</td>
+                                    <td className="p-4 font-bold text-white">{item.product_name}</td>
+                                    <td className="p-4 text-gray-300">{item.console_name}</td>
+                                    <td className="p-4 text-center">
+                                        <div className="flex justify-center gap-3">
+                                            <Link
+                                                href={`/admin/games/${item.id}/edit`}
+                                                className="text-gray-400 hover:text-[#ff6600] transition-colors"
+                                                title="Edit Details"
+                                            >
+                                                ✎
+                                            </Link>
+                                            <Link
+                                                href={`/admin/games/${item.id}/listings`}
+                                                className="text-blue-400 hover:text-white"
+                                                title="Manage Listings"
+                                            >
+                                                Listings
+                                            </Link>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                )}
+            </div>
+        )
+    }
+        </div >
     );
 }

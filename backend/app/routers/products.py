@@ -393,9 +393,36 @@ def run_scraper(
     """
     Trigger the scraper background job (Admin only).
     """
-    # Run for 5 minutes in background
+    # Run for 5 minutes in background (300s)
     background_tasks.add_task(scrape_missing_data, max_duration=300, limit=50)
     return {"status": "Scraper started in background"}
+
+from app.models.scraper_log import ScraperLog
+
+@router.get("/stats/scraper/status")
+def get_scraper_status(
+    current_user: 'User' = Depends(get_current_admin_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get the latest scraper log entry to determine status.
+    """
+    latest = db.query(ScraperLog).order_by(ScraperLog.start_time.desc()).first()
+    if not latest:
+        return {"status": "idle", "items_processed": 0, "start_time": None}
+    
+    # Check if 'running' but too old (stuck/crashed)
+    # If start_time > 1 hour ago and still running, assume dead?
+    # Backend service limits to 300s or 600s, so if > 15m assume done.
+    
+    return {
+        "status": latest.status,
+        "items_processed": latest.items_processed,
+        "start_time": latest.start_time,
+        "end_time": latest.end_time,
+        "error_message": latest.error_message
+    }
+
 
 @router.get("/incomplete", response_model=List[ProductSchema])
 def get_incomplete_products(
