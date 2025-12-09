@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks, Response
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from typing import List, Optional
 
 from app.db.session import get_db
@@ -319,8 +320,8 @@ def get_catalog_health(
     Returns statistics on catalog completeness (Admin only).
     """
     total = db.query(ProductModel).count()
-    missing_images = db.query(ProductModel).filter(ProductModel.image_url == None).count()
-    missing_desc = db.query(ProductModel).filter(ProductModel.description == None).count()
+    missing_images = db.query(ProductModel).filter(or_(ProductModel.image_url == None, ProductModel.image_url == "")).count()
+    missing_desc = db.query(ProductModel).filter(or_(ProductModel.description == None, ProductModel.description == "")).count()
     # Missing price: check if loose_price is None or 0
     missing_price = db.query(ProductModel).filter((ProductModel.loose_price == None) | (ProductModel.loose_price == 0)).count()
     
@@ -345,9 +346,9 @@ def get_incomplete_products(
     query = db.query(ProductModel)
     
     if type == IncompleteType.image:
-        query = query.filter(ProductModel.image_url == None)
+        query = query.filter(or_(ProductModel.image_url == None, ProductModel.image_url == ""))
     elif type == IncompleteType.description:
-        query = query.filter(ProductModel.description == None)
+        query = query.filter(or_(ProductModel.description == None, ProductModel.description == ""))
     elif type == IncompleteType.price:
         query = query.filter((ProductModel.loose_price == None) | (ProductModel.loose_price == 0))
         
