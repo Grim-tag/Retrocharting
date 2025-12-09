@@ -53,12 +53,24 @@ def scrape_data():
                 print(f"Time limit reached ({elapsed:.0f}s). Stopping for now.")
                 break
                 
-            # Get products without description OR without price history
-            from sqlalchemy import or_, text
+            # Get products without description OR without price history OR missing details
+            from sqlalchemy import or_, text, and_
             
             # Fetch a batch
+            # Logic: Missing Description OR Missing Publisher OR No Price History
+            # We use a crude check: if description is short/empty, or publisher empty.
+            
+            # Subquery for history existence
+            # This is cleaner in SQL but we can use outerjoin + filter(PriceHistory.id == None)
+            
             products = db.query(Product).outerjoin(PriceHistory).filter(
-                or_(Product.description == None, PriceHistory.id == None),
+                or_(
+                    Product.description == None, 
+                    Product.description == "",
+                    Product.publisher == None,
+                    Product.publisher == "",
+                    PriceHistory.id == None
+                ),
                 Product.console_name != None,
                 Product.console_name != "",
                 Product.product_name != None,

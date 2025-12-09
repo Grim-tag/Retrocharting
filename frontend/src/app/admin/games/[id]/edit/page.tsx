@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 
+import PriceHistoryChart from '@/components/PriceHistoryChart';
+
 export default function AdminGameEditPage() {
     const params = useParams();
     const router = useRouter();
@@ -11,6 +13,7 @@ export default function AdminGameEditPage() {
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [history, setHistory] = useState([]);
     const [formData, setFormData] = useState({
         product_name: '',
         console_name: '',
@@ -30,6 +33,7 @@ export default function AdminGameEditPage() {
         const fetchProduct = async () => {
             if (!id) return;
             try {
+                // Fetch Product
                 const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/products/${id}`);
                 if (res.ok) {
                     const data = await res.json();
@@ -48,6 +52,13 @@ export default function AdminGameEditPage() {
                         new_price: data.new_price || 0
                     });
                 }
+
+                // Fetch History
+                const resHistory = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/products/${id}/history`);
+                if (resHistory.ok) {
+                    setHistory(await resHistory.json());
+                }
+
             } catch (error) {
                 console.error("Failed to load product", error);
             } finally {
@@ -160,6 +171,18 @@ export default function AdminGameEditPage() {
                             <label className="block text-xs uppercase text-gray-400 mb-1">New</label>
                             <input type="number" step="0.01" name="new_price" value={formData.new_price} onChange={handleChange} className="w-full bg-[#1f2533] border border-[#2a3142] p-2 rounded text-white" />
                         </div>
+                    </div>
+                </div>
+
+                {/* Price History Visualization */}
+                <div className="p-4 bg-[#0f121e] rounded border border-[#2a3142]">
+                    <h3 className="text-white font-bold mb-4 text-sm uppercase">Price History Data</h3>
+                    <div className="h-64">
+                        {history.length > 0 ? (
+                            <PriceHistoryChart history={history} />
+                        ) : (
+                            <p className="text-gray-500 text-sm">No history data available.</p>
+                        )}
                     </div>
                 </div>
 
