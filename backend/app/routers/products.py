@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks, Response
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, exists
 from typing import List, Optional
 
 from app.db.session import get_db
@@ -310,6 +310,8 @@ class IncompleteType(str, Enum):
     image = "image"
     description = "description"
     price = "price"
+    details = "details"
+    history = "history"
 
 @router.get("/stats/health", response_model=dict)
 def get_catalog_health(
@@ -325,11 +327,28 @@ def get_catalog_health(
     # Missing price: check if loose_price is None or 0
     missing_price = db.query(ProductModel).filter((ProductModel.loose_price == None) | (ProductModel.loose_price == 0)).count()
     
+    # Missing details: Publisher OR Developer is missing
+    missing_details = db.query(ProductModel).filter(
+        or_(
+            ProductModel.publisher == None, 
+            ProductModel.publisher == "",
+            ProductModel.developer == None, 
+            ProductModel.developer == ""
+        )
+    ).count()
+
+    # Missing History: Products with NO price history entries
+    # Use EXISTS for performance
+    stmt_history = exists().where(PriceHistory.product_id == ProductModel.id)
+    missing_history = db.query(ProductModel).filter(~stmt_history).count()
+
     return {
         "total_products": total,
         "missing_images": missing_images,
         "missing_descriptions": missing_desc,
-        "missing_prices": missing_price
+        "missing_prices": missing_price,
+        "missing_details": missing_details,
+        "missing_history": missing_history
     }
 
 @router.get("/incomplete", response_model=List[ProductSchema])
@@ -351,6 +370,18 @@ def get_incomplete_products(
         query = query.filter(or_(ProductModel.description == None, ProductModel.description == ""))
     elif type == IncompleteType.price:
         query = query.filter((ProductModel.loose_price == None) | (ProductModel.loose_price == 0))
+    elif type == IncompleteType.details:
+        query = query.filter(
+            or_(
+                ProductModel.publisher == None, 
+                ProductModel.publisher == "",
+                ProductModel.developer == None, 
+                ProductModel.developer == ""
+            )
+        )
+    elif type == IncompleteType.history:
+        stmt = exists().where(PriceHistory.product_id == ProductModel.id)
+        query = query.filter(~stmt)
         
     return query.offset(skip).limit(limit).all()
 

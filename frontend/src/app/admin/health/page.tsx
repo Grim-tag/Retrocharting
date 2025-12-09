@@ -8,6 +8,8 @@ interface HealthStats {
     missing_images: number;
     missing_descriptions: number;
     missing_prices: number;
+    missing_details: number;
+    missing_history: number;
 }
 
 interface Product {
@@ -86,6 +88,20 @@ export default function AdminHealthPage() {
             count: stats.missing_prices,
             color: 'bg-blue-500',
             icon: '💰'
+        },
+        {
+            id: 'details',
+            title: 'Missing Details',
+            count: stats.missing_details,
+            color: 'bg-teal-500',
+            icon: 'ℹ️'
+        },
+        {
+            id: 'history',
+            title: 'No Price History',
+            count: stats.missing_history,
+            color: 'bg-purple-500',
+            icon: '📉'
         }
     ];
 
@@ -94,7 +110,7 @@ export default function AdminHealthPage() {
             <h2 className="text-2xl font-bold mb-6 text-white uppercase tracking-wider">Catalog Health</h2>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                 {cards.map(card => {
                     const pct = ((card.count / stats.total_products) * 100).toFixed(1);
                     const isSelected = selectedType === card.id;

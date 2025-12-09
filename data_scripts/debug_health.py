@@ -82,6 +82,24 @@ def check_data():
         for s in samples:
             print(f"- '{s[0]}'")
 
+        # Descriptions are already checked above
+        
+        # Check Details (Publisher / Developer)
+        missing_publisher = db.query(Product).filter(or_(Product.publisher == None, Product.publisher == "")).count()
+        missing_developer = db.query(Product).filter(or_(Product.developer == None, Product.developer == "")).count()
+        print(f"Missing Publisher: {missing_publisher}")
+        print(f"Missing Developer: {missing_developer}")
+
+        # Check Price History (Products with NO history points)
+        # This is heavy if done naively. Use NOT EXISTS.
+        from sqlalchemy import exists, text
+        
+        # Products that do NOT have any price history
+        # SQL: SELECT count(*) FROM products p WHERE NOT EXISTS (SELECT 1 FROM price_history ph WHERE ph.product_id = p.id)
+        
+        products_without_history = db.query(Product).filter(~exists().where(PriceHistory.product_id == Product.id)).count()
+        print(f"Products with NO Price History: {products_without_history}")
+
     finally:
         db.close()
 
