@@ -23,11 +23,27 @@ cloudinary.config(
 
 async def scrape_single_product(db: Session, product: "Product"):
     """
-    Scrapes a single product given its DB object.
-    Updates the object in place (does not commit).
-    Async wrapper for potential future async usage, but currently uses blocking requests.
+    Smart Scraper:
+    1. If metadata (desc, image, publisher) is missing -> Scrape HTML (Slow, but gets details).
+    2. If metadata exists -> Use API (Fast, gets latest price).
     """
-    return _scrape_product_logic(db, product)
+    # Check if we need rich metadata
+    needs_metadata = (
+        not product.description or 
+        not product.image_url or 
+        "cloudinary" not in (product.image_url or "") or
+        not product.publisher
+    )
+
+    if needs_metadata:
+        # Fallback to HTML scraping
+        return _scrape_html_logic(db, product)
+    elif settings.PRICECHARTING_API_TOKEN:
+        # Fast API Update
+        return _update_product_via_api(db, product)
+    else:
+        # No API Token, fallback to HTML
+        return _scrape_html_logic(db, product)
 
 def scrape_missing_data(max_duration: int = 600, limit: int = 50):
     """
@@ -60,13 +76,16 @@ def scrape_missing_data(max_duration: int = 600, limit: int = 50):
                 print(f"Time limit reached ({elapsed:.0f}s).")
                 break
                 
-            # Logic: Missing Description OR Missing Publisher OR No Price History
+            # Logic: Missing Description OR Missing Publisher OR No Price History (Last scraped long ago)
+            # Prioritize items never scraped or missing key info
             products = db.query(Product).outerjoin(PriceHistory).filter(
                 or_(
                     Product.description == None, 
                     Product.description == "",
                     Product.publisher == None,
                     Product.publisher == "",
+                    # Also include items compatible with API update (if we have token)
+                    # For now keep focus on missing data to fill holes
                     PriceHistory.id == None
                 ),
                 Product.console_name != None,
@@ -85,7 +104,31 @@ def scrape_missing_data(max_duration: int = 600, limit: int = 50):
                 if time.time() - start_time > max_duration:
                     break
 
-                success = _scrape_product_logic(db, p)
+                # The scrape_single_product wrapper decides method (HTML vs API)
+                # But here we are synchronous, so we call logical function directly or wrap
+                # Since scrape_single_product is async def in signature (but just returns logic),
+                # We'll just call the logic helper directly based on condition or fix the wrapper.
+                
+                # Let's use the logic helpers directly here to strictly control sync execution
+                needs_metadata = (
+                    not p.description or 
+                    not p.image_url or 
+                    "cloudinary" not in (p.image_url or "") or
+                    not p.publisher
+                )
+                
+                success = False
+                if needs_metadata:
+                    success = _scrape_html_logic(db, p)
+                    # HTML scraping is slow, so we sleep
+                    if success: time.sleep(random.uniform(1.0, 2.0))
+                elif settings.PRICECHARTING_API_TOKEN:
+                    success = _update_product_via_api(db, p)
+                    # API is fast, sleep less
+                    if success: time.sleep(0.1)
+                else:
+                    success = _scrape_html_logic(db, p)
+                    if success: time.sleep(random.uniform(1.0, 2.0))
                 
                 if success:
                     processed_count += 1
@@ -95,7 +138,6 @@ def scrape_missing_data(max_duration: int = 600, limit: int = 50):
                 p.last_scraped = datetime.utcnow()
                 db.commit()
                 
-                time.sleep(random.uniform(0.5, 1.5))
         
         # Mark as completed
         db.query(ScraperLog).filter(ScraperLog.id == current_log_id).update({
@@ -119,11 +161,98 @@ def scrape_missing_data(max_duration: int = 600, limit: int = 50):
         db.close()
         return processed_count
 
-def _scrape_product_logic(db: Session, product: "Product") -> bool:
+def _update_product_via_api(db: Session, product: "Product") -> bool:
     """
-    Internal synchronous logic to scrape a single product.
+    Uses PriceCharting API to update prices.
+    Very fast. Requires settings.PRICECHARTING_API_TOKEN.
+    """
+    from app.models.price_history import PriceHistory
+    
+    token = settings.PRICECHARTING_API_TOKEN
+    base_url = "https://www.pricecharting.com/api/product"
+    
+    params = {"t": token}
+    
+    if product.pricecharting_id:
+        params["id"] = product.pricecharting_id
+    else:
+        # Search by name if no ID
+        # Note: API search endpoint is /api/products, product endpoint is /api/product
+        # Detailed logic: if no ID, search first.
+        search_url = "https://www.pricecharting.com/api/products"
+        search_params = {"t": token, "q": f"{product.console_name} {product.product_name}"}
+        try:
+             res = requests.get(search_url, params=search_params, timeout=5)
+             if res.status_code == 200:
+                 data = res.json()
+                 if "products" in data and len(data["products"]) > 0:
+                     # Optimistic match: take first result
+                     # Ensure console matches loosely if possible
+                     best_match = data["products"][0]
+                     product.pricecharting_id = int(best_match["id"])
+                     params["id"] = product.pricecharting_id
+                 else:
+                     return False # Not found
+             else:
+                 return False
+        except Exception:
+            return False
+
+    # Now fetch product details
+    try:
+        response = requests.get(base_url, params=params, timeout=5)
+        if response.status_code != 200:
+            return False
+            
+        data = response.json()
+        if data.get("status") != "success":
+            return False
+            
+        # Update Prices (API returns cents)
+        if "loose-price" in data: product.loose_price = float(data["loose-price"]) / 100.0
+        if "cib-price" in data: product.cib_price = float(data["cib-price"]) / 100.0
+        if "new-price" in data: product.new_price = float(data["new-price"]) / 100.0
+        
+        # Add Price History Entry (Today)
+        # We add one entry for today to keep history alive
+        today_date = datetime.utcnow().date()
+        
+        # Helper to upsert history for today
+        def upsert_history(price_val, cond):
+            if price_val is None: return
+            exists = db.query(PriceHistory).filter(
+                PriceHistory.product_id == product.id,
+                PriceHistory.date == today_date,
+                PriceHistory.condition == cond
+            ).first()
+            
+            if not exists:
+                ph = PriceHistory(
+                    product_id=product.id,
+                    date=today_date,
+                    price=price_val,
+                    condition=cond
+                )
+                db.add(ph)
+            else:
+                exists.price = price_val
+
+        upsert_history(product.loose_price, "loose")
+        upsert_history(product.cib_price, "cib")
+        upsert_history(product.new_price, "new")
+        
+        return True
+        
+    except Exception as e:
+        print(f"API Error: {e}")
+        return False
+
+def _scrape_html_logic(db: Session, product: "Product") -> bool:
+    """
+    Internal synchronous logic to scrape a single product via HTML.
     Returns True if successful, False otherwise.
     """
+    from app.models.price_history import PriceHistory
     from app.models.price_history import PriceHistory
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
