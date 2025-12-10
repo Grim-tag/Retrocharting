@@ -1,0 +1,237 @@
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from sqlalchemy import text, func
+from typing import List, Optional, Dict, Any
+from datetime import datetime, timedelta
+
+from app.db.session import get_db
+from app.models.user import User
+from app.models.collection_item import CollectionItem
+from app.models.product import Product
+from app.models.price_history import PriceHistory
+from app.routers.auth import get_current_user
+
+router = APIRouter()
+
+@router.get("/summary")
+def get_portfolio_summary(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get high-level portfolio stats: Total Value, Item Count, Console Count.
+    """
+    # Fetch all items with their product details
+    # Efficiency: We could do this in SQL, but for <5000 items Python is fine and easier for conditional pricing
+    items = db.query(CollectionItem, Product).join(Product, CollectionItem.product_id == Product.id)\
+        .filter(CollectionItem.user_id == current_user.id).all()
+        
+    total_value = 0.0
+    item_count = len(items)
+    consoles = set()
+    
+    top_items = []
+    
+    for item, product in items:
+        # Calculate Value
+        val = 0.0
+        if item.condition == 'LOOSE': val = product.loose_price or 0
+        elif item.condition == 'CIB': val = product.cib_price or 0
+        elif item.condition == 'NEW': val = product.new_price or 0
+        elif item.condition == 'GRADED': val = product.new_price or 0 # Fallback
+        
+        total_value += val
+        consoles.add(product.console_name)
+        
+        # Add to top items candidate list
+        top_items.append({
+            "name": product.product_name,
+            "console": product.console_name,
+            "value": val,
+            "image": product.image_url
+        })
+        
+    # Sort top items by value
+    top_items.sort(key=lambda x: x["value"], reverse=True)
+    
+    return {
+        "total_value": round(total_value, 2),
+        "item_count": item_count,
+        "console_count": len(consoles),
+        "top_items": top_items[:5]
+    }
+
+@router.get("/history")
+def get_portfolio_history(
+    range_days: int = 30,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Calculates the portfolio value over time.
+    Complex logic: Replays the collection state day by day.
+    """
+    # 1. Get all items
+    items = db.query(CollectionItem).filter(CollectionItem.user_id == current_user.id).all()
+    if not items:
+        return []
+
+    item_product_map = {item.id: item.product_id for item in items}
+    product_ids = [item.product_id for item in items]
+    
+    # 2. Get Price History for all these products
+    # We need a robust way to find "price at date X"
+    # Let's fetch all history points for these products
+    history_records = db.query(PriceHistory).filter(
+        PriceHistory.product_id.in_(product_ids),
+        PriceHistory.date >= datetime.utcnow().date() - timedelta(days=range_days + 5) # Buffer
+    ).all()
+    
+    # Organize history: ProductID -> Condition -> Date -> Price
+    # Map: p_id -> { "loose": { date_obj: price }, "cib": ... }
+    price_map = {} 
+    
+    for h in history_records:
+        if h.product_id not in price_map: price_map[h.product_id] = {}
+        cond_u = h.condition.upper()
+        if cond_u == "USED": cond_u = "LOOSE" # Normalize
+        if cond_u == "COMPLETE": cond_u = "CIB"
+        
+        if cond_u not in price_map[h.product_id]: price_map[h.product_id][cond_u] = {}
+        
+        price_map[h.product_id][cond_u][h.date] = h.price
+
+    # 3. Iterate days
+    chart_data = []
+    today = datetime.utcnow().date()
+    
+    for i in range(range_days, -1, -1):
+        current_date = today - timedelta(days=i)
+        daily_total = 0.0
+        
+        for item in items:
+            # Did we own it then?
+            if item.added_at and item.added_at.date() > current_date:
+                continue
+                
+            # Find price
+            # Logic: Look for price on current_date. If missing, look back up to 7 days.
+            # If still missing, assume 0 (or use current price if we want to be generous, but 0 is strict)
+            p_id = item.product_id
+            cond = item.condition
+            
+            # Graded fallback
+            if cond == 'GRADED': cond = 'NEW'
+            
+            price = 0.0
+            if p_id in price_map and cond in price_map[p_id]:
+                date_prices = price_map[p_id][cond]
+                # Look for exact match or nearest past match
+                # Simple loop back
+                for lookback in range(0, 7):
+                    d_check = current_date - timedelta(days=lookback)
+                    if d_check in date_prices:
+                        price = date_prices[d_check]
+                        break
+            
+            daily_total += price
+            
+        chart_data.append({
+            "date": current_date.isoformat(),
+            "value": round(daily_total, 2)
+        })
+        
+@router.get("/movers")
+def get_portfolio_movers(
+    days: int = 30,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Indentify top gainers and losers in the collection over the last X days.
+    """
+    items = db.query(CollectionItem, Product).join(Product, CollectionItem.product_id == Product.id)\
+        .filter(CollectionItem.user_id == current_user.id).all()
+        
+    movers = []
+    
+    # Pre-fetch history for "days" ago
+    # We want price closest to (Today - days)
+    target_date = datetime.utcnow().date() - timedelta(days=days)
+    
+    # Efficient fetch: Get price history for these products around target date
+    # Ideally exactly on target_date, but realistically the latest BEFORE or ON target date.
+    # Simple approach: fetch all history for these items and find best match in python
+    product_ids = [item.product_id for item, _ in items]
+    
+    # Fetch history window: [target_date - 7, target_date + 1] to catch nearest
+    window_start = target_date - timedelta(days=7)
+    window_end = target_date + timedelta(days=1)
+    
+    history_records = db.query(PriceHistory).filter(
+        PriceHistory.product_id.in_(product_ids),
+        PriceHistory.date >= window_start,
+        PriceHistory.date <= window_end
+    ).all()
+    
+    # Map: pid -> cond -> date -> price
+    price_map = {}
+    for h in history_records:
+        if h.product_id not in price_map: price_map[h.product_id] = {}
+        cond = h.condition.upper()
+        if cond == 'USED': cond = 'LOOSE'
+        if cond == 'COMPLETE': cond = 'CIB'
+        if cond not in price_map[h.product_id]: price_map[h.product_id][cond] = {}
+        price_map[h.product_id][cond][h.date] = h.price
+
+    for item, product in items:
+        # 1. Current Price
+        current_val = 0.0
+        if item.condition == 'LOOSE': current_val = product.loose_price or 0
+        elif item.condition == 'CIB': current_val = product.cib_price or 0
+        elif item.condition == 'NEW': current_val = product.new_price or 0
+        elif item.condition == 'GRADED': current_val = product.new_price or 0
+        
+        if current_val == 0: continue
+            
+        # 2. Past Price
+        past_val = current_val # Default to flat if no history
+        
+        # Look for price at target_date
+        pid = product.id
+        cond = item.condition
+        if cond == 'GRADED': cond = 'NEW'
+        
+        if pid in price_map and cond in price_map[pid]:
+            # scan back from target_date
+            found = False
+            for lookback in range(0, 8):
+                d = target_date - timedelta(days=lookback)
+                if d in price_map[pid][cond]:
+                    past_val = price_map[pid][cond][d]
+                    found = True
+                    break
+        
+        # 3. Diff
+        pct_change = 0.0
+        if past_val > 0:
+            pct_change = ((current_val - past_val) / past_val) * 100.0
+        
+        if abs(pct_change) > 0.1: # Only track real movers
+            movers.append({
+                "name": product.product_name,
+                "console": product.console_name,
+                "current_price": current_val,
+                "past_price": past_val,
+                "pct_change": round(pct_change, 2),
+                "abs_change": round(current_val - past_val, 2),
+                "image": product.image_url
+            })
+            
+    # Sort: Top 5 Gainers and Bottom 5 Losers
+    movers.sort(key=lambda x: x['pct_change'], reverse=True)
+    
+    return {
+        "gainers": movers[:5],
+        "losers": movers[-5:] if len(movers) > 5 and movers[-1]['pct_change'] < 0 else []
+    }

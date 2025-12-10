@@ -277,3 +277,42 @@ export async function getRecentlyScrapedProducts(limit: number = 10, token: stri
         return [];
     }
 }
+// --- Portfolio APIs ---
+
+export async function getPortfolioSummary(token: string): Promise<any> {
+    try {
+        const response = await axios.get(`${API_URL}/portfolio/summary`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Failed to fetch portfolio summary", error);
+        return null;
+    }
+}
+
+export async function getPortfolioHistory(token: string, days = 30): Promise<any[]> {
+    try {
+        const response = await axios.get(`${API_URL}/portfolio/history`, {
+            headers: { Authorization: `Bearer ${token}` },
+            params: { range_days: days }
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Failed to fetch portfolio history", error);
+        return [];
+    }
+}
+
+export async function getPortfolioMovers(token: string, days = 30): Promise<any> {
+    try {
+        const response = await axios.get(`${API_URL}/portfolio/movers`, {
+            headers: { Authorization: `Bearer ${token}` },
+            params: { days }
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Failed to fetch portfolio movers", error);
+        return { gainers: [], losers: [] };
+    }
+}

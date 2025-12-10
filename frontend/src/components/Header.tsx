@@ -142,6 +142,13 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
                                         🎯 Sniper
                                     </button>
                                     <button
+                                        onClick={() => router.push(`/${lang}/collection/analytics`)}
+                                        className="hidden md:flex items-center gap-1 text-xs font-bold bg-[#22c55e]/20 text-[#22c55e] hover:bg-[#22c55e] hover:text-white px-2 py-1 rounded border border-[#22c55e]/30 transition-all ml-2"
+                                        title="Portfolio Analytics"
+                                    >
+                                        📈 Portfolio
+                                    </button>
+                                    <button
                                         onClick={logout}
                                         className="text-xs text-gray-400 hover:text-white border-l border-gray-600 pl-3 ml-1"
                                         title="Logout"
