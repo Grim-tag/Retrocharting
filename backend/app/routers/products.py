@@ -454,6 +454,26 @@ def get_scraper_status(
         "error_message": latest.error_message
     }
 
+@router.post("/maintenance/fix-prices")
+def fix_price_scaling(
+    current_user: 'User' = Depends(get_current_admin_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Emergency Maintenance Tool: Fixes inflated prices (>500) by dividing by 100.
+    """
+    try:
+        # Update price history where likely in cents
+        # Assuming loose prices are typically < $500, so > 500 is safe to assume cents.
+        # Even expensive games are rarely exactly 500.00 without being cents data.
+        stmt = text("UPDATE price_history SET price = price / 100.0 WHERE price > 500")
+        result = db.execute(stmt)
+        db.commit()
+        return {"status": "success", "affected_rows": result.rowcount, "message": f"Fixed {result.rowcount} inflated price records."}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.get("/stats/recently-scraped", response_model=List[ProductSchema])
 def get_recently_scraped(
     limit: int = 10,
