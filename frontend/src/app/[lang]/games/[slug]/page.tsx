@@ -190,7 +190,27 @@ export default async function GamePage({ params }: { params: Promise<{ slug: str
                                 </div>
                                 <div>
                                     <span className="text-gray-500 block">{dict.product.details.genre}</span>
-                                    <span className="text-white font-medium">{product.genre || "-"}</span>
+                                    <span className="text-white font-medium">
+                                        {product.genre ? (
+                                            product.genre.split(',').map((g, i) => {
+                                                const genreName = g.trim();
+                                                const consoleSlug = product.console_name.toLowerCase().replace(/ /g, '-');
+                                                // Only link if we have a valid genre name
+                                                if (!genreName) return null;
+                                                return (
+                                                    <span key={i}>
+                                                        {i > 0 && ", "}
+                                                        <Link
+                                                            href={`/${lang}/${gamesSlug}/console/${consoleSlug}?genre=${encodeURIComponent(genreName)}`}
+                                                            className="hover:text-[#ff6600] hover:underline transition-colors"
+                                                        >
+                                                            {genreName}
+                                                        </Link>
+                                                    </span>
+                                                );
+                                            })
+                                        ) : "-"}
+                                    </span>
                                 </div>
                                 <div>
                                     <span className="text-gray-500 block">{dict.product.details.players}</span>
