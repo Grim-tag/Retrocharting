@@ -159,7 +159,12 @@ export default function AdminHealthPage() {
                 <h2 className="text-2xl font-bold text-white uppercase tracking-wider">Catalog Health</h2>
                 <div className="flex items-center gap-4">
 
-                    {/* Status Monitor */}
+                    {scraperStatus?.status === 'error' && (
+                        <div className="bg-red-500/20 border border-red-500 text-red-200 px-4 py-2 rounded mb-4 text-xs font-mono">
+                            <strong>Last Error:</strong> {scraperStatus.error_message}
+                        </div>
+                    )}
+
                     {isRunning ? (
                         <div className="flex items-center gap-3 bg-[#2a3142] px-4 py-2 rounded animate-pulse border border-[#ff6600]">
                             <div className="w-2 h-2 bg-[#ff6600] rounded-full"></div>
@@ -188,8 +193,8 @@ export default function AdminHealthPage() {
                         onClick={handleStartScraper}
                         disabled={isRunning}
                         className={`px-4 py-2 rounded font-bold text-sm uppercase tracking-wide transition-colors ${isRunning
-                                ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                                : 'bg-[#ff6600] hover:bg-[#ff8533] text-white'
+                            ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                            : 'bg-[#ff6600] hover:bg-[#ff8533] text-white'
                             }`}
                     >
                         {isRunning ? 'Scraper Running...' : '▶ Run Auto-Scraper'}
