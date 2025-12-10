@@ -1,4 +1,5 @@
 import Link from "next/link";
+import AddToWishlistButton from "@/components/AddToWishlistButton";
 import { getProductById, getProductHistory, getProductsByConsole, getGenres } from "@/lib/api";
 import ListingsTable from "@/components/ListingsTable";
 import AddToCollectionButton from "@/components/AddToCollectionButton";
@@ -224,9 +225,11 @@ export default async function Page({
                         {/* Actions */}
                         <div className="flex gap-4 mb-8">
                             <AddToCollectionButton product={product} lang={lang} />
-                            <button className="flex-1 bg-[#2a3142] hover:bg-[#353e54] text-white font-bold py-3 px-6 rounded transition-colors uppercase tracking-wide border border-[#353e54]">
-                                {dict.product.actions.add_wishlist}
-                            </button>
+                            <AddToWishlistButton
+                                product={product}
+                                lang={lang}
+                                label={dict.product.actions.add_wishlist}
+                            />
                         </div>
 
                         {/* eBay Listings */}
