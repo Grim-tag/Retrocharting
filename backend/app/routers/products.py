@@ -454,6 +454,18 @@ def get_scraper_status(
         "error_message": latest.error_message
     }
 
+@router.get("/stats/recently-scraped", response_model=List[ProductSchema])
+def get_recently_scraped(
+    limit: int = 10,
+    current_user: 'User' = Depends(get_current_admin_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get list of products that were most recently scraped/updated.
+    """
+    products = db.query(ProductModel).filter(ProductModel.last_scraped != None).order_by(ProductModel.last_scraped.desc()).limit(limit).all()
+    return products
+
 
 @router.get("/incomplete", response_model=List[ProductSchema])
 def get_incomplete_products(

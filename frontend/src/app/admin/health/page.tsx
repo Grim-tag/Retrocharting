@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import RecentlyScrapedList from '@/components/admin/RecentlyScrapedList';
 
 interface HealthStats {
     total_products: number;
@@ -202,8 +203,14 @@ export default function AdminHealthPage() {
                 </div>
             </div>
 
+            {/* Recently Scraped List */}
+            <RecentlyScrapedList
+                token={localStorage.getItem('rc_token') || ''}
+                refreshTrigger={scraperStatus?.items_processed || 0}
+            />
+
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8 mt-8">
                 {cards.map(card => {
                     const pct = ((card.count / stats.total_products) * 100).toFixed(1);
                     const isSelected = selectedType === card.id;

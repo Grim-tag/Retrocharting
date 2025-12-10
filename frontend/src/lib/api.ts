@@ -264,3 +264,16 @@ export async function updateUser(token: string, data: { username?: string, full_
         throw error;
     }
 }
+
+export async function getRecentlyScrapedProducts(limit: number = 10, token: string): Promise<any[]> {
+    try {
+        const response = await axios.get(`${API_URL}/products/stats/recently-scraped`, {
+            headers: { 'Authorization': `Bearer ${token}` },
+            params: { limit }
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Failed to fetch recently scraped products", error);
+        return [];
+    }
+}
