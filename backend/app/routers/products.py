@@ -415,7 +415,7 @@ def run_scraper(
     Trigger the scraper background job (Admin only).
     """
     # Run for 5 minutes in background (300s)
-    background_tasks.add_task(scrape_missing_data, max_duration=300, limit=50)
+    background_tasks.add_task(scrape_missing_data, max_duration=300, limit=10)
     return {"status": "Scraper started in background"}
 
 from app.models.scraper_log import ScraperLog
@@ -433,8 +433,18 @@ def get_scraper_status(
         return {"status": "idle", "items_processed": 0, "start_time": None}
     
     # Check if 'running' but too old (stuck/crashed)
-    # If start_time > 1 hour ago and still running, assume dead?
-    # Backend service limits to 300s or 600s, so if > 15m assume done.
+    import datetime
+    
+    # If currently running but started > 10 minutes ago (limit is 5m), assume crashed
+    timeout_threshold = datetime.timedelta(minutes=10)
+    if latest.status == "running" and (datetime.datetime.utcnow() - latest.start_time) > timeout_threshold:
+        # We can auto-update it to error in DB? Or just report 'error' to frontend?
+        # Let's report 'error' so frontend enables the button.
+        # Ideally we update DB too so it stays fixed.
+        latest.status = "error"
+        latest.error_message = "Process timed out or crashed (Zombie job)."
+        latest.end_time = datetime.datetime.utcnow()
+        db.commit() # Fix it permanently
     
     return {
         "status": latest.status,
