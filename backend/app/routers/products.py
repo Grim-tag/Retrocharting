@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks, Response
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, exists
+from sqlalchemy import or_, exists, text
 from typing import List, Optional
 
 from app.db.session import get_db
