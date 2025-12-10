@@ -12,6 +12,7 @@ class CollectionItem(Base):
     
     # Condition: LOOSE, CIB, NEW, GRADED
     condition = Column(String, default="LOOSE")
+    paid_price = Column(Float, nullable=True)
     
     added_at = Column(DateTime, default=datetime.utcnow)
     notes = Column(Text, nullable=True)

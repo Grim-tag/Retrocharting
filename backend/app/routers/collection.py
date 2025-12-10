@@ -15,12 +15,14 @@ router = APIRouter()
 class CollectionItemCreate(BaseModel):
     product_id: int
     condition: str  # LOOSE, CIB, NEW, GRADED
+    paid_price: Optional[float] = None
     notes: Optional[str] = None
 
 class CollectionItemResponse(BaseModel):
     id: int
     product_id: int
     condition: str
+    paid_price: Optional[float]
     notes: Optional[str]
     # Hydrated Product Data
     product_name: str
@@ -62,6 +64,7 @@ def read_collection(
             "id": item.id,
             "product_id": item.product_id,
             "condition": item.condition,
+            "paid_price": item.paid_price,
             "notes": item.notes,
             "product_name": product.product_name,
             "console_name": product.console_name,
@@ -87,6 +90,7 @@ def add_to_collection(
         user_id=current_user.id,
         product_id=item_in.product_id,
         condition=item_in.condition,
+        paid_price=item_in.paid_price,
         notes=item_in.notes
     )
     db.add(new_item)
@@ -104,6 +108,7 @@ def add_to_collection(
         "id": new_item.id,
         "product_id": new_item.product_id,
         "condition": new_item.condition,
+        "paid_price": new_item.paid_price,
         "notes": new_item.notes,
         "product_name": product.product_name,
         "console_name": product.console_name,

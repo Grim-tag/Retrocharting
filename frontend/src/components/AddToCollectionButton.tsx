@@ -3,14 +3,19 @@
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { addToCollection, Product } from '@/lib/api';
+import { getCurrencyForLang, convertCurrency } from '@/lib/currency';
 
 export default function AddToCollectionButton({ product, lang }: { product: Product, lang: string }) {
     const { isAuthenticated, token, login } = useAuth();
     const [isOpen, setIsOpen] = useState(false);
     const [condition, setCondition] = useState('LOOSE');
     const [notes, setNotes] = useState('');
+    const [paidPriceStr, setPaidPriceStr] = useState('');
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
+
+    const currency = getCurrencyForLang(lang);
+    const symbol = currency === 'EUR' ? '€' : '$';
 
     if (!isAuthenticated) {
         return (
@@ -27,11 +32,26 @@ export default function AddToCollectionButton({ product, lang }: { product: Prod
         if (!token) return;
         setLoading(true);
         try {
-            await addToCollection(token, product.id, condition, notes);
+            // Logic: User inputs price in their local currency (e.g. 10 EUR)
+            // Backend expects USD (or base currency).
+            // We convert the input value to USD before sending.
+
+            let finalPrice = undefined;
+            if (paidPriceStr) {
+                const numericPrice = parseFloat(paidPriceStr.replace(',', '.'));
+                if (!isNaN(numericPrice)) {
+                    // Convert FROM user currency TO USD
+                    finalPrice = convertCurrency(numericPrice, currency, 'USD');
+                }
+            }
+
+            await addToCollection(token, product.id, condition, notes, finalPrice);
             setSuccess(true);
             setTimeout(() => {
                 setSuccess(false);
                 setIsOpen(false);
+                setNotes('');
+                setPaidPriceStr('');
             }, 1000);
         } catch (error: any) {
             console.error(error);
@@ -86,6 +106,23 @@ export default function AddToCollectionButton({ product, lang }: { product: Prod
                             </div>
                         </div>
 
+                        <div className="mb-4">
+                            <label className="block text-xs uppercase text-gray-400 mb-2">Price Paid ({symbol})</label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                value={paidPriceStr}
+                                onChange={(e) => setPaidPriceStr(e.target.value)}
+                                className="w-full bg-[#0f121e] border border-[#3a4152] rounded p-2 text-sm text-white focus:border-[#ff6600] outline-none"
+                                placeholder={`e.g. 15.00`}
+                            />
+                            {currency === 'EUR' && paidPriceStr && (
+                                <p className="text-[10px] text-gray-500 mt-1 text-right">
+                                    Saved as ~${convertCurrency(parseFloat(paidPriceStr), 'EUR', 'USD').toFixed(2)} USD
+                                </p>
+                            )}
+                        </div>
+
                         <div className="mb-6">
                             <label className="block text-xs uppercase text-gray-400 mb-2">Notes</label>
                             <textarea
@@ -93,7 +130,7 @@ export default function AddToCollectionButton({ product, lang }: { product: Prod
                                 onChange={(e) => setNotes(e.target.value)}
                                 className="w-full bg-[#0f121e] border border-[#3a4152] rounded p-2 text-sm text-white focus:border-[#ff6600] outline-none"
                                 rows={2}
-                                placeholder="Cost, date, condition details..."
+                                placeholder="Details..."
                             />
                         </div>
 

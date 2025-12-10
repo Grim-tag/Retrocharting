@@ -5,7 +5,8 @@ export const dynamic = 'force-dynamic';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { getPortfolioSummary, getPortfolioHistory, getPortfolioMovers } from '@/lib/api';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
+import { getCurrencyForLang, convertCurrency, formatCurrency } from '@/lib/currency';
 import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer
 } from 'recharts';
@@ -13,6 +14,9 @@ import {
 export default function AnalyticsPage() {
     const { token, isAuthenticated } = useAuth();
     const router = useRouter();
+    const params = useParams();
+    const lang = (params.lang as string) || 'en';
+    const currency = getCurrencyForLang(lang);
 
     const [summary, setSummary] = useState<any>(null);
     const [history, setHistory] = useState<any[]>([]);
@@ -26,7 +30,6 @@ export default function AnalyticsPage() {
             if (!token) return;
             setLoading(true);
             try {
-                // If APIs return null/defaults, the destructured variables will hold them
                 const [sumRes, histRes, movRes] = await Promise.all([
                     getPortfolioSummary(token),
                     getPortfolioHistory(token, 30),
@@ -60,6 +63,17 @@ export default function AnalyticsPage() {
         );
     }
 
+    // Convert values for display
+    const totalValueLoc = convertCurrency(summary?.total_value || 0, 'USD', currency);
+    const totalInvestedLoc = convertCurrency(summary?.total_invested || 0, 'USD', currency);
+    const totalProfitLoc = convertCurrency(summary?.total_profit || 0, 'USD', currency);
+
+    // Convert chart data
+    const historyLoc = history.map(h => ({
+        ...h,
+        value: convertCurrency(h.value, 'USD', currency)
+    }));
+
     return (
         <div className="min-h-screen bg-[#0f121e] py-8 text-white print:bg-white print:text-black">
             <div className="max-w-[1400px] mx-auto px-4">
@@ -84,37 +98,45 @@ export default function AnalyticsPage() {
                     <p className="text-gray-600">Generated on {new Date().toLocaleDateString()}</p>
                 </div>
 
-                {/* KPI Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                {/* KPI Grid - Expanded to 4 columns */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                     {/* Card 1: Total Value */}
                     <div className="bg-[#1f2533] p-6 rounded-xl border border-[#2a3142] print:border-black print:bg-white">
                         <h3 className="text-gray-400 uppercase text-xs font-bold mb-2 print:text-black">Total Value</h3>
-                        <div className="text-4xl font-bold text-[#22c55e]">
-                            {/* Check for summary existence before accessing properties */}
-                            ${(summary?.total_value || 0).toLocaleString()}
+                        <div className="text-3xl font-bold text-[#22c55e]">
+                            {formatCurrency(totalValueLoc, currency)}
                         </div>
-                        <div className="text-xs text-gray-500 mt-2">Estimated market value today</div>
+                        <div className="text-xs text-gray-500 mt-2">Current market value</div>
                     </div>
 
-                    {/* Card 2: Item Count */}
+                    {/* Card 2: Total Invested */}
                     <div className="bg-[#1f2533] p-6 rounded-xl border border-[#2a3142] print:border-black print:bg-white">
-                        <h3 className="text-gray-400 uppercase text-xs font-bold mb-2 print:text-black">Total Games</h3>
-                        <div className="text-4xl font-bold text-white print:text-black">
-                            {summary?.item_count || 0}
+                        <h3 className="text-gray-400 uppercase text-xs font-bold mb-2 print:text-black">Total Invested</h3>
+                        <div className="text-3xl font-bold text-white print:text-black">
+                            {formatCurrency(totalInvestedLoc, currency)}
                         </div>
-                        <div className="text-xs text-gray-500 mt-2">Across {summary?.console_count || 0} consoles</div>
+                        <div className="text-xs text-gray-500 mt-2">Based on paid price</div>
                     </div>
 
-                    {/* Card 3: Best Gem */}
+                    {/* Card 3: Unrealized Profit */}
                     <div className="bg-[#1f2533] p-6 rounded-xl border border-[#2a3142] print:border-black print:bg-white">
-                        <h3 className="text-gray-400 uppercase text-xs font-bold mb-2 print:text-black">Most Valuable Item</h3>
-                        {summary?.top_items && summary.top_items.length > 0 ? (
+                        <h3 className="text-gray-400 uppercase text-xs font-bold mb-2 print:text-black">Total Profit</h3>
+                        <div className={`text-3xl font-bold ${totalProfitLoc >= 0 ? 'text-[#22c55e]' : 'text-red-500'}`}>
+                            {totalProfitLoc > 0 ? '+' : ''}{formatCurrency(totalProfitLoc, currency)}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-2">Unrealized gains</div>
+                    </div>
+
+                    {/* Card 4: Best Gem */}
+                    <div className="bg-[#1f2533] p-6 rounded-xl border border-[#2a3142] print:border-black print:bg-white">
+                        <h3 className="text-gray-400 uppercase text-xs font-bold mb-2 print:text-black">Most Valuable</h3>
+                        {summary?.top_items?.[0] ? (
                             <div>
-                                <div className="text-2xl font-bold text-white truncate print:text-black" title={summary.top_items[0].name}>
+                                <div className="text-lg font-bold text-white truncate print:text-black" title={summary.top_items[0].name}>
                                     {summary.top_items[0].name}
                                 </div>
                                 <div className="text-[#ff6600] font-bold text-xl">
-                                    ${(summary.top_items[0].value || 0).toLocaleString()}
+                                    {formatCurrency(convertCurrency(summary.top_items[0].value, 'USD', currency), currency)}
                                 </div>
                             </div>
                         ) : (
@@ -128,7 +150,7 @@ export default function AnalyticsPage() {
                     <h3 className="text-xl font-bold mb-6 print:text-black">Value History (30 Days)</h3>
                     <div className="h-[300px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={history || []}>
+                            <AreaChart data={historyLoc}>
                                 <defs>
                                     <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
@@ -151,11 +173,15 @@ export default function AnalyticsPage() {
                                     stroke="#6b7280"
                                     tickLine={false}
                                     axisLine={false}
-                                    tickFormatter={(val) => `$${val}`}
+                                    tickFormatter={(val) => {
+                                        // Shorten large numbers for Y axis
+                                        if (val >= 1000) return `${currency === 'EUR' ? '€' : '$'}${(val / 1000).toFixed(1)}k`;
+                                        return `${currency === 'EUR' ? '€' : '$'}${val}`;
+                                    }}
                                 />
                                 <RechartsTooltip
                                     contentStyle={{ backgroundColor: '#1f2533', borderColor: '#2a3142', color: '#fff' }}
-                                    formatter={(value: number) => [`$${value.toLocaleString()}`, "Value"]}
+                                    formatter={(value: number) => [formatCurrency(value, currency), "Value"]}
                                     labelFormatter={(label) => {
                                         if (!label) return '';
                                         const d = new Date(label);
@@ -189,7 +215,7 @@ export default function AnalyticsPage() {
                                     </div>
                                 </div>
                                 <div className="font-bold text-[#ff6600]">
-                                    ${item.value.toLocaleString()}
+                                    {formatCurrency(convertCurrency(item.value, 'USD', currency), currency)}
                                 </div>
                             </div>
                         ))}
@@ -199,22 +225,31 @@ export default function AnalyticsPage() {
                     <div className="bg-[#1f2533] p-6 rounded-xl border border-[#2a3142] print:border-black print:bg-white print:break-inside-avoid">
                         <h3 className="text-xl font-bold mb-4 print:text-black">Top Movers (30 Days)</h3>
                         {movers?.gainers && movers.gainers.length > 0 ? (
-                            movers.gainers.slice(0, 5).map((item: any, i: number) => (
-                                <div key={i} className="flex items-center justify-between py-3 border-b border-[#2a3142] last:border-0 print:border-gray-200">
-                                    <div className="flex items-center gap-3">
-                                        <div className="text-green-500 bg-green-500/10 px-2 py-1 rounded text-xs font-bold">
-                                            +{item.pct_change}%
+                            movers.gainers.slice(0, 5).map((item: any, i: number) => {
+                                const currentLoc = convertCurrency(item.current_price, 'USD', currency);
+                                const absChangeLoc = convertCurrency(item.abs_change, 'USD', currency);
+
+                                return (
+                                    <div key={i} className="flex items-center justify-between py-3 border-b border-[#2a3142] last:border-0 print:border-gray-200">
+                                        <div className="flex items-center gap-3">
+                                            <div className="text-green-500 bg-green-500/10 px-2 py-1 rounded text-xs font-bold">
+                                                +{item.pct_change}%
+                                            </div>
+                                            <div>
+                                                <div className="font-bold print:text-black">{item.name}</div>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <div className="font-bold print:text-black">{item.name}</div>
+                                        <div className="text-right">
+                                            <div className="font-bold text-white print:text-black">
+                                                {formatCurrency(currentLoc, currency)}
+                                            </div>
+                                            <div className="text-xs text-green-500">
+                                                +{formatCurrency(absChangeLoc, currency)}
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="text-right">
-                                        <div className="font-bold text-white print:text-black">${item.current_price}</div>
-                                        <div className="text-xs text-green-500">+${item.abs_change}</div>
-                                    </div>
-                                </div>
-                            ))
+                                );
+                            })
                         ) : (
                             <div className="text-gray-500 text-center py-8">No significant movement yet.</div>
                         )}

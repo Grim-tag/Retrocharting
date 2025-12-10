@@ -208,6 +208,7 @@ export interface CollectionItem {
     product_id: number;
     condition: 'LOOSE' | 'CIB' | 'NEW' | 'GRADED';
     notes?: string;
+    paid_price?: number;
     product_name: string;
     console_name: string;
     image_url?: string;
@@ -226,11 +227,12 @@ export async function getCollection(token: string): Promise<CollectionItem[]> {
     }
 }
 
-export async function addToCollection(token: string, productId: number, condition: string, notes?: string): Promise<CollectionItem> {
+export async function addToCollection(token: string, productId: number, condition: string, notes?: string, paidPrice?: number): Promise<CollectionItem> {
     try {
         const response = await axios.post(`${API_URL}/collection/`, {
             product_id: productId,
             condition,
+            paid_price: paidPrice,
             notes
         }, {
             headers: { Authorization: `Bearer ${token}` }

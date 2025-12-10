@@ -128,6 +128,16 @@ def startup_event():
         else:
             print("Schema check: 'is_good_deal' column exists.")
 
+        # 3. CollectionItem 'paid_price' column
+        collection_cols = [c['name'] for c in inspector.get_columns('collection_items')]
+        if 'paid_price' not in collection_cols:
+            print("Migrating: Adding 'paid_price' column to collection_items table...")
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE collection_items ADD COLUMN paid_price FLOAT"))
+                conn.commit()
+        else:
+            print("Schema check: 'paid_price' column exists.")
+
         print("Auto-migration checks complete.")
         
     except Exception as e:

@@ -27,6 +27,7 @@ def get_portfolio_summary(
         .filter(CollectionItem.user_id == current_user.id).all()
         
     total_value = 0.0
+    total_invested = 0.0
     item_count = len(items)
     consoles = set()
     
@@ -41,6 +42,7 @@ def get_portfolio_summary(
         elif item.condition == 'GRADED': val = product.new_price or 0 # Fallback
         
         total_value += val
+        total_invested += (item.paid_price or 0)
         consoles.add(product.console_name)
         
         # Add to top items candidate list
@@ -48,6 +50,7 @@ def get_portfolio_summary(
             "name": product.product_name,
             "console": product.console_name,
             "value": val,
+            "paid": item.paid_price,
             "image": product.image_url
         })
         
@@ -56,6 +59,8 @@ def get_portfolio_summary(
     
     return {
         "total_value": round(total_value, 2),
+        "total_invested": round(total_invested, 2),
+        "total_profit": round(total_value - total_invested, 2),
         "item_count": item_count,
         "console_count": len(consoles),
         "top_items": top_items[:5]
@@ -110,9 +115,10 @@ def get_portfolio_history(
         daily_total = 0.0
         
         for item in items:
-            # Did we own it then?
-            if item.added_at and item.added_at.date() > current_date:
-                continue
+            # Did we own it then? 
+            # BACKFILL LOGIC: Ignore added_at. User wants to see history of CURRENT collection.
+            # if item.added_at and item.added_at.date() > current_date:
+            #     continue
                 
             # Find price
             # Logic: Look for price on current_date. If missing, look back up to 7 days.

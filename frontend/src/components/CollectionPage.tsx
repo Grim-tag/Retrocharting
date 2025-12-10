@@ -6,11 +6,15 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { TrashIcon } from '@heroicons/react/24/outline';
 
+import { getCurrencyForLang, convertCurrency, formatCurrency } from '@/lib/currency';
+
 export default function CollectionPage({ dict, lang }: { dict: any; lang: string }) {
     const { user, token, isAuthenticated } = useAuth();
     const router = useRouter();
     const [items, setItems] = useState<CollectionItem[]>([]);
     const [loading, setLoading] = useState(true);
+
+    const currency = getCurrencyForLang(lang);
 
     useEffect(() => {
         if (!loading && !isAuthenticated) {
@@ -25,7 +29,6 @@ export default function CollectionPage({ dict, lang }: { dict: any; lang: string
                 setLoading(false);
             });
         } else {
-            // Wait a bit to see if token loads from localStorage
             setTimeout(() => setLoading(false), 1000);
         }
     }, [token]);
@@ -39,16 +42,17 @@ export default function CollectionPage({ dict, lang }: { dict: any; lang: string
         }
     };
 
-    const totalValue = items.reduce((sum, item) => sum + (item.estimated_value || 0), 0);
+    const totalValueUSD = items.reduce((sum, item) => sum + (item.estimated_value || 0), 0);
+    const totalValueLocalized = convertCurrency(totalValueUSD, 'USD', currency);
     const totalItems = items.length;
 
     if (loading) return <div className="min-h-screen bg-[#1f2533] flex items-center justify-center text-white">Loading Collection...</div>;
 
-    if (!isAuthenticated) return null; // Will redirect
+    if (!isAuthenticated) return null;
 
     return (
         <div className="min-h-screen bg-[#1f2533] text-white">
-            <div className="max-w-6xl mx-auto px-4 py-8">
+            <div className="max-w-7xl mx-auto px-4 py-8">
 
                 {/* Header Stats */}
                 <div className="bg-[#2a3142] rounded-lg p-6 mb-8 flex flex-col md:flex-row justify-between items-center shadow-lg border border-[#3a4152]">
@@ -67,15 +71,12 @@ export default function CollectionPage({ dict, lang }: { dict: any; lang: string
                         </div>
                         <div>
                             <div className="text-3xl font-bold text-green-400">
-                                {new Intl.NumberFormat(lang === 'fr' ? 'fr-FR' : 'en-US', { style: 'currency', currency: 'EUR' }).format(totalValue)}
+                                {formatCurrency(totalValueLocalized, currency)}
                             </div>
                             <div className="text-xs uppercase tracking-wide text-gray-400">Est. Value</div>
                         </div>
                     </div>
                 </div>
-
-                {/* Filters (Future) */}
-                {/* <div className="mb-6 flex gap-2">...</div> */}
 
                 {/* Grid */}
                 {items.length === 0 ? (
@@ -91,43 +92,66 @@ export default function CollectionPage({ dict, lang }: { dict: any; lang: string
                                     <th className="p-4">Game</th>
                                     <th className="p-4">Console</th>
                                     <th className="p-4">Condition</th>
-                                    <th className="p-4">Notes</th>
+                                    <th className="p-4 text-right">Paid</th>
                                     <th className="p-4 text-right">Value</th>
+                                    <th className="p-4 text-right">Profit</th>
                                     <th className="p-4 text-center">Action</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-[#3a4152]">
-                                {items.map(item => (
-                                    <tr key={item.id} className="hover:bg-[#32394d] transition-colors">
-                                        <td className="p-4 flex items-center gap-3">
-                                            {item.image_url && <img src={item.image_url} className="w-10 h-10 object-cover rounded" />}
-                                            <span className="font-medium text-white">{item.product_name}</span>
-                                        </td>
-                                        <td className="p-4 text-gray-300">{item.console_name}</td>
-                                        <td className="p-4">
-                                            <span className={`px-2 py-1 rounded text-xs font-bold 
-                                                ${item.condition === 'NEW' ? 'bg-green-900 text-green-300' :
-                                                    item.condition === 'CIB' ? 'bg-blue-900 text-blue-300' :
-                                                        'bg-gray-700 text-gray-300'}`}>
-                                                {item.condition}
-                                            </span>
-                                        </td>
-                                        <td className="p-4 text-gray-400 text-sm italic">{item.notes}</td>
-                                        <td className="p-4 text-right font-mono text-green-400">
-                                            {item.estimated_value ?
-                                                new Intl.NumberFormat(lang === 'fr' ? 'fr-FR' : 'en-US', { style: 'currency', currency: 'EUR' }).format(item.estimated_value)
-                                                : '-'}
-                                        </td>
-                                        <td className="p-4 text-center">
-                                            <button
-                                                onClick={() => handleDelete(item.id)}
-                                                className="text-gray-500 hover:text-red-500 transition-colors p-2"
-                                            >
-                                                <TrashIcon className="w-5 h-5" />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
+                                {items.map(item => {
+                                    const valueUSD = item.estimated_value || 0;
+                                    const paidUSD = item.paid_price;
+                                    const profitUSD = paidUSD !== null && paidUSD !== undefined ? valueUSD - paidUSD : null;
+
+                                    const valueLoc = convertCurrency(valueUSD, 'USD', currency);
+                                    const paidLoc = paidUSD !== null && paidUSD !== undefined ? convertCurrency(paidUSD, 'USD', currency) : null;
+                                    const profitLoc = profitUSD !== null ? convertCurrency(profitUSD, 'USD', currency) : null;
+
+                                    return (
+                                        <tr key={item.id} className="hover:bg-[#32394d] transition-colors">
+                                            <td className="p-4 flex items-center gap-3">
+                                                {item.image_url && <img src={item.image_url} className="w-10 h-10 object-cover rounded" />}
+                                                <span className="font-medium text-white">{item.product_name}</span>
+                                            </td>
+                                            <td className="p-4 text-gray-300">{item.console_name}</td>
+                                            <td className="p-4">
+                                                <span className={`px-2 py-1 rounded text-xs font-bold 
+                                                    ${item.condition === 'NEW' ? 'bg-green-900 text-green-300' :
+                                                        item.condition === 'CIB' ? 'bg-blue-900 text-blue-300' :
+                                                            'bg-gray-700 text-gray-300'}`}>
+                                                    {item.condition}
+                                                </span>
+                                            </td>
+                                            <td className="p-4 text-right font-mono text-gray-300">
+                                                {paidLoc !== null ? formatCurrency(paidLoc, currency) : '-'}
+                                            </td>
+                                            <td className="p-4 text-right font-mono text-green-400">
+                                                {formatCurrency(valueLoc, currency)}
+                                            </td>
+                                            <td className="p-4 text-right font-mono">
+                                                {profitLoc !== null ? (
+                                                    <span className={profitLoc >= 0 ? 'text-green-500' : 'text-red-500'}>
+                                                        {profitLoc > 0 ? '+' : ''}{formatCurrency(profitLoc, currency)}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-gray-600">-</span>
+                                                )}
+                                            </td>
+                                            <td className="p-4 text-center">
+                                                <div className="flex justify-center gap-2">
+                                                    <button
+                                                        onClick={() => handleDelete(item.id)}
+                                                        className="text-gray-500 hover:text-red-500 transition-colors p-2"
+                                                        title="Remove"
+                                                    >
+                                                        <TrashIcon className="w-5 h-5" />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
                     </div>
