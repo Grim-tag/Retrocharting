@@ -102,11 +102,12 @@ function addSecurityHeaders(response: NextResponse) {
     // 6. Content Security Policy
     const csp = `
         default-src 'self';
-        script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com;
-        style-src 'self' 'unsafe-inline';
+        script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com https://accounts.google.com https://apis.google.com;
+        style-src 'self' 'unsafe-inline' https://accounts.google.com;
         img-src * blob: data:;
         font-src 'self';
-        connect-src 'self' https://retrocharting-frontend.onrender.com https://retrocharting.com;
+        connect-src 'self' https://retrocharting-frontend.onrender.com https://retrocharting.com https://accounts.google.com https://oauth2.googleapis.com;
+        frame-src https://accounts.google.com;
         frame-ancestors 'none';
         upgrade-insecure-requests;
     `.replace(/\s{2,}/g, ' ').trim();
