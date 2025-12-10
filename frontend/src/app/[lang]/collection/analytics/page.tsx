@@ -15,13 +15,20 @@ export default function AnalyticsPage() {
     const { token, isAuthenticated } = useAuth();
     const router = useRouter();
     const params = useParams();
-    const lang = (params.lang as string) || 'en';
+    const lang = (params?.lang as string) || 'en'; // Safe access options
     const currency = getCurrencyForLang(lang);
 
     const [summary, setSummary] = useState<any>(null);
     const [history, setHistory] = useState<any[]>([]);
     const [movers, setMovers] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [isMounted, setIsMounted] = useState(false);
+    const [reportDate, setReportDate] = useState('');
+
+    useEffect(() => {
+        setIsMounted(true);
+        setReportDate(new Date().toLocaleDateString());
+    }, []);
 
     useEffect(() => {
         if (!isAuthenticated) return;
@@ -47,6 +54,9 @@ export default function AnalyticsPage() {
         loadData();
     }, [token, isAuthenticated]);
 
+    // Prevent hydration mismatch: render nothing until client-side hydration is complete
+    if (!isMounted) return null;
+
     if (!isAuthenticated) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-[#0f121e] text-white">
@@ -68,11 +78,11 @@ export default function AnalyticsPage() {
     const totalInvestedLoc = convertCurrency(summary?.total_invested || 0, 'USD', currency);
     const totalProfitLoc = convertCurrency(summary?.total_profit || 0, 'USD', currency);
 
-    // Convert chart data
-    const historyLoc = history.map(h => ({
+    // Convert chart data and ensure it's valid for Recharts
+    const historyLoc = Array.isArray(history) ? history.map(h => ({
         ...h,
-        value: convertCurrency(h.value, 'USD', currency)
-    }));
+        value: convertCurrency(h.value || 0, 'USD', currency)
+    })) : [];
 
     return (
         <div className="min-h-screen bg-[#0f121e] py-8 text-white print:bg-white print:text-black">
@@ -95,10 +105,10 @@ export default function AnalyticsPage() {
                 {/* Print Header (Only visible when printing) */}
                 <div className="hidden print:block mb-8 border-b-2 border-black pb-4">
                     <h1 className="text-4xl font-bold">Collection Valuation Report</h1>
-                    <p className="text-gray-600">Generated on {new Date().toLocaleDateString()}</p>
+                    <p className="text-gray-600">Generated on {reportDate}</p>
                 </div>
 
-                {/* KPI Grid - Expanded to 4 columns */}
+                {/* KPI Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                     {/* Card 1: Total Value */}
                     <div className="bg-[#1f2533] p-6 rounded-xl border border-[#2a3142] print:border-black print:bg-white">
@@ -149,55 +159,60 @@ export default function AnalyticsPage() {
                 <div className="bg-[#1f2533] p-6 rounded-xl border border-[#2a3142] mb-8 print:border-black print:bg-white print:break-inside-avoid">
                     <h3 className="text-xl font-bold mb-6 print:text-black">Value History (30 Days)</h3>
                     <div className="h-[300px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={historyLoc}>
-                                <defs>
-                                    <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
-                                        <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#2a3142" vertical={false} />
-                                <XAxis
-                                    dataKey="date"
-                                    tickFormatter={(str) => {
-                                        if (!str) return '';
-                                        const d = new Date(str);
-                                        return isNaN(d.getTime()) ? '' : d.getDate().toString();
-                                    }}
-                                    stroke="#6b7280"
-                                    tickLine={false}
-                                    axisLine={false}
-                                />
-                                <YAxis
-                                    stroke="#6b7280"
-                                    tickLine={false}
-                                    axisLine={false}
-                                    tickFormatter={(val) => {
-                                        // Shorten large numbers for Y axis
-                                        if (val >= 1000) return `${currency === 'EUR' ? '€' : '$'}${(val / 1000).toFixed(1)}k`;
-                                        return `${currency === 'EUR' ? '€' : '$'}${val}`;
-                                    }}
-                                />
-                                <RechartsTooltip
-                                    contentStyle={{ backgroundColor: '#1f2533', borderColor: '#2a3142', color: '#fff' }}
-                                    formatter={(value: number) => [formatCurrency(value, currency), "Value"]}
-                                    labelFormatter={(label) => {
-                                        if (!label) return '';
-                                        const d = new Date(label);
-                                        return isNaN(d.getTime()) ? '' : d.toLocaleDateString();
-                                    }}
-                                />
-                                <Area
-                                    type="monotone"
-                                    dataKey="value"
-                                    stroke="#22c55e"
-                                    strokeWidth={3}
-                                    fillOpacity={1}
-                                    fill="url(#colorValue)"
-                                />
-                            </AreaChart>
-                        </ResponsiveContainer>
+                        {isMounted && historyLoc.length > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={historyLoc}>
+                                    <defs>
+                                        <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
+                                            <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#2a3142" vertical={false} />
+                                    <XAxis
+                                        dataKey="date"
+                                        tickFormatter={(str) => {
+                                            if (!str) return '';
+                                            const d = new Date(str);
+                                            return isNaN(d.getTime()) ? '' : d.getDate().toString();
+                                        }}
+                                        stroke="#6b7280"
+                                        tickLine={false}
+                                        axisLine={false}
+                                    />
+                                    <YAxis
+                                        stroke="#6b7280"
+                                        tickLine={false}
+                                        axisLine={false}
+                                        tickFormatter={(val) => {
+                                            if (val >= 1000) return `${currency === 'EUR' ? '€' : '$'}${(val / 1000).toFixed(1)}k`;
+                                            return `${currency === 'EUR' ? '€' : '$'}${val}`;
+                                        }}
+                                    />
+                                    <RechartsTooltip
+                                        contentStyle={{ backgroundColor: '#1f2533', borderColor: '#2a3142', color: '#fff' }}
+                                        formatter={(value: number) => [formatCurrency(value, currency), "Value"]}
+                                        labelFormatter={(label) => {
+                                            if (!label) return '';
+                                            const d = new Date(label);
+                                            return isNaN(d.getTime()) ? '' : d.toLocaleDateString();
+                                        }}
+                                    />
+                                    <Area
+                                        type="monotone"
+                                        dataKey="value"
+                                        stroke="#22c55e"
+                                        strokeWidth={3}
+                                        fillOpacity={1}
+                                        fill="url(#colorValue)"
+                                    />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="flex items-center justify-center h-full text-gray-500">
+                                {isMounted ? "No history data available yet." : "Loading chart..."}
+                            </div>
+                        )}
                     </div>
                 </div>
 
