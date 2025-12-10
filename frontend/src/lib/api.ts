@@ -287,7 +287,7 @@ export async function getPortfolioSummary(token: string): Promise<any> {
         return response.data;
     } catch (error) {
         console.error("Failed to fetch portfolio summary", error);
-        return null;
+        return { total_value: 0, item_count: 0, console_count: 0, top_items: [] };
     }
 }
 

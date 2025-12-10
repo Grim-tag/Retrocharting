@@ -26,6 +26,7 @@ export default function AnalyticsPage() {
             if (!token) return;
             setLoading(true);
             try {
+                // If APIs return null/defaults, the destructured variables will hold them
                 const [sumRes, histRes, movRes] = await Promise.all([
                     getPortfolioSummary(token),
                     getPortfolioHistory(token, 30),
@@ -35,7 +36,7 @@ export default function AnalyticsPage() {
                 setHistory(histRes);
                 setMovers(movRes);
             } catch (e) {
-                console.error(e);
+                console.error("Failed to load analytics data", e);
             } finally {
                 setLoading(false);
             }
@@ -89,7 +90,8 @@ export default function AnalyticsPage() {
                     <div className="bg-[#1f2533] p-6 rounded-xl border border-[#2a3142] print:border-black print:bg-white">
                         <h3 className="text-gray-400 uppercase text-xs font-bold mb-2 print:text-black">Total Value</h3>
                         <div className="text-4xl font-bold text-[#22c55e]">
-                            ${summary?.total_value?.toLocaleString()}
+                            {/* Check for summary existence before accessing properties */}
+                            ${(summary?.total_value || 0).toLocaleString()}
                         </div>
                         <div className="text-xs text-gray-500 mt-2">Estimated market value today</div>
                     </div>
@@ -98,21 +100,21 @@ export default function AnalyticsPage() {
                     <div className="bg-[#1f2533] p-6 rounded-xl border border-[#2a3142] print:border-black print:bg-white">
                         <h3 className="text-gray-400 uppercase text-xs font-bold mb-2 print:text-black">Total Games</h3>
                         <div className="text-4xl font-bold text-white print:text-black">
-                            {summary?.item_count}
+                            {summary?.item_count || 0}
                         </div>
-                        <div className="text-xs text-gray-500 mt-2">Across {summary?.console_count} consoles</div>
+                        <div className="text-xs text-gray-500 mt-2">Across {summary?.console_count || 0} consoles</div>
                     </div>
 
                     {/* Card 3: Best Gem */}
                     <div className="bg-[#1f2533] p-6 rounded-xl border border-[#2a3142] print:border-black print:bg-white">
                         <h3 className="text-gray-400 uppercase text-xs font-bold mb-2 print:text-black">Most Valuable Item</h3>
-                        {summary?.top_items?.[0] ? (
+                        {summary?.top_items && summary.top_items.length > 0 ? (
                             <div>
                                 <div className="text-2xl font-bold text-white truncate print:text-black" title={summary.top_items[0].name}>
                                     {summary.top_items[0].name}
                                 </div>
                                 <div className="text-[#ff6600] font-bold text-xl">
-                                    ${summary.top_items[0].value.toLocaleString()}
+                                    ${(summary.top_items[0].value || 0).toLocaleString()}
                                 </div>
                             </div>
                         ) : (
@@ -126,7 +128,7 @@ export default function AnalyticsPage() {
                     <h3 className="text-xl font-bold mb-6 print:text-black">Value History (30 Days)</h3>
                     <div className="h-[300px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={history}>
+                            <AreaChart data={history || []}>
                                 <defs>
                                     <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
@@ -136,7 +138,11 @@ export default function AnalyticsPage() {
                                 <CartesianGrid strokeDasharray="3 3" stroke="#2a3142" vertical={false} />
                                 <XAxis
                                     dataKey="date"
-                                    tickFormatter={(str) => new Date(str).getDate().toString()}
+                                    tickFormatter={(str) => {
+                                        if (!str) return '';
+                                        const d = new Date(str);
+                                        return isNaN(d.getTime()) ? '' : d.getDate().toString();
+                                    }}
                                     stroke="#6b7280"
                                     tickLine={false}
                                     axisLine={false}
@@ -150,7 +156,11 @@ export default function AnalyticsPage() {
                                 <RechartsTooltip
                                     contentStyle={{ backgroundColor: '#1f2533', borderColor: '#2a3142', color: '#fff' }}
                                     formatter={(value: number) => [`$${value.toLocaleString()}`, "Value"]}
-                                    labelFormatter={(label) => new Date(label).toLocaleDateString()}
+                                    labelFormatter={(label) => {
+                                        if (!label) return '';
+                                        const d = new Date(label);
+                                        return isNaN(d.getTime()) ? '' : d.toLocaleDateString();
+                                    }}
                                 />
                                 <Area
                                     type="monotone"
@@ -188,7 +198,7 @@ export default function AnalyticsPage() {
                     {/* Movers Table */}
                     <div className="bg-[#1f2533] p-6 rounded-xl border border-[#2a3142] print:border-black print:bg-white print:break-inside-avoid">
                         <h3 className="text-xl font-bold mb-4 print:text-black">Top Movers (30 Days)</h3>
-                        {movers?.gainers?.length > 0 ? (
+                        {movers?.gainers && movers.gainers.length > 0 ? (
                             movers.gainers.slice(0, 5).map((item: any, i: number) => (
                                 <div key={i} className="flex items-center justify-between py-3 border-b border-[#2a3142] last:border-0 print:border-gray-200">
                                     <div className="flex items-center gap-3">
