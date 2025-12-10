@@ -217,7 +217,7 @@ def _scrape_product_logic(db: Session, product: "Product") -> bool:
                             
                             for point in points:
                                 ts = point[0]
-                                price = float(point[1])
+                                price = float(point[1]) / 100.0 # Convert cents to dollars
                                 date_obj = datetime.fromtimestamp(ts / 1000.0)
                                 
                                 exists_sql = "SELECT 1 FROM price_history WHERE product_id = :pid AND date = :date AND condition = :cond"
