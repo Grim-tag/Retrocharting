@@ -1,5 +1,7 @@
 import { getApiUrl } from "@/lib/api";
 
+export const dynamic = 'force-dynamic';
+
 type AdminStats = {
     total_products: number;
     scraped_products: number;
