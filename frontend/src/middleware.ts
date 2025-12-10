@@ -27,6 +27,9 @@ export function middleware(request: NextRequest) {
     if ((pathname.startsWith('/en/') || pathname === '/en') && !isInternalRewrite) {
         const newPath = pathname.replace(/^\/en/, '');
         const url = new URL(newPath || '/', request.url);
+        request.nextUrl.searchParams.forEach((value, key) => {
+            url.searchParams.set(key, value);
+        });
         return NextResponse.redirect(url, 301);
     }
 
