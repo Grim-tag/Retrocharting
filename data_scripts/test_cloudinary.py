@@ -1,37 +1,38 @@
-import sys
 import os
-from dotenv import load_dotenv
-
-# Add backend directory to path to import app
-backend_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'backend')
-sys.path.append(backend_path)
-
-# Load .env from project root
-env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env')
-load_dotenv(env_path)
-
+import sys
 import cloudinary
 import cloudinary.uploader
-from app.core.config import settings
+from dotenv import load_dotenv
 
-# Configure Cloudinary
+# Load env variables
+env_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'backend', '.env'))
+print(f"Loading env from: {env_path}")
+load_dotenv(env_path)
+
+cloud_name = os.getenv("CLOUDINARY_CLOUD_NAME")
+api_key = os.getenv("CLOUDINARY_API_KEY")
+api_secret = os.getenv("CLOUDINARY_API_SECRET")
+
+print(f"Cloud Name: {cloud_name}")
+print(f"API Key: {api_key}")
+print(f"API Secret: {'*' * len(api_secret) if api_secret else 'None'}")
+
+if not all([cloud_name, api_key, api_secret]):
+    print("Missing credentials!")
+    sys.exit(1)
+
 cloudinary.config( 
-  cloud_name = settings.CLOUDINARY_CLOUD_NAME, 
-  api_key = settings.CLOUDINARY_API_KEY, 
-  api_secret = settings.CLOUDINARY_API_SECRET 
+  cloud_name = cloud_name, 
+  api_key = api_key, 
+  api_secret = api_secret 
 )
 
-def test_upload():
-    print("Testing Cloudinary upload...")
-    # Use a dummy image or a known URL
-    url = "https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png"
-    
-    try:
-        result = cloudinary.uploader.upload(url, folder="retrocharting/test")
-        print(f"Upload successful!")
-        print(f"Secure URL: {result['secure_url']}")
-    except Exception as e:
-        print(f"Upload failed: {e}")
+test_image_url = "https://upload.wikimedia.org/wikipedia/commons/e/e0/SNES-Mod1-Console-Set.jpg" # Valid Wiki Image
+print(f"Attempting to upload: {test_image_url}")
 
-if __name__ == "__main__":
-    test_upload()
+try:
+    res = cloudinary.uploader.upload(test_image_url, folder="retrocharting/test_upload")
+    print("\nSUCCESS!")
+    print(f"Secure URL: {res['secure_url']}")
+except Exception as e:
+    print(f"\nFAILED: {e}")

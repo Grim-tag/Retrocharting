@@ -66,6 +66,7 @@ export default function RecentlyScrapedList({ token, refreshTrigger }: RecentlyS
                                     <Link
                                         href={`/admin/games/${p.id}/edit`}
                                         className="text-[#ff6600] hover:text-white text-xs font-bold uppercase"
+                                        prefetch={false}
                                     >
                                         Edit
                                     </Link>

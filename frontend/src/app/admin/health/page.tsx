@@ -266,6 +266,7 @@ export default function AdminHealthPage() {
                                                     href={`/admin/games/${item.id}/edit`}
                                                     className="text-gray-400 hover:text-[#ff6600] transition-colors"
                                                     title="Edit Details"
+                                                    prefetch={false}
                                                 >
                                                     ✎
                                                 </Link>
@@ -273,6 +274,7 @@ export default function AdminHealthPage() {
                                                     href={`/admin/games/${item.id}/listings`}
                                                     className="text-blue-400 hover:text-white"
                                                     title="Manage Listings"
+                                                    prefetch={false}
                                                 >
                                                     Listings
                                                 </Link>
