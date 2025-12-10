@@ -26,14 +26,18 @@ export default function AddToCollectionButton({ product, lang }: { product: Prod
     const handleSave = async () => {
         if (!token) return;
         setLoading(true);
-        const res = await addToCollection(token, product.id, condition, notes);
-        setLoading(false);
-        if (res) {
+        try {
+            await addToCollection(token, product.id, condition, notes);
             setSuccess(true);
             setTimeout(() => {
                 setSuccess(false);
                 setIsOpen(false);
             }, 1000);
+        } catch (error: any) {
+            console.error(error);
+            alert(`Failed to add: ${error.message}`);
+        } finally {
+            setLoading(false);
         }
     };
 

@@ -226,7 +226,7 @@ export async function getCollection(token: string): Promise<CollectionItem[]> {
     }
 }
 
-export async function addToCollection(token: string, productId: number, condition: string, notes?: string): Promise<CollectionItem | null> {
+export async function addToCollection(token: string, productId: number, condition: string, notes?: string): Promise<CollectionItem> {
     try {
         const response = await axios.post(`${API_URL}/collection/`, {
             product_id: productId,
@@ -236,9 +236,9 @@ export async function addToCollection(token: string, productId: number, conditio
             headers: { Authorization: `Bearer ${token}` }
         });
         return response.data;
-    } catch (error) {
+    } catch (error: any) {
         console.error("Failed to add to collection", error);
-        return null;
+        throw new Error(error.response?.data?.detail || "Failed to add to collection");
     }
 }
 

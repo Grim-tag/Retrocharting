@@ -17,15 +17,15 @@ export default function AddToWishlistButton({ product, lang, label }: { product:
         if (!token) return;
 
         setLoading(true);
-        // Use 'WISHLIST' as the condition to distinguish it
-        const res = await addToCollection(token, product.id, 'WISHLIST', 'Added via Wishlist Button');
-        setLoading(false);
-
-        if (res) {
+        try {
+            // Use 'WISHLIST' as the condition to distinguish it
+            await addToCollection(token, product.id, 'WISHLIST', 'Added via Wishlist Button');
             setSuccess(true);
             setTimeout(() => setSuccess(false), 2000);
-        } else {
-            alert("Failed to add to wishlist.");
+        } catch (error: any) {
+            alert(error.message || "Failed to add to wishlist.");
+        } finally {
+            setLoading(false);
         }
     };
 
