@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getProductById, getProductHistory } from "@/lib/api";
+import { getProductById, getProductHistory, getProductsByConsole, getGenres } from "@/lib/api";
 import ListingsTable from "@/components/ListingsTable";
 import AddToCollectionButton from "@/components/AddToCollectionButton";
 import PriceHistoryChart from "@/components/PriceHistoryChart";
@@ -12,6 +12,8 @@ import Breadcrumbs from "@/components/seo/Breadcrumbs";
 import JsonLd, { generateProductSchema } from "@/components/seo/JsonLd";
 import { getDictionary } from "@/lib/get-dictionary";
 import { routeMap } from "@/lib/route-config";
+import { groupedSystems } from "@/data/systems";
+import ConsoleGameCatalog from "@/components/ConsoleGameCatalog";
 
 // --- Helper to extract ID from slug ---
 // format: title-console-id (e.g. metal-gear-solid-ps1-4402)
@@ -22,8 +24,34 @@ function getIdFromSlug(slug: string): number {
     return isNaN(id) ? 0 : id;
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string; lang: string }> }): Promise<Metadata> {
+// Helper to make title case from slug (e.g. super-nintendo -> Super Nintendo)
+function unslugify(slug: string) {
+    // Basic title case, but we prefer finding it in our system list first
+    return slug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+}
+
+// Dispatcher Helper
+function isSystemSlug(slug: string): string | null {
+    const flatSystems = Object.values(groupedSystems).flat();
+    // Normalize slug (e.g. Nintendo 64 -> nintendo-64)
+    // Check if the current slug strictly equals a known system slug
+    const found = flatSystems.find(s => s.toLowerCase().replace(/ /g, '-') === slug);
+    return found || null; // Returns the proper System Name ("Nintendo 64") or null
+}
+
+export async function generateMetadata({ params, searchParams }: { params: Promise<{ slug: string; lang: string }>; searchParams: Promise<{ genre?: string }> }): Promise<Metadata> {
     const { slug, lang } = await params;
+
+    // 1. Check if it's a Console Page
+    const systemName = isSystemSlug(slug);
+    if (systemName) {
+        return {
+            title: `${systemName} Video Games Price Guide | RetroCharting`,
+            description: `Complete list of ${systemName} games with loose, CIB, and new prices. Filter by genre and find the best deals.`
+        };
+    }
+
+    // 2. Default: Game Page
     const id = getIdFromSlug(slug);
     const product = await getProductById(id);
 
@@ -41,16 +69,59 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     };
 }
 
-export default async function GamePage({ params }: { params: Promise<{ slug: string; lang: string }> }) {
+export default async function Page({
+    params,
+    searchParams
+}: {
+    params: Promise<{ slug: string; lang: string }>,
+    searchParams: Promise<{ genre?: string }>
+}) {
     const { slug, lang } = await params;
+    const { genre } = await searchParams;
     const dict = await getDictionary(lang);
+
+    const getSlug = (key: string) => routeMap[key]?.[lang] || key;
+    const gamesSlug = getSlug('games');
+
+    // --- DISPATCHER LOGIC ---
+
+    // 1. CHECK IF CONSOLE
+    const systemName = isSystemSlug(slug);
+
+    if (systemName) {
+        // === CONSOLE CATALOG VIEW ===
+        const [products, genres] = await Promise.all([
+            getProductsByConsole(systemName, 2000, undefined, 'game'),
+            getGenres(systemName)
+        ]);
+
+        const breadcrumbItems = [
+            { label: dict.header.nav.video_games, href: `/${lang}/${gamesSlug}` },
+            { label: systemName, href: `/${lang}/${gamesSlug}/${slug}` }
+        ];
+
+        return (
+            <main className="flex-grow bg-[#0f121e] py-8">
+                <div className="max-w-[1400px] mx-auto px-4">
+                    <Breadcrumbs items={breadcrumbItems} />
+                    <ConsoleGameCatalog
+                        products={products}
+                        genres={genres}
+                        systemName={systemName}
+                        lang={lang}
+                        gamesSlug={gamesSlug}
+                        systemSlug={slug}
+                    />
+                </div>
+            </main>
+        );
+    }
+
+    // 2. DEFAULT: GAME DETAIL VIEW
     const id = getIdFromSlug(slug);
     const product = await getProductById(id);
-    // TODO: We could redirect if the SLUG doesn't match the canonical one, but for now we just serve the page.
-    // Ideally we check if (product) and then verify if matches getGameUrl. If not -> redirect 301.
 
     if (!product) {
-        const getSlug = (key: string) => routeMap[key]?.[lang] || key;
         return (
             <main className="flex-grow bg-[#0f121e] py-20 text-center text-white">
                 <h1 className="text-3xl font-bold">{dict.product.not_found.title}</h1>
@@ -61,20 +132,13 @@ export default async function GamePage({ params }: { params: Promise<{ slug: str
         );
     }
 
-    // Check canonical redirect (Optional but good for SEO)
-    // const canonicalUrl = getGameUrl(product, lang);
-    // const currentUrl = `/${lang}/${routeMap['games'][lang]}/${slug}`;
-    // if (currentUrl !== canonicalUrl) ... (need headers/middleware for full URL check)
-
     const history = await getProductHistory(id);
     const shortConsoleName = formatConsoleName(product.console_name);
-    const getSlug = (key: string) => routeMap[key]?.[lang] || key;
-    const gamesSlug = getSlug('games');
 
     const breadcrumbItems = [
         { label: dict.header.nav.video_games, href: `/${lang}/${gamesSlug}` },
-        // Use console directory
-        { label: product.console_name, href: `/${lang}/${gamesSlug}/console/${product.console_name.toLowerCase().replace(/ /g, '-')}` },
+        // Use console directory - NEW LINK STRUCTURE
+        { label: product.console_name, href: `/${lang}/${gamesSlug}/${product.console_name.toLowerCase().replace(/ /g, '-')}` },
         { label: product.product_name, href: getGameUrl(product, lang) }
     ];
 
@@ -200,8 +264,9 @@ export default async function GamePage({ params }: { params: Promise<{ slug: str
                                                 return (
                                                     <span key={i}>
                                                         {i > 0 && ", "}
+                                                        {/* Link to new console URL structure */}
                                                         <Link
-                                                            href={`/${lang}/${gamesSlug}/console/${consoleSlug}?genre=${encodeURIComponent(genreName)}`}
+                                                            href={`/${lang}/${gamesSlug}/${consoleSlug}?genre=${encodeURIComponent(genreName)}`}
                                                             className="hover:text-[#ff6600] hover:underline transition-colors"
                                                         >
                                                             {genreName}

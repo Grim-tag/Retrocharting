@@ -62,7 +62,7 @@ export default async function GamesPage({ params }: { params: Promise<{ lang: st
                                                 <Link
                                                     key={system}
                                                     // Link to /games/console/[system-slug]
-                                                    href={`/${lang}/${gamesSlug}/console/${system.toLowerCase().replace(/ /g, '-')}`}
+                                                    href={`/${lang}/${gamesSlug}/${system.toLowerCase().replace(/ /g, '-')}`}
                                                     className="bg-[#1f2533] p-4 rounded border border-[#2a3142] hover:border-[#ff6600] hover:bg-[#252b3b] transition-all group"
                                                 >
                                                     <h3 className="font-medium text-gray-300 group-hover:text-white truncate" title={system}>
