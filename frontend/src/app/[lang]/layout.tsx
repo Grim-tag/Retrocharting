@@ -25,8 +25,8 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
     // We can just construct it.
 
     return {
-        title: "RetroCharting",
-        description: "Track video game prices and collections",
+        title: "RetroCharting | Video Game Price Guide & Collection Tracker",
+        description: "Track video game prices, monitor your collection value, and find the best deals for Nintendo, PlayStation, Xbox, and Sega games.",
         metadataBase: new URL(baseUrl),
         alternates: {
             canonical: lang === 'en' ? '/' : `/${lang}`,

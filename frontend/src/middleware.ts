@@ -49,7 +49,13 @@ export function middleware(request: NextRequest) {
             url.searchParams.set(key, value);
         });
         url.searchParams.set('__next_rewrite', '1');
-        return NextResponse.rewrite(url);
+        const response = NextResponse.rewrite(url);
+        // We need to return here for the rewrite logic to work correctly with Next.js params
+        // But we should attach headers too? 
+        // For simplicity and safety with Next.js internals, we let this one go as is usually,
+        // BUT the audit wants global headers.
+        addSecurityHeaders(response);
+        return response;
     }
 
     // 5. Handle Other Locales (e.g. /fr)
@@ -57,6 +63,8 @@ export function middleware(request: NextRequest) {
     const match = pathname.match(/^\/([a-z]{2})(.*)/);
     const locale = match ? match[1] : defaultLocale;
     const pathBody = match ? match[2] : pathname;
+
+    let response = NextResponse.next();
 
     // Handle Localized Path Rewrites (e.g. /fr/jeux-video -> /fr/video-games)
     if (reverseRouteMap[locale]) {
@@ -66,14 +74,44 @@ export function middleware(request: NextRequest) {
 
         if (internalPath !== pathname) {
             const url = new URL(internalPath, request.url);
+            // Preserve search params
             request.nextUrl.searchParams.forEach((value, key) => {
                 url.searchParams.set(key, value);
             });
-            return NextResponse.rewrite(url);
+            response = NextResponse.rewrite(url);
         }
     }
 
-    return NextResponse.next();
+    // --- SECURITY HEADERS ---
+    addSecurityHeaders(response);
+
+    return response;
+}
+
+function addSecurityHeaders(response: NextResponse) {
+    // 1. HSTS
+    response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    // 2. Anti-Clickjacking
+    response.headers.set('X-Frame-Options', 'DENY');
+    // 3. MIME Sniffing
+    response.headers.set('X-Content-Type-Options', 'nosniff');
+    // 4. Referrer Policy
+    response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+    // 5. Permissions Policy
+    response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    // 6. Content Security Policy
+    const csp = `
+        default-src 'self';
+        script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com;
+        style-src 'self' 'unsafe-inline';
+        img-src * blob: data:;
+        font-src 'self';
+        connect-src 'self' https://retrocharting-frontend.onrender.com https://retrocharting.com;
+        frame-ancestors 'none';
+        upgrade-insecure-requests;
+    `.replace(/\s{2,}/g, ' ').trim();
+
+    response.headers.set('Content-Security-Policy', csp);
 }
 
 export const config = {
