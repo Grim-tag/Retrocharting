@@ -45,16 +45,68 @@ async def scrape_single_product(db: Session, product: "Product"):
         # No API Token, fallback to HTML
         return _scrape_html_logic(db, product)
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+def process_product_id(product_id: int) -> bool:
+    """
+    Worker function to process a single product in its own thread/session.
+    """
+    db = SessionLocal()
+    try:
+        from app.models.product import Product
+        product = db.query(Product).get(product_id)
+        if not product:
+            return False
+            
+        # Re-use the smart scraping logic
+        # logic helper determines need for HTML vs API
+        success = False
+        
+        # Check metadata needs inside this session
+        needs_metadata = (
+            not product.description or 
+            not product.image_url or 
+            "cloudinary" not in (product.image_url or "") or
+            not product.publisher
+        )
+
+        if needs_metadata:
+            success = _scrape_html_logic(db, product)
+            if success: time.sleep(random.uniform(1.0, 2.0))
+        elif settings.PRICECHARTING_API_TOKEN:
+            success = _update_product_via_api(db, product)
+            # API is fast
+        else:
+            success = _scrape_html_logic(db, product)
+            if success: time.sleep(random.uniform(1.0, 2.0))
+            
+        if success:
+            product.last_scraped = datetime.utcnow()
+            db.commit()
+            return True
+        else:
+            # Even on failure, update last_scraped so we don't retry endlessly immediately
+            product.last_scraped = datetime.utcnow()
+            db.commit()
+            return False
+            
+    except Exception as e:
+        print(f"Error processing product {product_id}: {e}")
+        return False
+    finally:
+        db.close()
+
 def scrape_missing_data(max_duration: int = 600, limit: int = 50):
     """
-    Scrapes data for products with missing information.
-    max_duration: seconds to run
-    limit: items per batch
+    Scrapes data using a thread pool for concurrency.
     """
     start_time = time.time()
     db: Session = SessionLocal()
     
-    print(f"Starting scraper service. Max duration: {max_duration}s")
+    # Max concurrency
+    MAX_WORKERS = 5
+    
+    print(f"Starting PARALLEL scraper service (Workers: {MAX_WORKERS}). Duration: {max_duration}s")
     
     from app.models.product import Product
     from app.models.price_history import PriceHistory
@@ -76,73 +128,57 @@ def scrape_missing_data(max_duration: int = 600, limit: int = 50):
                 print(f"Time limit reached ({elapsed:.0f}s).")
                 break
                 
-            # Logic: Missing Description OR Missing Publisher OR No Price History (Last scraped long ago)
-            # Prioritize items never scraped or missing key info
+            # Fetch batch of IDs to process
+            # We fetch products but strictly extract IDs to pass to workers
             products = db.query(Product).outerjoin(PriceHistory).filter(
                 or_(
                     Product.description == None, 
                     Product.description == "",
                     Product.publisher == None,
                     Product.publisher == "",
-                    # Also include items compatible with API update (if we have token)
-                    # For now keep focus on missing data to fill holes
                     PriceHistory.id == None
                 ),
                 Product.console_name != None,
-                Product.console_name != "",
-                Product.product_name != None,
-                Product.product_name != ""
+                Product.product_name != None
             ).order_by(Product.last_scraped.asc().nullsfirst()).distinct().limit(limit).all()
             
             if not products:
                 print("No incomplete products found.")
                 break
             
-            print(f"Fetched batch of {len(products)} games.")
+            product_ids = [p.id for p in products]
+            print(f"Dispatching batch of {len(product_ids)} games to workers...")
             
-            for p in products:
-                if time.time() - start_time > max_duration:
-                    break
+            # Use ThreadPoolExecutor
+            with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+                # Map product IDs to futures
+                futures = {executor.submit(process_product_id, pid): pid for pid in product_ids}
+                
+                for future in as_completed(futures):
+                    if time.time() - start_time > max_duration:
+                        executor.shutdown(wait=False)
+                        break
+                        
+                    try:
+                        success = future.result()
+                        if success:
+                            processed_count += 1
+                            # Update log periodically (not every single item to reduce locking)
+                            if processed_count % 5 == 0:
+                                db.query(ScraperLog).filter(ScraperLog.id == current_log_id).update({"items_processed": processed_count})
+                                db.commit()
+                    except Exception as e:
+                        print(f"Worker exception: {e}")
 
-                # The scrape_single_product wrapper decides method (HTML vs API)
-                # But here we are synchronous, so we call logical function directly or wrap
-                # Since scrape_single_product is async def in signature (but just returns logic),
-                # We'll just call the logic helper directly based on condition or fix the wrapper.
+            # Sleep slightly between batches to execute a 'breath' check
+            if time.time() - start_time > max_duration:
+                break
                 
-                # Let's use the logic helpers directly here to strictly control sync execution
-                needs_metadata = (
-                    not p.description or 
-                    not p.image_url or 
-                    "cloudinary" not in (p.image_url or "") or
-                    not p.publisher
-                )
-                
-                success = False
-                if needs_metadata:
-                    success = _scrape_html_logic(db, p)
-                    # HTML scraping is slow, so we sleep
-                    if success: time.sleep(random.uniform(1.0, 2.0))
-                elif settings.PRICECHARTING_API_TOKEN:
-                    success = _update_product_via_api(db, p)
-                    # API is fast, sleep less
-                    if success: time.sleep(0.1)
-                else:
-                    success = _scrape_html_logic(db, p)
-                    if success: time.sleep(random.uniform(1.0, 2.0))
-                
-                if success:
-                    processed_count += 1
-                    db.query(ScraperLog).filter(ScraperLog.id == current_log_id).update({"items_processed": processed_count})
-                
-                # Always update last_scraped and commit to rotate queue
-                p.last_scraped = datetime.utcnow()
-                db.commit()
-                
-        
-        # Mark as completed
+        # Final status update
         db.query(ScraperLog).filter(ScraperLog.id == current_log_id).update({
             "status": "completed", 
-            "end_time": datetime.utcnow()
+            "end_time": datetime.utcnow(),
+            "items_processed": processed_count
         })
         db.commit()
 
