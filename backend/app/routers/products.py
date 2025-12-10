@@ -461,15 +461,36 @@ def fix_price_scaling(
 ):
     """
     Emergency Maintenance Tool: Fixes inflated prices (>500) by dividing by 100.
+    Executes in batches to avoid database deadlocks.
     """
+    total_fixed = 0
+    batch_size = 100000 # Update 100k rows at a time
+    
     try:
-        # Update price history where likely in cents
-        # Assuming loose prices are typically < $500, so > 500 is safe to assume cents.
-        # Even expensive games are rarely exactly 500.00 without being cents data.
-        stmt = text("UPDATE price_history SET price = price / 100.0 WHERE price > 500")
-        result = db.execute(stmt)
-        db.commit()
-        return {"status": "success", "affected_rows": result.rowcount, "message": f"Fixed {result.rowcount} inflated price records."}
+        while True:
+            # Postgres subquery limit for chunking
+            # Update a batch of rows that need fixing
+            stmt = text(f"""
+                UPDATE price_history 
+                SET price = price / 100.0 
+                WHERE id IN (
+                    SELECT id FROM price_history 
+                    WHERE price > 500 
+                    LIMIT {batch_size}
+                )
+            """)
+            result = db.execute(stmt)
+            db.commit() # Commit to release lock for this batch
+            
+            count = result.rowcount
+            total_fixed += count
+            
+            # If we updated fewer than batch_size, we are done
+            if count < batch_size:
+                break
+                
+        return {"status": "success", "affected_rows": total_fixed, "message": f"Fixed {total_fixed} inflated price records."}
+        
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
