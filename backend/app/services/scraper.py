@@ -72,13 +72,13 @@ def process_product_id(product_id: int) -> bool:
 
         if needs_metadata:
             success = _scrape_html_logic(db, product)
-            if success: time.sleep(random.uniform(1.0, 2.0))
+            if success: time.sleep(0.1)
         elif settings.PRICECHARTING_API_TOKEN:
             success = _update_product_via_api(db, product)
             # API is fast
         else:
             success = _scrape_html_logic(db, product)
-            if success: time.sleep(random.uniform(1.0, 2.0))
+            if success: time.sleep(0.1)
             
         if success:
             product.last_scraped = datetime.utcnow()
@@ -104,7 +104,7 @@ def scrape_missing_data(max_duration: int = 600, limit: int = 50):
     db: Session = SessionLocal()
     
     # Max concurrency
-    MAX_WORKERS = 5
+    MAX_WORKERS = 8
     
     print(f"Starting PARALLEL scraper service (Workers: {MAX_WORKERS}). Duration: {max_duration}s")
     
