@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Header, Body
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.translation import Translation
-from app.routers.admin import verify_admin_key
+from app.routers.admin import get_admin_access
 from typing import Dict, Any
 
 router = APIRouter()
@@ -21,7 +21,7 @@ def get_translations(locale: str, db: Session = Depends(get_db)):
         result[t.key] = t.value
     return result
 
-@router.post("/", dependencies=[Depends(verify_admin_key)])
+@router.post("/", dependencies=[Depends(get_admin_access)])
 def upsert_translation(
     payload: Dict[str, Any] = Body(...),
     db: Session = Depends(get_db)
