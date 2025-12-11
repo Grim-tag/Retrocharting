@@ -1,15 +1,7 @@
-import axios from 'axios';
-
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL
-    ? process.env.NEXT_PUBLIC_API_URL
-    : (process.env.NODE_ENV === 'production'
-        ? 'https://retrocharting-backend.onrender.com'
-        : 'http://127.0.0.1:8000');
-
-const API_URL = `${BASE_URL}/api/v1`;
+import { apiClient, API_URL } from './client';
 
 export function getApiUrl() {
-    return BASE_URL;
+    return API_URL;
 }
 
 export interface Product {
@@ -43,7 +35,7 @@ export interface PriceHistoryPoint {
 
 export async function getProductsByConsole(consoleName: string, limit = 50, genre?: string, type?: 'game' | 'console' | 'accessory'): Promise<Product[]> {
     try {
-        const response = await axios.get(`${API_URL}/products/`, {
+        const response = await apiClient.get(`/products/`, {
             params: {
                 console: consoleName,
                 limit,
@@ -60,7 +52,7 @@ export async function getProductsByConsole(consoleName: string, limit = 50, genr
 
 export async function getGenres(consoleName?: string): Promise<string[]> {
     try {
-        const response = await axios.get(`${API_URL}/products/genres`, {
+        const response = await apiClient.get(`/products/genres`, {
             params: {
                 console: consoleName
             }
@@ -72,10 +64,9 @@ export async function getGenres(consoleName?: string): Promise<string[]> {
     }
 }
 
-
 export async function getProductById(id: number): Promise<Product | null> {
     try {
-        const response = await axios.get(`${API_URL}/products/${id}`);
+        const response = await apiClient.get(`/products/${id}`);
         return response.data;
     } catch (error) {
         console.error(`Error fetching product ${id}:`, error);
@@ -85,7 +76,7 @@ export async function getProductById(id: number): Promise<Product | null> {
 
 export async function getProductHistory(id: number): Promise<PriceHistoryPoint[]> {
     try {
-        const response = await axios.get(`${API_URL}/products/${id}/history`);
+        const response = await apiClient.get(`/products/${id}/history`);
         return response.data;
     } catch (error) {
         console.error(`Error fetching history for product ${id}:`, error);
@@ -95,7 +86,7 @@ export async function getProductHistory(id: number): Promise<PriceHistoryPoint[]
 
 export async function searchProducts(query: string): Promise<Product[]> {
     try {
-        const response = await axios.get(`${API_URL}/products/`, {
+        const response = await apiClient.get(`/products/`, {
             params: { search: query, limit: 5 }
         });
         return response.data;
@@ -107,9 +98,7 @@ export async function searchProducts(query: string): Promise<Product[]> {
 
 export async function updateProduct(id: number, data: Partial<Product>, token: string): Promise<Product | null> {
     try {
-        const response = await axios.put(`${API_URL}/products/${id}`, data, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
+        const response = await apiClient.put(`/products/${id}`, data);
         return response.data;
     } catch (error) {
         console.error(`Error updating product ${id}:`, error);
@@ -123,7 +112,7 @@ export interface GroupedProducts {
 
 export async function searchProductsGrouped(query: string): Promise<GroupedProducts> {
     try {
-        const response = await axios.get(`${API_URL}/products/search/grouped`, {
+        const response = await apiClient.get(`/products/search/grouped`, {
             params: { query }
         });
         return response.data;
@@ -135,7 +124,7 @@ export async function searchProductsGrouped(query: string): Promise<GroupedProdu
 
 export async function getListings(id: number): Promise<{ data: any[], isStale: boolean }> {
     try {
-        const response = await axios.get(`${API_URL}/products/${id}/listings`);
+        const response = await apiClient.get(`/products/${id}/listings`);
         const isStale = response.headers['x-is-stale'] === 'true';
         return { data: response.data, isStale };
     } catch (error) {
@@ -145,7 +134,7 @@ export async function getListings(id: number): Promise<{ data: any[], isStale: b
 
 export async function getRelatedProducts(id: number): Promise<Product[]> {
     try {
-        const response = await axios.get(`${API_URL}/products/${id}/related`);
+        const response = await apiClient.get(`/products/${id}/related`);
         return response.data;
     } catch (error) {
         console.error("Error fetching related products:", error);
@@ -155,7 +144,7 @@ export async function getRelatedProducts(id: number): Promise<Product[]> {
 
 export async function getTranslations(locale: string): Promise<Record<string, string>> {
     try {
-        const response = await axios.get(`${API_URL}/translations/${locale}`, {
+        const response = await apiClient.get(`/translations/${locale}`, {
             timeout: 2000 // Fast timeout
         });
         return response.data;
@@ -166,7 +155,7 @@ export async function getTranslations(locale: string): Promise<Record<string, st
 
 export async function saveTranslation(locale: string, key: string, value: string, adminKey: string): Promise<boolean> {
     try {
-        await axios.post(`${API_URL}/translations/`, {
+        await apiClient.post(`/translations/`, {
             locale,
             key,
             value
@@ -182,7 +171,7 @@ export async function saveTranslation(locale: string, key: string, value: string
 
 export async function getSitemapProducts(limit: number = 10000): Promise<any[]> {
     try {
-        const response = await axios.get(`${API_URL}/products/sitemap?limit=${limit}`);
+        const response = await apiClient.get(`/products/sitemap?limit=${limit}`);
         return response.data;
     } catch (error) {
         console.error("Error fetching sitemap products:", error);
@@ -194,11 +183,10 @@ export async function getSitemapProducts(limit: number = 10000): Promise<any[]> 
 
 export async function loginWithGoogle(credential: string): Promise<{ access_token: string, token_type: string } | null> {
     try {
-        const response = await axios.post(`${API_URL}/auth/google`, { credential });
+        const response = await apiClient.post(`/auth/google`, { credential });
         return response.data;
     } catch (error: any) {
         console.error("Google Login failed", error);
-        // Propagate the specific backend error message if available
         const msg = error.response?.data?.detail || error.message || "Login failed";
         throw new Error(msg);
     }
@@ -206,9 +194,7 @@ export async function loginWithGoogle(credential: string): Promise<{ access_toke
 
 export async function fetchMe(token: string): Promise<any> {
     try {
-        const response = await axios.get(`${API_URL}/auth/me`, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
+        const response = await apiClient.get(`/auth/me`);
         return response.data;
     } catch (error) {
         return null;
@@ -233,9 +219,7 @@ export interface CollectionItem {
 
 export async function getCollection(token: string): Promise<CollectionItem[]> {
     try {
-        const response = await axios.get(`${API_URL}/collection/`, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
+        const response = await apiClient.get(`/collection/`);
         return response.data;
     } catch (error) {
         console.error("Failed to fetch collection", error);
@@ -245,13 +229,11 @@ export async function getCollection(token: string): Promise<CollectionItem[]> {
 
 export async function addToCollection(token: string, productId: number, condition: string, notes?: string, paidPrice?: number): Promise<CollectionItem> {
     try {
-        const response = await axios.post(`${API_URL}/collection/`, {
+        const response = await apiClient.post(`/collection/`, {
             product_id: productId,
             condition,
             paid_price: paidPrice,
             notes
-        }, {
-            headers: { Authorization: `Bearer ${token}` }
         });
         return response.data;
     } catch (error: any) {
@@ -262,9 +244,7 @@ export async function addToCollection(token: string, productId: number, conditio
 
 export async function updateCollectionItem(token: string, itemId: number, data: { condition?: string, notes?: string, paid_price?: number, purchase_date?: string, user_images?: string }): Promise<CollectionItem> {
     try {
-        const response = await axios.put(`${API_URL}/collection/${itemId}`, data, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
+        const response = await apiClient.put(`/collection/${itemId}`, data);
         return response.data;
     } catch (error: any) {
         console.error("Failed to update collection item", error);
@@ -274,9 +254,7 @@ export async function updateCollectionItem(token: string, itemId: number, data: 
 
 export async function deleteFromCollection(token: string, itemId: number): Promise<boolean> {
     try {
-        await axios.delete(`${API_URL}/collection/${itemId}`, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
+        await apiClient.delete(`/collection/${itemId}`);
         return true;
     } catch (error) {
         console.error("Failed to delete item", error);
@@ -286,9 +264,7 @@ export async function deleteFromCollection(token: string, itemId: number): Promi
 
 export async function updateUser(token: string, data: { username?: string, full_name?: string }): Promise<any> {
     try {
-        const response = await axios.put(`${API_URL}/auth/me`, data, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
+        const response = await apiClient.put(`/auth/me`, data);
         return response.data;
     } catch (error) {
         throw error;
@@ -297,8 +273,7 @@ export async function updateUser(token: string, data: { username?: string, full_
 
 export async function getRecentlyScrapedProducts(limit: number = 10, token: string): Promise<any[]> {
     try {
-        const response = await axios.get(`${API_URL}/products/stats/recently-scraped`, {
-            headers: { 'Authorization': `Bearer ${token}` },
+        const response = await apiClient.get(`/products/stats/recently-scraped`, {
             params: { limit }
         });
         return response.data;
@@ -307,13 +282,12 @@ export async function getRecentlyScrapedProducts(limit: number = 10, token: stri
         return [];
     }
 }
+
 // --- Portfolio APIs ---
 
 export async function getPortfolioSummary(token: string): Promise<any> {
     try {
-        const response = await axios.get(`${API_URL}/portfolio/summary`, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
+        const response = await apiClient.get(`/portfolio/summary`);
         return response.data;
     } catch (error) {
         console.error("Failed to fetch portfolio summary", error);
@@ -323,8 +297,7 @@ export async function getPortfolioSummary(token: string): Promise<any> {
 
 export async function getPortfolioHistory(token: string, days = 30): Promise<any[]> {
     try {
-        const response = await axios.get(`${API_URL}/portfolio/history`, {
-            headers: { Authorization: `Bearer ${token}` },
+        const response = await apiClient.get(`/portfolio/history`, {
             params: { range_days: days }
         });
         return response.data;
@@ -336,8 +309,7 @@ export async function getPortfolioHistory(token: string, days = 30): Promise<any
 
 export async function getPortfolioMovers(token: string, days = 30): Promise<any> {
     try {
-        const response = await axios.get(`${API_URL}/portfolio/movers`, {
-            headers: { Authorization: `Bearer ${token}` },
+        const response = await apiClient.get(`/portfolio/movers`, {
             params: { days }
         });
         return response.data;
@@ -347,13 +319,9 @@ export async function getPortfolioMovers(token: string, days = 30): Promise<any>
     }
 }
 
-
-
 export async function getPortfolioDebug(token: string): Promise<any> {
     try {
-        const response = await axios.get(`${API_URL}/portfolio/debug`, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
+        const response = await apiClient.get(`/portfolio/debug`);
         return response.data;
     } catch (error) {
         console.error("Failed to fetch portfolio debug", error);
@@ -402,9 +370,8 @@ export async function uploadCsv(file: File, token: string): Promise<ImportAnalys
     formData.append('file', file);
 
     try {
-        const response = await axios.post(`${API_URL}/import/upload`, formData, {
+        const response = await apiClient.post(`/import/upload`, formData, {
             headers: {
-                Authorization: `Bearer ${token}`,
                 'Content-Type': 'multipart/form-data'
             }
         });
@@ -426,9 +393,7 @@ export interface ImportItem {
 
 export async function bulkImport(items: ImportItem[], token: string): Promise<{ imported: number, errors: number }> {
     try {
-        const response = await axios.post(`${API_URL}/import/confirm`, { items }, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
+        const response = await apiClient.post(`/import/confirm`, { items });
         return response.data;
     } catch (error: any) {
         console.error("Bulk import failed", error);

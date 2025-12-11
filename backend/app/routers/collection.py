@@ -50,6 +50,35 @@ class CollectionItemResponse(BaseModel):
 
 # --- Endpoints ---
 
+# --- Helpers ---
+def _calculate_estimated_value(product: Product, condition: str) -> float:
+    if not product:
+        return 0.0
+    if condition == 'LOOSE': return product.loose_price or 0.0
+    if condition == 'CIB': return product.cib_price or 0.0
+    if condition == 'NEW': return product.new_price or 0.0
+    if condition == 'GRADED': return product.new_price or 0.0
+    return 0.0
+
+def _format_item_response(item: CollectionItem, product: Product) -> dict:
+    estimated_val = _calculate_estimated_value(product, item.condition)
+    return {
+        "id": item.id,
+        "product_id": item.product_id,
+        "condition": item.condition,
+        "paid_price": item.paid_price,
+        "purchase_date": item.purchase_date,
+        "notes": item.notes,
+        "user_images": item.user_images,
+        # Hydrated
+        "product_name": product.product_name if product else "Unknown",
+        "console_name": product.console_name if product else "Unknown",
+        "image_url": product.image_url if product else None,
+        "estimated_value": estimated_val
+    }
+
+# --- Endpoints ---
+
 @router.get("/", response_model=List[CollectionItemResponse])
 def read_collection(
     db: Session = Depends(get_db),
@@ -62,32 +91,7 @@ def read_collection(
         product = db.query(Product).filter(Product.id == item.product_id).first()
         if not product:
             continue
-            
-        # simple value logic
-        val = 0.0
-        if item.condition == 'LOOSE': val = product.loose_price or 0
-        elif item.condition == 'CIB': val = product.cib_price or 0
-        elif item.condition == 'NEW': val = product.new_price or 0
-        # Graded?? For now default to New price or 0? 
-        # User requested Graded support in plan, but we don't have graded_price in Product model yet.
-        # Let's use new_price for now as a fallback or 0.
-        elif item.condition == 'GRADED': val = product.new_price or 0
-        
-        response_items.append({
-            "id": item.id,
-            "product_id": item.product_id,
-            "condition": item.condition,
-            "paid_price": item.paid_price,
-            "purchase_date": item.purchase_date,
-            "notes": item.notes,
-            "product_name": product.product_name,
-            "console_name": product.console_name,
-            "product_name": product.product_name,
-            "console_name": product.console_name,
-            "image_url": product.image_url,
-            "estimated_value": val,
-            "user_images": item.user_images
-        })
+        response_items.append(_format_item_response(item, product))
         
     return response_items
 
@@ -116,26 +120,7 @@ def add_to_collection(
     db.commit()
     db.refresh(new_item)
     
-    # Construct response manually to include hydrated fields
-    val = 0.0
-    if new_item.condition == 'LOOSE': val = product.loose_price or 0
-    elif new_item.condition == 'CIB': val = product.cib_price or 0
-    elif new_item.condition == 'NEW': val = product.new_price or 0
-    elif new_item.condition == 'GRADED': val = product.new_price or 0
-
-    return {
-        "id": new_item.id,
-        "product_id": new_item.product_id,
-        "condition": new_item.condition,
-        "paid_price": new_item.paid_price,
-        "purchase_date": new_item.purchase_date,
-        "notes": new_item.notes,
-        "product_name": product.product_name,
-        "console_name": product.console_name,
-        "image_url": product.image_url,
-        "estimated_value": val,
-        "user_images": new_item.user_images
-    }
+    return _format_item_response(new_item, product)
 
 @router.put("/{item_id}", response_model=CollectionItemResponse)
 def update_collection_item(
@@ -169,27 +154,7 @@ def update_collection_item(
     # Re-fetch product for response
     product = db.query(Product).filter(Product.id == item.product_id).first()
     
-    val = 0.0
-    if product:
-        if item.condition == 'LOOSE': val = product.loose_price or 0
-        elif item.condition == 'CIB': val = product.cib_price or 0
-        elif item.condition == 'NEW': val = product.new_price or 0
-        elif item.condition == 'GRADED': val = product.new_price or 0
-
-    return {
-        "id": item.id,
-        "product_id": item.product_id,
-        "condition": item.condition,
-        "condition": item.condition,
-        "paid_price": item.paid_price,
-        "purchase_date": item.purchase_date,
-        "notes": item.notes,
-        "product_name": product.product_name if product else "Unknown",
-        "console_name": product.console_name if product else "Unknown",
-        "image_url": product.image_url if product else None,
-        "estimated_value": val,
-        "user_images": item.user_images
-    }
+    return _format_item_response(item, product)
 
 @router.delete("/{item_id}")
 def delete_collection_item(

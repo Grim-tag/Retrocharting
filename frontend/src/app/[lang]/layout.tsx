@@ -59,9 +59,9 @@ export default async function PublicLayout({
 
                     <ProductSearch placeholder={dict.header.search_placeholder} lang={lang} />
 
-                    <div className="flex-grow">
+                    <main className="flex-grow">
                         {children}
-                    </div>
+                    </main>
 
                     <Footer dict={dict} lang={lang} />
                 </AuthProvider>
