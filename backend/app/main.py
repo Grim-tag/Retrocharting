@@ -138,6 +138,18 @@ def startup_event():
         else:
             print("Schema check: 'paid_price' column exists.")
 
+        if 'notes' not in collection_cols:
+             print("Migrating: Adding 'notes' column to collection_items table...")
+             with engine.connect() as conn:
+                 conn.execute(text("ALTER TABLE collection_items ADD COLUMN notes TEXT"))
+                 conn.commit()
+
+        if 'user_images' not in collection_cols:
+             print("Migrating: Adding 'user_images' column to collection_items table...")
+             with engine.connect() as conn:
+                 conn.execute(text("ALTER TABLE collection_items ADD COLUMN user_images TEXT"))
+                 conn.commit()
+
         print("Auto-migration checks complete.")
 
         # 4. User 'user_rank', 'xp', 'last_active' columns
