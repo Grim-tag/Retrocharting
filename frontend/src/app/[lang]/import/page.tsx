@@ -8,7 +8,8 @@ import { getApiUrl } from '@/lib/api';
 const API_URL = `${getApiUrl()}/api/v1`;
 
 
-import { uploadCsv, ImportAnalysisResult, CSVMatchResult } from '@/lib/api';
+
+import { uploadCsv, bulkImport, ImportAnalysisResult } from '@/lib/api';
 
 export default function ImportPage({ params }: { params: { lang: string } }) {
     const { lang } = params;
@@ -17,7 +18,35 @@ export default function ImportPage({ params }: { params: { lang: string } }) {
     const [step, setStep] = useState(1);
     const [file, setFile] = useState<File | null>(null);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [isImporting, setIsImporting] = useState(false); // New state
     const [analysisResult, setAnalysisResult] = useState<ImportAnalysisResult | null>(null);
+
+    // ... existing handlers ...
+
+    const handleImportItems = async () => {
+        if (!analysisResult || !token) return;
+
+        setIsImporting(true);
+        try {
+            const itemsToImport = analysisResult.matches.map(m => ({
+                product_id: m.match!.id,
+                condition: m.item.condition,
+                paid_price: m.item.paid_price ? parseFloat(m.item.paid_price) : undefined,
+                currency: m.item.currency,
+                purchase_date: m.item.purchase_date,
+                comment: m.item.comment
+            }));
+
+            const result = await bulkImport(itemsToImport, token);
+            alert(`Success! Imported ${result.imported} items.`);
+            router.push(`/${lang}/collection`);
+        } catch (err) {
+            console.error(err);
+            alert("Import failed. Please try again.");
+        } finally {
+            setIsImporting(false);
+        }
+    };
 
     const handleDownloadTemplate = () => {
         window.open(`${API_URL}/import/template`, '_blank');
@@ -203,10 +232,11 @@ export default function ImportPage({ params }: { params: { lang: string } }) {
                                         ← Start Over
                                     </button>
                                     <button
-                                        onClick={() => alert("Final Import logic to be implemented")}
-                                        className="flex-1 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded transition-colors"
+                                        onClick={handleImportItems}
+                                        disabled={isImporting}
+                                        className={`flex-1 py-2 font-bold rounded transition-colors ${isImporting ? 'bg-green-800 text-gray-300 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700 text-white'}`}
                                     >
-                                        Import {analysisResult.matches.length} Items
+                                        {isImporting ? 'Importing...' : `Import ${analysisResult.matches.length} Items`}
                                     </button>
                                 </div>
                             </div>
