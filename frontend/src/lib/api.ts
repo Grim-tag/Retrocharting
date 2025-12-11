@@ -348,6 +348,19 @@ export async function getPortfolioMovers(token: string, days = 30): Promise<any>
 }
 
 
+
+export async function getPortfolioDebug(token: string): Promise<any> {
+    try {
+        const response = await axios.get(`${API_URL}/portfolio/debug`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Failed to fetch portfolio debug", error);
+        return { error: "Failed to fetch debug info" };
+    }
+}
+
 // --- Import APIs ---
 
 export interface CSVMatchResult {
