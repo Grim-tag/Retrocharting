@@ -81,6 +81,8 @@ app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(collection.router, prefix="/api/v1/collection", tags=["collection"])
 app.include_router(sniper.router, prefix="/api/v1/sniper", tags=["sniper"])
 app.include_router(portfolio.router, prefix="/api/v1/portfolio", tags=["portfolio"])
+from app.routers import import_collection
+app.include_router(import_collection.router, prefix="/api/v1/import", tags=["import"])
 
 @app.on_event("startup")
 def startup_event():

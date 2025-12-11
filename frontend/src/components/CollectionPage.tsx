@@ -146,29 +146,7 @@ export default function CollectionPage({ dict, lang }: { dict: any; lang: string
                                             <td className="p-4 text-right font-mono">
                                                 {profitLoc !== null ? (
                                                     <span className={profitLoc >= 0 ? 'text-green-500' : 'text-red-500'}>
-                                                        {profitLoc > 0 ? '+' : ''}{formatCurrency(profitLoc, currency)}
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-gray-600">-</span>
-                                                )}
-                                            </td>
-                                            <td className="p-4 text-center">
-                                                <div className="flex justify-center gap-2">
-                                                    <button
-                                                        onClick={() => setEditItem(item)}
-                                                        className="text-gray-500 hover:text-[#ff6600] transition-colors p-2"
-                                                        title="Edit"
-                                                    >
-                                                        <PencilIcon className="w-5 h-5" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDelete(item.id)}
-                                                        className="text-gray-500 hover:text-red-500 transition-colors p-2"
-                                                        title="Remove"
-                                                    >
-                                                        <TrashIcon className="w-5 h-5" />
-                                                    </button>
-                                                </div>
+                                                    </div>
                                             </td>
                                         </tr>
                                     );
