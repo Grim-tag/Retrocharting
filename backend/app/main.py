@@ -159,6 +159,16 @@ def startup_event():
                  conn.execute(text("ALTER TABLE collection_items ADD COLUMN purchase_date TIMESTAMP"))
                  conn.commit()
 
+        # Check users table columns
+        inspector = inspect(engine)
+        user_cols = [col['name'] for col in inspector.get_columns('users')]
+        
+        if 'ip_address' not in user_cols:
+            print("Migrating: Adding 'ip_address' column to users table...")
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE users ADD COLUMN ip_address VARCHAR"))
+                conn.commit()
+
         print("Auto-migration checks complete.")
 
         # 4. User 'user_rank', 'xp', 'last_active' columns

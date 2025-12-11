@@ -64,7 +64,9 @@ def get_admin_users(db: Session = Depends(get_db)):
                 "xp": u.xp,
                 "is_admin": u.is_admin,
                 "created_at": u.created_at,
-                "last_active": u.last_active
+                "created_at": u.created_at,
+                "last_active": u.last_active,
+                "ip_address": u.ip_address
             }
             for u in users
         ]

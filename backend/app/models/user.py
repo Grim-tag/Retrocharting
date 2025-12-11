@@ -20,6 +20,7 @@ class User(Base):
     rank = Column("user_rank", String, default="Loose")
     xp = Column(Integer, default=0)
     last_active = Column(DateTime, default=datetime.utcnow)
+    ip_address = Column(String, nullable=True)
 
     # Relationships
     collection_items = relationship("CollectionItem", back_populates="user")

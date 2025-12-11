@@ -1,11 +1,3 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Security
-from sqlalchemy.orm import Session
-from app.db.session import get_db
-from app.models.user import User
-from app.schemas.user import GoogleAuthRequest, Token, UserResponse, TokenData
-from app.core.security import create_access_token, verify_token
-from app.core.config import settings
-from google.oauth2 import id_token
 from google.auth.transport import requests
 from typing import Optional
 from datetime import datetime
@@ -22,7 +14,7 @@ if not GOOGLE_CLIENT_ID:
     GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 
 @router.post("/google", response_model=Token)
-def login_with_google(request: GoogleAuthRequest, db: Session = Depends(get_db)):
+def login_with_google(request: GoogleAuthRequest, req: Request, db: Session = Depends(get_db)):
     if not GOOGLE_CLIENT_ID:
         raise HTTPException(status_code=500, detail="Server config error: Missing GOOGLE_CLIENT_ID")
 
@@ -63,63 +55,6 @@ def login_with_google(request: GoogleAuthRequest, db: Session = Depends(get_db))
             google_id=google_id,
             full_name=name,
             avatar_url=picture,
-            is_admin=is_super_admin # Auto-promote
-        )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-    else:
-        # Update info if changed (e.g. avatar)
-        changed = False
-        if user.avatar_url != picture:
-            user.avatar_url = picture
-            changed = True
-        if user.full_name != name:
-            user.full_name = name
-            changed = True
-        
-        # Ensure Super Admins always have access
-        if is_super_admin and not user.is_admin:
-            user.is_admin = True
-            changed = True
-            
-        if changed:
-            db.commit()
-            
-    # Create internal JWT
-    # Embed is_admin in token for client-side usage (optional, but payload extraction is easier)
-    access_token = create_access_token(data={"sub": str(user.id), "email": user.email, "is_admin": user.is_admin})
-    
-    return {"access_token": access_token, "token_type": "bearer"}
-
-from fastapi import Security
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-
-security = HTTPBearer()
-
-def get_current_user(credentials: HTTPAuthorizationCredentials = Security(security), db: Session = Depends(get_db)) -> User:
-    token = credentials.credentials
-    payload = verify_token(token)
-    if payload is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    
-    user_id: int = int(payload.get("sub"))
-    user = db.query(User).filter(User.id == user_id).first()
-    if user is None:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    # Update last_active
-    user.last_active = datetime.utcnow()
-    db.commit()
-        
-    return user
-
-def get_current_admin_user(current_user: User = Depends(get_current_user)) -> User:
-    if not current_user.is_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="The user doesn't have enough privileges"
