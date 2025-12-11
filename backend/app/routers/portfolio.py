@@ -76,85 +76,99 @@ def get_portfolio_history(
     Calculates the portfolio value over time.
     Complex logic: Replays the collection state day by day.
     """
-    # 1. Get all items with Product
-    items = db.query(CollectionItem, Product).join(Product, CollectionItem.product_id == Product.id)\
-        .filter(CollectionItem.user_id == current_user.id).all()
-    if not items:
-        return []
+    try:
+        # 1. Get all items with Product
+        items = db.query(CollectionItem, Product).join(Product, CollectionItem.product_id == Product.id)\
+            .filter(CollectionItem.user_id == current_user.id).all()
+        if not items:
+            return []
 
-    item_product_map = {item.id: item.product_id for item, prod in items}
-    product_ids = [item.product_id for item, prod in items]
-    
-    # 2. Get Price History for all these products
-    # We need a robust way to find "price at date X"
-    # Let's fetch all history points for these products
-    history_records = db.query(PriceHistory).filter(
-        PriceHistory.product_id.in_(product_ids),
-        PriceHistory.date >= datetime.utcnow().date() - timedelta(days=range_days + 5) # Buffer
-    ).all()
-    
-    # Organize history: ProductID -> Condition -> Date -> Price
-    # Map: p_id -> { "loose": { date_obj: price }, "cib": ... }
-    price_map = {} 
-    
-    for h in history_records:
-        if h.product_id not in price_map: price_map[h.product_id] = {}
-        cond_u = h.condition.upper()
-        if cond_u == "USED": cond_u = "LOOSE" # Normalize
-        if cond_u == "COMPLETE": cond_u = "CIB"
+        item_product_map = {item.id: item.product_id for item, prod in items}
+        product_ids = [item.product_id for item, prod in items]
         
-        if cond_u not in price_map[h.product_id]: price_map[h.product_id][cond_u] = {}
+        # 2. Get Price History for all these products
+        # We need a robust way to find "price at date X"
+        # Let's fetch all history points for these products
+        history_records = db.query(PriceHistory).filter(
+            PriceHistory.product_id.in_(product_ids),
+            PriceHistory.date >= datetime.utcnow().date() - timedelta(days=range_days + 5) # Buffer
+        ).all()
         
-        price_map[h.product_id][cond_u][h.date] = h.price
+        # Organize history: ProductID -> Condition -> Date -> Price
+        # Map: p_id -> { "loose": { date_obj: price }, "cib": ... }
+        price_map = {} 
+        
+        for h in history_records:
+            if h.product_id not in price_map: price_map[h.product_id] = {}
+            cond_u = h.condition.upper()
+            if cond_u == "USED": cond_u = "LOOSE" # Normalize
+            if cond_u == "COMPLETE": cond_u = "CIB"
+            
+            if cond_u not in price_map[h.product_id]: price_map[h.product_id][cond_u] = {}
+            
+            # HANDLE DB DATE vs DATETIME
+            h_date = h.date
+            if isinstance(h_date, datetime):
+                h_date = h_date.date()
+            
+            price_map[h.product_id][cond_u][h_date] = h.price
 
-    # 3. Iterate days
-    chart_data = []
-    today = datetime.utcnow().date()
-    
-    for i in range(range_days, -1, -1):
-        current_date = today - timedelta(days=i)
-        daily_total = 0.0
+        # 3. Iterate days
+        chart_data = []
+        today = datetime.utcnow().date()
         
-        for item, product in items:
-            # Did we own it then? 
-            # BACKFILL LOGIC: Ignore added_at. User wants to see history of CURRENT collection.
-            # if item.added_at and item.added_at.date() > current_date:
-            #     continue
+        for i in range(range_days, -1, -1):
+            current_date = today - timedelta(days=i)
+            daily_total = 0.0
+            
+            for item, product in items:
+                # Did we own it then? 
+                # BACKFILL LOGIC: Ignore added_at. User wants to see history of CURRENT collection.
+                # if item.added_at and item.added_at.date() > current_date:
+                #     continue
+                    
+                # Find price
+                # Logic: Look for price on current_date. If missing, look back up to 7 days.
+                # If still missing, assume 0 (or use current price if we want to be generous, but 0 is strict)
+                p_id = item.product_id
+                cond = item.condition
                 
-            # Find price
-            # Logic: Look for price on current_date. If missing, look back up to 7 days.
-            # If still missing, assume 0 (or use current price if we want to be generous, but 0 is strict)
-            p_id = item.product_id
-            cond = item.condition
+                # Graded fallback
+                if cond == 'GRADED': cond = 'NEW'
+                
+                price = 0.0
+                if p_id in price_map and cond in price_map[p_id]:
+                    date_prices = price_map[p_id][cond]
+                    # Look for exact match or nearest past match
+                    # Simple loop back
+                    for lookback in range(0, 7):
+                        d_check = current_date - timedelta(days=lookback)
+                        if d_check in date_prices:
+                            price = date_prices[d_check]
+                            break
+                
+                # Fallback to current price if history missing (which is common for new items)
+                if price == 0.0:
+                     if cond == 'LOOSE': price = product.loose_price or 0
+                     elif cond == 'CIB': price = product.cib_price or 0
+                     elif cond == 'NEW': price = product.new_price or 0
+                     elif cond == 'GRADED': price = product.new_price or 0
+                
+                daily_total += price
+                
+            chart_data.append({
+                "date": current_date.isoformat(),
+                "value": round(daily_total, 2)
+            })
             
-            # Graded fallback
-            if cond == 'GRADED': cond = 'NEW'
-            
-            price = 0.0
-            if p_id in price_map and cond in price_map[p_id]:
-                date_prices = price_map[p_id][cond]
-                # Look for exact match or nearest past match
-                # Simple loop back
-                for lookback in range(0, 7):
-                    d_check = current_date - timedelta(days=lookback)
-                    if d_check in date_prices:
-                        price = date_prices[d_check]
-                        price = date_prices[d_check]
-                        break
-            
-            # Fallback to current price if history missing
-            if price == 0.0:
-                 if cond == 'LOOSE': price = product.loose_price or 0
-                 elif cond == 'CIB': price = product.cib_price or 0
-                 elif cond == 'NEW': price = product.new_price or 0
-                 elif cond == 'GRADED': price = product.new_price or 0
-            
-            daily_total += price
-            
-        chart_data.append({
-            "date": current_date.isoformat(),
-            "value": round(daily_total, 2)
-        })
+        return chart_data
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"Error in portfolio history: {e}")
+        # Return empty list or maybe error dict? Frontend expects list.
+        # Returning a single error point to make it visible in chart? No, that's ugly.
+        return []
         
 @router.get("/movers")
 def get_portfolio_movers(
