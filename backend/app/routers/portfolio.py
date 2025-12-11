@@ -76,13 +76,14 @@ def get_portfolio_history(
     Calculates the portfolio value over time.
     Complex logic: Replays the collection state day by day.
     """
-    # 1. Get all items
-    items = db.query(CollectionItem).filter(CollectionItem.user_id == current_user.id).all()
+    # 1. Get all items with Product
+    items = db.query(CollectionItem, Product).join(Product, CollectionItem.product_id == Product.id)\
+        .filter(CollectionItem.user_id == current_user.id).all()
     if not items:
         return []
 
-    item_product_map = {item.id: item.product_id for item in items}
-    product_ids = [item.product_id for item in items]
+    item_product_map = {item.id: item.product_id for item, prod in items}
+    product_ids = [item.product_id for item, prod in items]
     
     # 2. Get Price History for all these products
     # We need a robust way to find "price at date X"
@@ -114,7 +115,7 @@ def get_portfolio_history(
         current_date = today - timedelta(days=i)
         daily_total = 0.0
         
-        for item in items:
+        for item, product in items:
             # Did we own it then? 
             # BACKFILL LOGIC: Ignore added_at. User wants to see history of CURRENT collection.
             # if item.added_at and item.added_at.date() > current_date:
@@ -138,7 +139,15 @@ def get_portfolio_history(
                     d_check = current_date - timedelta(days=lookback)
                     if d_check in date_prices:
                         price = date_prices[d_check]
+                        price = date_prices[d_check]
                         break
+            
+            # Fallback to current price if history missing
+            if price == 0.0:
+                 if cond == 'LOOSE': price = product.loose_price or 0
+                 elif cond == 'CIB': price = product.cib_price or 0
+                 elif cond == 'NEW': price = product.new_price or 0
+                 elif cond == 'GRADED': price = product.new_price or 0
             
             daily_total += price
             

@@ -12,6 +12,8 @@ interface User {
     full_name: string;
     avatar_url: string;
     is_admin: boolean;
+    rank?: string;
+    xp?: number;
 }
 
 interface AuthContextType {

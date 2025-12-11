@@ -45,3 +45,29 @@ def get_admin_stats(db: Session = Depends(get_db)):
     except Exception as e:
         print(f"Error producing admin stats: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/users", dependencies=[Depends(verify_admin_key)])
+def get_admin_users(db: Session = Depends(get_db)):
+    """
+    Returns list of users with details for Admin Dashboard.
+    """
+    try:
+        from app.models.user import User
+        users = db.query(User).order_by(User.created_at.desc()).all()
+        
+        return [
+            {
+                "id": u.id,
+                "email": u.email,
+                "username": u.username,
+                "rank": u.rank,
+                "xp": u.xp,
+                "is_admin": u.is_admin,
+                "created_at": u.created_at,
+                "last_active": u.last_active
+            }
+            for u in users
+        ]
+    except Exception as e:
+        print(f"Error fetching users: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

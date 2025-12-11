@@ -213,6 +213,7 @@ export interface CollectionItem {
     console_name: string;
     image_url?: string;
     estimated_value?: number;
+    user_images?: string; // JSON string
 }
 
 export async function getCollection(token: string): Promise<CollectionItem[]> {
@@ -241,6 +242,18 @@ export async function addToCollection(token: string, productId: number, conditio
     } catch (error: any) {
         console.error("Failed to add to collection", error);
         throw new Error(error.response?.data?.detail || "Failed to add to collection");
+    }
+}
+
+export async function updateCollectionItem(token: string, itemId: number, data: { condition?: string, notes?: string, paid_price?: number, user_images?: string }): Promise<CollectionItem> {
+    try {
+        const response = await axios.put(`${API_URL}/collection/${itemId}`, data, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error: any) {
+        console.error("Failed to update collection item", error);
+        throw new Error(error.response?.data?.detail || "Failed to update item");
     }
 }
 

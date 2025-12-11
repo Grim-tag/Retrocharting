@@ -15,7 +15,9 @@ class CollectionItem(Base):
     paid_price = Column(Float, nullable=True)
     
     added_at = Column(DateTime, default=datetime.utcnow)
+    added_at = Column(DateTime, default=datetime.utcnow)
     notes = Column(Text, nullable=True)
+    user_images = Column(Text, nullable=True) # Stored as JSON string
     
     # Relationships
     user = relationship("User", back_populates="collection_items")

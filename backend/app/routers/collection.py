@@ -17,13 +17,23 @@ class CollectionItemCreate(BaseModel):
     condition: str  # LOOSE, CIB, NEW, GRADED
     paid_price: Optional[float] = None
     notes: Optional[str] = None
+    user_images: Optional[str] = None # JSON string of ["url1", "url2", "url3"]
+
+class CollectionItemUpdate(BaseModel):
+    condition: Optional[str] = None
+    paid_price: Optional[float] = None
+    notes: Optional[str] = None
+    user_images: Optional[str] = None
+
 
 class CollectionItemResponse(BaseModel):
     id: int
     product_id: int
     condition: str
     paid_price: Optional[float]
+    paid_price: Optional[float]
     notes: Optional[str]
+    user_images: Optional[str]
     # Hydrated Product Data
     product_name: str
     console_name: str
@@ -68,8 +78,11 @@ def read_collection(
             "notes": item.notes,
             "product_name": product.product_name,
             "console_name": product.console_name,
+            "product_name": product.product_name,
+            "console_name": product.console_name,
             "image_url": product.image_url,
-            "estimated_value": val
+            "estimated_value": val,
+            "user_images": item.user_images
         })
         
     return response_items
@@ -91,7 +104,10 @@ def add_to_collection(
         product_id=item_in.product_id,
         condition=item_in.condition,
         paid_price=item_in.paid_price,
-        notes=item_in.notes
+        condition=item_in.condition,
+        paid_price=item_in.paid_price,
+        notes=item_in.notes,
+        user_images=item_in.user_images
     )
     db.add(new_item)
     db.commit()
@@ -113,7 +129,58 @@ def add_to_collection(
         "product_name": product.product_name,
         "console_name": product.console_name,
         "image_url": product.image_url,
-        "estimated_value": val
+        "estimated_value": val,
+        "user_images": new_item.user_images
+    }
+
+@router.put("/{item_id}", response_model=CollectionItemResponse)
+def update_collection_item(
+    item_id: int,
+    item_in: CollectionItemUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    item = db.query(CollectionItem).filter(
+        CollectionItem.id == item_id,
+        CollectionItem.user_id == current_user.id
+    ).first()
+    
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    if item_in.condition is not None:
+        item.condition = item_in.condition
+    if item_in.paid_price is not None:
+        item.paid_price = item_in.paid_price
+    if item_in.notes is not None:
+        item.notes = item_in.notes
+    if item_in.user_images is not None:
+        item.user_images = item_in.user_images
+
+    db.commit()
+    db.refresh(item)
+
+    # Re-fetch product for response
+    product = db.query(Product).filter(Product.id == item.product_id).first()
+    
+    val = 0.0
+    if product:
+        if item.condition == 'LOOSE': val = product.loose_price or 0
+        elif item.condition == 'CIB': val = product.cib_price or 0
+        elif item.condition == 'NEW': val = product.new_price or 0
+        elif item.condition == 'GRADED': val = product.new_price or 0
+
+    return {
+        "id": item.id,
+        "product_id": item.product_id,
+        "condition": item.condition,
+        "paid_price": item.paid_price,
+        "notes": item.notes,
+        "product_name": product.product_name if product else "Unknown",
+        "console_name": product.console_name if product else "Unknown",
+        "image_url": product.image_url if product else None,
+        "estimated_value": val,
+        "user_images": item.user_images
     }
 
 @router.delete("/{item_id}")

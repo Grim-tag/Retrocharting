@@ -4,8 +4,8 @@ import { useAuth } from '@/context/AuthContext';
 import { CollectionItem, getCollection, deleteFromCollection } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { TrashIcon } from '@heroicons/react/24/outline';
-
+import CollectionItemModal from './CollectionItemModal';
+import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { getCurrencyForLang, convertCurrency, formatCurrency } from '@/lib/currency';
 
 export default function CollectionPage({ dict, lang }: { dict: any; lang: string }) {
@@ -13,6 +13,7 @@ export default function CollectionPage({ dict, lang }: { dict: any; lang: string
     const router = useRouter();
     const [items, setItems] = useState<CollectionItem[]>([]);
     const [loading, setLoading] = useState(true);
+    const [editItem, setEditItem] = useState<CollectionItem | null>(null);
 
     const currency = getCurrencyForLang(lang);
 
@@ -42,6 +43,10 @@ export default function CollectionPage({ dict, lang }: { dict: any; lang: string
         }
     };
 
+    const handleUpdate = (updatedItem: CollectionItem) => {
+        setItems(items.map(i => i.id === updatedItem.id ? updatedItem : i));
+    };
+
     const totalValueUSD = items.reduce((sum, item) => sum + (item.estimated_value || 0), 0);
     const totalValueLocalized = convertCurrency(totalValueUSD, 'USD', currency);
     const totalItems = items.length;
@@ -52,6 +57,14 @@ export default function CollectionPage({ dict, lang }: { dict: any; lang: string
 
     return (
         <div className="min-h-screen bg-[#1f2533] text-white">
+            <CollectionItemModal
+                isOpen={!!editItem}
+                item={editItem}
+                onClose={() => setEditItem(null)}
+                onSave={handleUpdate}
+                lang={lang}
+            />
+
             <div className="max-w-7xl mx-auto px-4 py-8">
 
                 {/* Header Stats */}
@@ -113,6 +126,7 @@ export default function CollectionPage({ dict, lang }: { dict: any; lang: string
                                             <td className="p-4 flex items-center gap-3">
                                                 {item.image_url && <img src={item.image_url} className="w-10 h-10 object-cover rounded" />}
                                                 <span className="font-medium text-white">{item.product_name}</span>
+                                                {item.user_images && <span className="text-[10px] bg-gray-700 px-1 rounded">📷</span>}
                                             </td>
                                             <td className="p-4 text-gray-300">{item.console_name}</td>
                                             <td className="p-4">
@@ -140,6 +154,13 @@ export default function CollectionPage({ dict, lang }: { dict: any; lang: string
                                             </td>
                                             <td className="p-4 text-center">
                                                 <div className="flex justify-center gap-2">
+                                                    <button
+                                                        onClick={() => setEditItem(item)}
+                                                        className="text-gray-500 hover:text-[#ff6600] transition-colors p-2"
+                                                        title="Edit"
+                                                    >
+                                                        <PencilIcon className="w-5 h-5" />
+                                                    </button>
                                                     <button
                                                         onClick={() => handleDelete(item.id)}
                                                         className="text-gray-500 hover:text-red-500 transition-colors p-2"

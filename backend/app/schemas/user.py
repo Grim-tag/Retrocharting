@@ -24,6 +24,8 @@ class UserResponse(UserBase):
     id: int
     is_admin: bool
     created_at: datetime
+    rank: str
+    xp: int
     
     class Config:
         from_attributes = True

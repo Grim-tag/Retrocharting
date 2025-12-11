@@ -59,6 +59,97 @@ export default async function AdminDashboard() {
                     Your database is currently tracking <strong>{stats?.total_products.toLocaleString() ?? 0}</strong> items.
                 </p>
             </div>
+
+            <UserList />
+        </div>
+    );
+}
+
+type AdminUser = {
+    id: number;
+    email: string;
+    username: string | null;
+    rank: string;
+    xp: number;
+    is_admin: boolean;
+    created_at: string;
+    last_active: string | null;
+};
+
+async function getUsers(): Promise<AdminUser[]> {
+    try {
+        const apiUrl = getApiUrl();
+        const secretKey = process.env.ADMIN_SECRET_KEY || "admin_secret_123";
+
+        const res = await fetch(`${apiUrl}/api/v1/admin/users`, {
+            cache: 'no-store',
+            headers: {
+                'X-Admin-Key': secretKey
+            }
+        });
+        if (!res.ok) return [];
+        return res.json();
+    } catch (error) {
+        console.error("Failed to fetch users", error);
+        return [];
+    }
+}
+
+async function UserList() {
+    const users = await getUsers();
+
+    return (
+        <div className="col-span-full p-6 bg-[#1f2533] border border-[#2a3142] rounded">
+            <h3 className="text-lg font-bold mb-4 text-white">User Management ({users.length})</h3>
+            <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm text-gray-400">
+                    <thead className="text-xs uppercase bg-[#2a3142] text-gray-200">
+                        <tr>
+                            <th className="px-4 py-3">ID</th>
+                            <th className="px-4 py-3">User</th>
+                            <th className="px-4 py-3">Rank / XP</th>
+                            <th className="px-4 py-3">Role</th>
+                            <th className="px-4 py-3">Joined</th>
+                            <th className="px-4 py-3">Last Active</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#2a3142]">
+                        {users.map((user) => (
+                            <tr key={user.id} className="hover:bg-[#2a3142]/50">
+                                <td className="px-4 py-3 text-white">#{user.id}</td>
+                                <td className="px-4 py-3">
+                                    <div className="text-white font-medium">{user.username || "No Pseudo"}</div>
+                                    <div className="text-xs">{user.email}</div>
+                                </td>
+                                <td className="px-4 py-3">
+                                    <span className="text-[#ff6600] font-bold">{user.rank}</span>
+                                    <div className="text-xs">{user.xp.toLocaleString()} XP</div>
+                                </td>
+                                <td className="px-4 py-3">
+                                    {user.is_admin ? (
+                                        <span className="px-2 py-1 rounded bg-purple-900 text-purple-200 text-xs">Admin</span>
+                                    ) : (
+                                        <span className="px-2 py-1 rounded bg-gray-700 text-gray-300 text-xs">User</span>
+                                    )}
+                                </td>
+                                <td className="px-4 py-3">
+                                    {new Date(user.created_at).toLocaleDateString()}
+                                </td>
+                                <td className="px-4 py-3">
+                                    {user.last_active ? new Date(user.last_active).toLocaleString() : "Never"}
+                                </td>
+                            </tr>
+                        ))}
+                        {users.length === 0 && (
+                            <tr>
+                                <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                                    No users found.
+                                </td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
         </div>
     );
 }

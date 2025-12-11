@@ -14,6 +14,11 @@ class User(Base):
     avatar_url = Column(String)
     is_admin = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Gamification
+    rank = Column(String, default="Loose")
+    xp = Column(Integer, default=0)
+    last_active = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
     collection_items = relationship("CollectionItem", back_populates="user")

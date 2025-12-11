@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Security
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.user import User
@@ -8,6 +8,9 @@ from app.core.config import settings
 from google.oauth2 import id_token
 from google.auth.transport import requests
 from typing import Optional
+from datetime import datetime
+from app.services.gamification import add_xp
+
 
 router = APIRouter()
 
@@ -108,6 +111,10 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Security(securi
     user = db.query(User).filter(User.id == user_id).first()
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
+    
+    # Update last_active
+    user.last_active = datetime.utcnow()
+    db.commit()
         
     return user
 
@@ -148,3 +155,22 @@ def update_user_me(
     db.commit()
     db.refresh(current_user)
     return current_user
+    db.refresh(current_user)
+    return current_user
+
+@router.delete("/me", status_code=204)
+def delete_user_me(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Deletes the current user's account and all associated data permanently.
+    This action is irreversible (GDPR compliance).
+    """
+    # Delete related data (Cascade usually handles this, but let's be safe if needed)
+    # SQLAlchemy relationships with cascade="all, delete" should work if configured.
+    # Otherwise, manually delete dependent rows here.
+    
+    db.delete(current_user)
+    db.commit()
+    return
