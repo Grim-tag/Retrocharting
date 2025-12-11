@@ -164,7 +164,9 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
                                                 try {
                                                     await login(credentialResponse.credential);
                                                 } catch (e) {
-                                                    alert("Échec de la connexion. Vérifiez que le serveur est lancé.");
+                                                    // Typecast e to any or Error to access message
+                                                    const msg = (e as any)?.message || "Erreur inconnue";
+                                                    alert(`Échec de la connexion (${msg}). Vérifiez que le serveur est lancé et l'URL API.`);
                                                 }
                                             }
                                         }}
