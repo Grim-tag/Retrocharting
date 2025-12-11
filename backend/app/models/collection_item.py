@@ -15,7 +15,7 @@ class CollectionItem(Base):
     paid_price = Column(Float, nullable=True)
     
     added_at = Column(DateTime, default=datetime.utcnow)
-    added_at = Column(DateTime, default=datetime.utcnow)
+    purchase_date = Column(DateTime, nullable=True) # Date of actual purchase
     notes = Column(Text, nullable=True)
     user_images = Column(Text, nullable=True) # Stored as JSON string
     

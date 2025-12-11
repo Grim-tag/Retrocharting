@@ -152,6 +152,13 @@ def startup_event():
                  conn.execute(text("ALTER TABLE collection_items ADD COLUMN user_images TEXT"))
                  conn.commit()
 
+        if 'purchase_date' not in collection_cols:
+             print("Migrating: Adding 'purchase_date' column to collection_items table...")
+             with engine.connect() as conn:
+                 # Standardize on TIMESTAMP/DATETIME
+                 conn.execute(text("ALTER TABLE collection_items ADD COLUMN purchase_date TIMESTAMP"))
+                 conn.commit()
+
         print("Auto-migration checks complete.")
 
         # 4. User 'user_rank', 'xp', 'last_active' columns

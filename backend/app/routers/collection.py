@@ -4,6 +4,7 @@ from typing import List, Optional
 from pydantic import BaseModel
 
 from app.db.session import get_db
+from datetime import datetime
 from app.models.user import User
 from app.models.collection_item import CollectionItem
 from app.models.product import Product
@@ -16,12 +17,14 @@ class CollectionItemCreate(BaseModel):
     product_id: int
     condition: str  # LOOSE, CIB, NEW, GRADED
     paid_price: Optional[float] = None
+    purchase_date: Optional[datetime] = None
     notes: Optional[str] = None
     user_images: Optional[str] = None # JSON string of ["url1", "url2", "url3"]
 
 class CollectionItemUpdate(BaseModel):
     condition: Optional[str] = None
     paid_price: Optional[float] = None
+    purchase_date: Optional[datetime] = None
     notes: Optional[str] = None
     user_images: Optional[str] = None
 
@@ -31,7 +34,7 @@ class CollectionItemResponse(BaseModel):
     product_id: int
     condition: str
     paid_price: Optional[float]
-    paid_price: Optional[float]
+    purchase_date: Optional[datetime]
     notes: Optional[str]
     user_images: Optional[str]
     # Hydrated Product Data
@@ -75,6 +78,7 @@ def read_collection(
             "product_id": item.product_id,
             "condition": item.condition,
             "paid_price": item.paid_price,
+            "purchase_date": item.purchase_date,
             "notes": item.notes,
             "product_name": product.product_name,
             "console_name": product.console_name,
@@ -104,6 +108,7 @@ def add_to_collection(
         product_id=item_in.product_id,
         condition=item_in.condition,
         paid_price=item_in.paid_price,
+        purchase_date=item_in.purchase_date,
         notes=item_in.notes,
         user_images=item_in.user_images
     )
@@ -123,6 +128,7 @@ def add_to_collection(
         "product_id": new_item.product_id,
         "condition": new_item.condition,
         "paid_price": new_item.paid_price,
+        "purchase_date": new_item.purchase_date,
         "notes": new_item.notes,
         "product_name": product.product_name,
         "console_name": product.console_name,
@@ -150,6 +156,8 @@ def update_collection_item(
         item.condition = item_in.condition
     if item_in.paid_price is not None:
         item.paid_price = item_in.paid_price
+    if item_in.purchase_date is not None:
+        item.purchase_date = item_in.purchase_date
     if item_in.notes is not None:
         item.notes = item_in.notes
     if item_in.user_images is not None:
