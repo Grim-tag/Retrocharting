@@ -50,6 +50,18 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
 
     // ... logic above ...
 
+    // Dynamic Menu Items from Dictionary
+    const menuItems = [
+        {
+            id: 'video-games',
+            label: dict.header.nav.video_games,
+            href: getPath('games'),
+        },
+        { id: 'consoles', label: dict.header.nav.consoles, href: getPath('consoles') },
+        { id: 'accessories', label: dict.header.nav.accessories, href: getPath('accessories') },
+        { id: 'collectibles', label: dict.header.nav.collectibles, href: getPath('collectibles') },
+    ];
+
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     return (
