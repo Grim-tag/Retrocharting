@@ -9,7 +9,64 @@ import io
 from app.models.product import Product
 from thefuzz import process, fuzz
 
+from pydantic import BaseModel
+from typing import List, Optional
+from datetime import datetime
+from app.models.collection_item import CollectionItem
+
 router = APIRouter()
+
+class ImportItem(BaseModel):
+    product_id: int
+    condition: str
+    paid_price: Optional[float] = None
+    currency: Optional[str] = "EUR"
+    purchase_date: Optional[str] = None # YYYY-MM-DD
+    comment: Optional[str] = None
+
+class BulkImportRequest(BaseModel):
+    items: List[ImportItem]
+
+@router.post("/confirm")
+async def confirm_import(
+    request: BulkImportRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Finalizes the import by creating collection items for the provided list.
+    """
+    imported_count = 0
+    errors = 0
+    
+    for item in request.items:
+        try:
+            # Parse date if present
+            p_date = None
+            if item.purchase_date:
+                try:
+                    # Generic parser or flexible format could be better, but strict YYYY-MM-DD is fine for template
+                    p_date = datetime.strptime(item.purchase_date, "%Y-%m-%d")
+                except ValueError:
+                    pass # Ignore invalid date
+            
+            new_item = CollectionItem(
+                user_id=current_user.id,
+                product_id=item.product_id,
+                condition=item.condition,
+                paid_price=item.paid_price,
+                purchase_date=p_date,
+                notes=item.comment
+            )
+            db.add(new_item)
+            imported_count += 1
+        except Exception as e:
+            # simple logging
+            print(f"Error importing item {item}: {e}")
+            errors += 1
+            
+    db.commit()
+    return {"message": "Import processed", "imported": imported_count, "errors": errors}
 
 @router.post("/upload")
 async def upload_csv(
