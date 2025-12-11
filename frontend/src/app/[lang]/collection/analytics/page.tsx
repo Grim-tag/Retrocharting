@@ -89,7 +89,8 @@ export default function AnalyticsPage() {
     // Convert chart data and ensure it's valid for Recharts
     const historyLoc = Array.isArray(history) ? history.map(h => ({
         ...h,
-        value: convertCurrency(h.value || 0, 'USD', currency)
+        value: convertCurrency(h.value || 0, 'USD', currency),
+        invested: convertCurrency(h.invested || 0, 'USD', currency)
     })) : [];
 
     return (
@@ -175,6 +176,10 @@ export default function AnalyticsPage() {
                                             <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
                                             <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
                                         </linearGradient>
+                                        <linearGradient id="colorInvested" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
+                                            <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                                        </linearGradient>
                                     </defs>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#2a3142" vertical={false} />
                                     <XAxis
@@ -199,7 +204,10 @@ export default function AnalyticsPage() {
                                     />
                                     <RechartsTooltip
                                         contentStyle={{ backgroundColor: '#1f2533', borderColor: '#2a3142', color: '#fff' }}
-                                        formatter={(value: number) => [formatCurrency(value, currency), "Value"]}
+                                        formatter={(value: number, name: string) => {
+                                            const label = name === 'value' ? 'Market Value' : 'Invested';
+                                            return [formatCurrency(value, currency), label];
+                                        }}
                                         labelFormatter={(label) => {
                                             if (!label) return '';
                                             const d = new Date(label);
@@ -209,10 +217,20 @@ export default function AnalyticsPage() {
                                     <Area
                                         type="monotone"
                                         dataKey="value"
+                                        name="value"
                                         stroke="#22c55e"
                                         strokeWidth={3}
                                         fillOpacity={1}
                                         fill="url(#colorValue)"
+                                    />
+                                    <Area
+                                        type="monotone"
+                                        dataKey="invested"
+                                        name="invested"
+                                        stroke="#ef4444"
+                                        strokeWidth={2}
+                                        fillOpacity={1}
+                                        fill="url(#colorInvested)"
                                     />
                                 </AreaChart>
                             </ResponsiveContainer>

@@ -119,17 +119,25 @@ def get_portfolio_history(
         
         for i in range(range_days, -1, -1):
             current_date = today - timedelta(days=i)
-            daily_total = 0.0
+            daily_total_value = 0.0
+            daily_total_invested = 0.0
             
             for item, product in items:
-                # Did we own it then? 
-                # BACKFILL LOGIC: Ignore added_at. User wants to see history of CURRENT collection.
-                # if item.added_at and item.added_at.date() > current_date:
-                #     continue
-                    
-                # Find price
-                # Logic: Look for price on current_date. If missing, look back up to 7 days.
-                # If still missing, assume 0 (or use current price if we want to be generous, but 0 is strict)
+                # CHECK PURCHASE DATE
+                # If item has a purchase_date, count it only if purchase_date <= current_date
+                # If no purchase_date, fall back to added_at? No, user wants current state if date missing.
+                # But let's respect purchase_date if set.
+                if item.purchase_date:
+                    p_date = item.purchase_date
+                    if isinstance(p_date, datetime): p_date = p_date.date()
+                    if p_date > current_date:
+                        continue # Not owned yet
+
+                # Invested Value Logic
+                if item.paid_price:
+                    daily_total_invested += item.paid_price
+
+                # Market Value Logic
                 p_id = item.product_id
                 cond = item.condition
                 
@@ -154,11 +162,12 @@ def get_portfolio_history(
                      elif cond == 'NEW': price = product.new_price or 0
                      elif cond == 'GRADED': price = product.new_price or 0
                 
-                daily_total += price
+                daily_total_value += price
                 
             chart_data.append({
                 "date": current_date.isoformat(),
-                "value": round(daily_total, 2)
+                "value": round(daily_total_value, 2),
+                "invested": round(daily_total_invested, 2)
             })
             
         return chart_data

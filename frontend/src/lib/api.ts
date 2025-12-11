@@ -211,6 +211,7 @@ export interface CollectionItem {
     condition: 'LOOSE' | 'CIB' | 'NEW' | 'GRADED';
     notes?: string;
     paid_price?: number;
+    purchase_date?: string; // ISO Date
     product_name: string;
     console_name: string;
     image_url?: string;
@@ -247,7 +248,7 @@ export async function addToCollection(token: string, productId: number, conditio
     }
 }
 
-export async function updateCollectionItem(token: string, itemId: number, data: { condition?: string, notes?: string, paid_price?: number, user_images?: string }): Promise<CollectionItem> {
+export async function updateCollectionItem(token: string, itemId: number, data: { condition?: string, notes?: string, paid_price?: number, purchase_date?: string, user_images?: string }): Promise<CollectionItem> {
     try {
         const response = await axios.put(`${API_URL}/collection/${itemId}`, data, {
             headers: { Authorization: `Bearer ${token}` }

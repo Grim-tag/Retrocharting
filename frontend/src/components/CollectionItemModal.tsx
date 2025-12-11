@@ -16,6 +16,7 @@ export default function CollectionItemModal({ item, isOpen, onClose, onSave, lan
     const [condition, setCondition] = useState('LOOSE');
     const [notes, setNotes] = useState('');
     const [paidPriceStr, setPaidPriceStr] = useState('');
+    const [purchaseDate, setPurchaseDate] = useState('');
     const [userImages, setUserImages] = useState<string[]>([]);
     const [loading, setLoading] = useState(false);
 
@@ -33,6 +34,13 @@ export default function CollectionItemModal({ item, isOpen, onClose, onSave, lan
                 setPaidPriceStr(displayed.toFixed(2));
             } else {
                 setPaidPriceStr('');
+            }
+
+            if (item.purchase_date) {
+                // Ensure YYYY-MM-DD format for input type="date"
+                setPurchaseDate(new Date(item.purchase_date).toISOString().split('T')[0]);
+            } else {
+                setPurchaseDate('');
             }
 
             try {
@@ -66,6 +74,7 @@ export default function CollectionItemModal({ item, isOpen, onClose, onSave, lan
                 condition,
                 notes,
                 paid_price: finalPrice,
+                purchase_date: purchaseDate ? new Date(purchaseDate).toISOString() : undefined,
                 user_images: JSON.stringify(userImages)
             });
 
@@ -119,15 +128,26 @@ export default function CollectionItemModal({ item, isOpen, onClose, onSave, lan
                     </div>
                 </div>
 
-                <div className="mb-4">
-                    <label className="block text-xs uppercase text-gray-400 mb-2">Price Paid ({symbol})</label>
-                    <input
-                        type="number"
-                        step="0.01"
-                        value={paidPriceStr}
-                        onChange={(e) => setPaidPriceStr(e.target.value)}
-                        className="w-full bg-[#0f121e] border border-[#3a4152] rounded p-2 text-sm text-white focus:border-[#ff6600] outline-none"
-                    />
+                <div className="mb-4 grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-xs uppercase text-gray-400 mb-2">Price Paid ({symbol})</label>
+                        <input
+                            type="number"
+                            step="0.01"
+                            value={paidPriceStr}
+                            onChange={(e) => setPaidPriceStr(e.target.value)}
+                            className="w-full bg-[#0f121e] border border-[#3a4152] rounded p-2 text-sm text-white focus:border-[#ff6600] outline-none"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-xs uppercase text-gray-400 mb-2">Purchase Date</label>
+                        <input
+                            type="date"
+                            value={purchaseDate}
+                            onChange={(e) => setPurchaseDate(e.target.value)}
+                            className="w-full bg-[#0f121e] border border-[#3a4152] rounded p-2 text-sm text-white focus:border-[#ff6600] outline-none"
+                        />
+                    </div>
                 </div>
 
                 <div className="mb-4">
