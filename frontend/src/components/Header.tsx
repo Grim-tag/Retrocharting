@@ -50,6 +50,17 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
 
     // ... logic above ...
 
+
+    // Helper for localized path
+    const getSlug = (key: string) => routeMap[key]?.[lang] || key;
+    const getPath = (key: string) => {
+        const slug = getSlug(key);
+        if (lang === 'en') {
+            return `/${slug}`;
+        }
+        return `/${lang}/${slug}`;
+    };
+
     // Dynamic Menu Items from Dictionary
     const menuItems = [
         {
