@@ -414,3 +414,24 @@ export async function uploadCsv(file: File, token: string): Promise<ImportAnalys
         throw new Error(error.response?.data?.detail || "Upload failed");
     }
 }
+
+export interface ImportItem {
+    product_id: number;
+    condition: string;
+    paid_price?: number;
+    currency?: string;
+    purchase_date?: string;
+    comment?: string;
+}
+
+export async function bulkImport(items: ImportItem[], token: string): Promise<{ imported: number, errors: number }> {
+    try {
+        const response = await axios.post(`${API_URL}/import/confirm`, { items }, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error: any) {
+        console.error("Bulk import failed", error);
+        throw new Error(error.response?.data?.detail || "Import failed");
+    }
+}
