@@ -29,7 +29,7 @@ async def get_admin_access(
     # Fail
     raise HTTPException(status_code=403, detail="Admin Access Required")
 
-@router.get("/stats", dependencies=[Depends(verify_admin_key)])
+@router.get("/stats", dependencies=[Depends(get_admin_access)])
 def get_admin_stats(db: Session = Depends(get_db)):
     """
     Returns high-level statistics for the Admin Dashboard.
@@ -60,7 +60,7 @@ def get_admin_stats(db: Session = Depends(get_db)):
         print(f"Error producing admin stats: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/users", dependencies=[Depends(verify_admin_key)])
+@router.get("/users", dependencies=[Depends(get_admin_access)])
 def get_admin_users(db: Session = Depends(get_db)):
     """
     Returns list of users with details for Admin Dashboard.
