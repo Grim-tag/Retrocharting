@@ -20,7 +20,7 @@ export default function Footer({ dict, lang }: { dict: any; lang: string }) {
                 {/* Brand */}
                 <div>
                     <Link href={lang === 'en' ? '/' : `/${lang}`} className="flex items-center gap-2 mb-4">
-                        <span className="text-2xl font-bold text-white tracking-tight">
+                        <span className="text-2xl font-bold text-white tracking-tight notranslate" translate="no">
                             Retro<span className="text-[#ff6600]">Charting</span>
                         </span>
                     </Link>

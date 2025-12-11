@@ -60,7 +60,7 @@ function AdminGuard({ children }: { children: React.ReactNode }) {
         <>
             <aside className="w-64 border-r border-[#2a3142] bg-[#1f2533] flex flex-col">
                 <div className="p-6 border-b border-[#2a3142]">
-                    <Link href="/" className="text-xl font-bold tracking-wider text-white">
+                    <Link href="/" className="text-xl font-bold tracking-wider text-white notranslate" translate="no">
                         RETRO<span className="text-[#ff6600]">CHARTING</span>
                         <span className="block text-[10px] text-gray-500 mt-1">ADMIN CONSOLE</span>
                     </Link>

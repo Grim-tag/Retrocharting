@@ -81,7 +81,7 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
                     {/* Left: Logo */}
                     <div className="flex items-center gap-4">
                         <Link href={lang === 'en' ? '/' : `/${lang}`} className="flex items-center gap-2 group">
-                            <span className="text-2xl font-bold text-white tracking-tight">
+                            <span className="text-2xl font-bold text-white tracking-tight notranslate" translate="no">
                                 Retro<span className="text-[#ff6600]">Charting</span>
                             </span>
                         </Link>
