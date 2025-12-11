@@ -54,7 +54,7 @@ export default function AdminGamesPage() {
         fetchGames();
     }, [debouncedSearch]);
 
-    return (
+
     const [editingGame, setEditingGame] = useState<Product | null>(null);
     const [token, setToken] = useState<string>('');
 
