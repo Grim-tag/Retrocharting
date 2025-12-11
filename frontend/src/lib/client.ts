@@ -20,7 +20,7 @@ apiClient.interceptors.request.use(
     (config) => {
         // Only on client side
         if (typeof window !== 'undefined') {
-            const token = localStorage.getItem('token');
+            const token = localStorage.getItem('rc_token');
             if (token) {
                 config.headers.Authorization = `Bearer ${token}`;
             }
