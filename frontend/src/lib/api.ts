@@ -105,6 +105,18 @@ export async function searchProducts(query: string): Promise<Product[]> {
     }
 }
 
+export async function updateProduct(id: number, data: Partial<Product>, token: string): Promise<Product | null> {
+    try {
+        const response = await axios.put(`${API_URL}/products/${id}`, data, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        console.error(`Error updating product ${id}:`, error);
+        return null;
+    }
+}
+
 export interface GroupedProducts {
     [console: string]: (Product & { region?: string })[];
 }

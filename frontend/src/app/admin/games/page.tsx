@@ -55,7 +55,46 @@ export default function AdminGamesPage() {
     }, [debouncedSearch]);
 
     return (
-        <div className="text-white">
+    const [editingGame, setEditingGame] = useState<Product | null>(null);
+    const [token, setToken] = useState<string>('');
+
+    useEffect(() => {
+        // Client-side only token access
+        const t = localStorage.getItem('token');
+        if (t) setToken(t);
+    }, []);
+
+    const handleEdit = (game: Product) => {
+        setEditingGame(game);
+    };
+
+    const handleSave = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingGame || !token) return;
+
+        try {
+            const { updateProduct } = await import('@/lib/api'); // Dynamic import to avoid SSR issues if any, or just consistent usage
+            const updated = await updateProduct(editingGame.id, editingGame, token);
+
+            if (updated) {
+                setGames(games.map(g => g.id === updated.id ? updated : g));
+                setEditingGame(null);
+            } else {
+                alert("Failed to update product");
+            }
+        } catch (err) {
+            console.error("Update failed", err);
+            alert("Update failed");
+        }
+    };
+
+    const handleChange = (field: keyof Product, value: any) => {
+        if (!editingGame) return;
+        setEditingGame({ ...editingGame, [field]: value });
+    };
+
+    return (
+        <div className="text-white relative">
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold uppercase tracking-wider">Games Catalog</h2>
                 <div className="flex gap-4">
@@ -124,7 +163,10 @@ export default function AdminGamesPage() {
                                         </td>
                                         <td className="p-4 text-center">
                                             <div className="flex gap-2 justify-center">
-                                                <button className="bg-[#2a3142] hover:bg-[#353e54] text-gray-200 px-3 py-1 rounded text-xs border border-[#353e54]">
+                                                <button
+                                                    onClick={() => handleEdit(game)}
+                                                    className="bg-[#2a3142] hover:bg-[#353e54] text-gray-200 px-3 py-1 rounded text-xs border border-[#353e54]"
+                                                >
                                                     Edit
                                                 </button>
                                                 <Link
@@ -142,6 +184,115 @@ export default function AdminGamesPage() {
                     </table>
                 </div>
             </div>
+
+            {/* Edit Modal */}
+            {editingGame && (
+                <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+                    <div className="bg-[#1f2533] rounded-xl border border-[#2a3142] shadow-2xl w-full max-w-lg overflow-hidden">
+                        <div className="p-6 border-b border-[#2a3142] flex justify-between items-center bg-[#151922]">
+                            <h3 className="text-xl font-bold text-white">Edit Game</h3>
+                            <button
+                                onClick={() => setEditingGame(null)}
+                                className="text-gray-400 hover:text-white"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleSave} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+                            <div>
+                                <label className="block text-xs uppercase text-gray-500 font-bold mb-1">Product Name</label>
+                                <input
+                                    type="text"
+                                    className="w-full bg-[#111] border border-[#333] rounded px-3 py-2 text-white focus:border-[#ff6600] outline-none"
+                                    value={editingGame.product_name || ''}
+                                    onChange={e => handleChange('product_name', e.target.value)}
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs uppercase text-gray-500 font-bold mb-1">Console</label>
+                                    <input
+                                        type="text"
+                                        className="w-full bg-[#111] border border-[#333] rounded px-3 py-2 text-white focus:border-[#ff6600] outline-none"
+                                        value={editingGame.console_name || ''}
+                                        onChange={e => handleChange('console_name', e.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs uppercase text-gray-500 font-bold mb-1">Genre</label>
+                                    <input
+                                        type="text"
+                                        className="w-full bg-[#111] border border-[#333] rounded px-3 py-2 text-white focus:border-[#ff6600] outline-none"
+                                        value={editingGame.genre || ''}
+                                        onChange={e => handleChange('genre', e.target.value)}
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs uppercase text-gray-500 font-bold mb-1">Image URL</label>
+                                <input
+                                    type="text"
+                                    className="w-full bg-[#111] border border-[#333] rounded px-3 py-2 text-white focus:border-[#ff6600] outline-none"
+                                    value={editingGame.image_url || ''}
+                                    onChange={e => handleChange('image_url', e.target.value)}
+                                />
+                                {editingGame.image_url && (
+                                    <img src={editingGame.image_url} alt="Preview" className="h-20 mt-2 rounded border border-[#333]" />
+                                )}
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-4">
+                                <div>
+                                    <label className="block text-xs uppercase text-[#ff6600] font-bold mb-1">Loose Price</label>
+                                    <input
+                                        type="number" step="0.01"
+                                        className="w-full bg-[#111] border border-[#333] rounded px-3 py-2 text-white focus:border-[#ff6600] outline-none"
+                                        value={editingGame.loose_price || ''}
+                                        onChange={e => handleChange('loose_price', parseFloat(e.target.value))}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs uppercase text-[#007bff] font-bold mb-1">CIB Price</label>
+                                    <input
+                                        type="number" step="0.01"
+                                        className="w-full bg-[#111] border border-[#333] rounded px-3 py-2 text-white focus:border-[#007bff] outline-none"
+                                        value={editingGame.cib_price || ''}
+                                        onChange={e => handleChange('cib_price', parseFloat(e.target.value))}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs uppercase text-[#00ff00] font-bold mb-1">New Price</label>
+                                    <input
+                                        type="number" step="0.01"
+                                        className="w-full bg-[#111] border border-[#333] rounded px-3 py-2 text-white focus:border-[#00ff00] outline-none"
+                                        value={editingGame.new_price || ''}
+                                        onChange={e => handleChange('new_price', parseFloat(e.target.value))}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex justify-end gap-3 pt-4 border-t border-[#2a3142] mt-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setEditingGame(null)}
+                                    className="px-4 py-2 text-gray-400 hover:text-white"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="bg-[#ff6600] hover:bg-[#ff8533] text-white px-6 py-2 rounded font-bold"
+                                >
+                                    Save Changes
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
