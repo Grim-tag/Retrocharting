@@ -139,6 +139,28 @@ def startup_event():
             print("Schema check: 'paid_price' column exists.")
 
         print("Auto-migration checks complete.")
+
+        # 4. User 'user_rank', 'xp', 'last_active' columns
+        user_cols = [c['name'] for c in inspector.get_columns('users')]
+        
+        if 'user_rank' not in user_cols:
+             print("Migrating: Adding 'user_rank' column to users table...")
+             with engine.connect() as conn:
+                 conn.execute(text("ALTER TABLE users ADD COLUMN user_rank VARCHAR DEFAULT 'Loose'"))
+                 conn.commit()
+
+        if 'xp' not in user_cols:
+            print("Migrating: Adding 'xp' column to users table...")
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE users ADD COLUMN xp INTEGER DEFAULT 0"))
+                conn.commit()
+        
+        if 'last_active' not in user_cols:
+             print("Migrating: Adding 'last_active' column to users table...")
+             with engine.connect() as conn:
+                # Postgres TIMESTAMP, SQLite DATETIME. TIMESTAMP is standard enough.
+                conn.execute(text("ALTER TABLE users ADD COLUMN last_active TIMESTAMP"))
+                conn.commit()
         
     except Exception as e:
         print(f"Auto-migration failed: {e}")

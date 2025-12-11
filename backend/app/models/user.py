@@ -16,7 +16,8 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     
     # Gamification
-    rank = Column(String, default="Loose")
+    # Mapped to 'user_rank' in DB to avoid conflict with Postgres reserved keyword 'rank'
+    rank = Column("user_rank", String, default="Loose")
     xp = Column(Integer, default=0)
     last_active = Column(DateTime, default=datetime.utcnow)
 
