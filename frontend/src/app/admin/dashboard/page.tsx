@@ -74,6 +74,7 @@ type AdminUser = {
     is_admin: boolean;
     created_at: string;
     last_active: string | null;
+    ip_address: string | null;
 };
 
 async function getUsers(): Promise<AdminUser[]> {
@@ -111,6 +112,7 @@ async function UserList() {
                             <th className="px-4 py-3">Role</th>
                             <th className="px-4 py-3">Joined</th>
                             <th className="px-4 py-3">Last Active</th>
+                            <th className="px-4 py-3">IP Address</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-[#2a3142]">
@@ -138,11 +140,14 @@ async function UserList() {
                                 <td className="px-4 py-3">
                                     {user.last_active ? new Date(user.last_active).toLocaleString() : "Never"}
                                 </td>
+                                <td className="px-4 py-3 font-mono text-xs text-gray-400">
+                                    {user.ip_address || "-"}
+                                </td>
                             </tr>
                         ))}
                         {users.length === 0 && (
                             <tr>
-                                <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                                <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
                                     No users found.
                                 </td>
                             </tr>
