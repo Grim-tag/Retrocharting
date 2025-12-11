@@ -1,35 +1,27 @@
-import sqlite3
+from sqlalchemy import create_engine, inspect
+import os
 
-def check_db():
-    try:
-        conn = sqlite3.connect('collector.db')
-        cursor = conn.cursor()
-        
-        # Check listings table info
-        print("--- Table: listings ---")
-        cursor.execute("PRAGMA table_info(listings)")
-        columns = cursor.fetchall()
-        found = False
-        for col in columns:
-            print(col)
-            if col[1] == 'is_good_deal':
-                found = True
-        
-        if found:
-            print("\nSUCCESS: 'is_good_deal' column found in 'listings'.")
-        else:
-            print("\nFAILURE: 'is_good_deal' column NOT found in 'listings'.")
-            
-        print("\n--- Table: products ---")
-        cursor.execute("PRAGMA table_info(products)")
-        columns = cursor.fetchall()
-        for col in columns:
-            if col[1] == 'players':
-                print(f"Found 'players' column: {col}")
+# Ensure we use the absolute path to the DB
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# Assuming the DB is in the root collector directory or accessible
+# Adjust path to point to parent directory
+DB_PATH = os.path.join(os.path.dirname(BASE_DIR), 'collector.db')
+print(f"Checking DB at: {DB_PATH}")
 
-        conn.close()
-    except Exception as e:
-        print(f"Error: {e}")
+DATABASE_URL = f"sqlite:///{DB_PATH}"
+engine = create_engine(DATABASE_URL)
 
-if __name__ == "__main__":
-    check_db()
+try:
+    inspector = inspect(engine)
+    tables = inspector.get_table_names()
+    print(f"Tables found: {tables}")
+    
+    if 'collection_items' in tables:
+        columns = inspector.get_columns('collection_items')
+        print("\nColumns in collection_items:")
+        for column in columns:
+            print(f"- {column['name']} ({column['type']})")
+    else:
+        print("\nTable 'collection_items' NOT found.")
+except Exception as e:
+    print(f"Error: {e}")
