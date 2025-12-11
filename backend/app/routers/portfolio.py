@@ -250,3 +250,39 @@ def get_portfolio_movers(
         "gainers": movers[:5],
         "losers": movers[-5:] if len(movers) > 5 and movers[-1]['pct_change'] < 0 else []
     }
+
+@router.get("/debug")
+def debug_portfolio_state(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Debug endpoint to check why portfolio might be empty.
+    """
+    # 1. Raw Items
+    raw_count = db.query(CollectionItem).filter(CollectionItem.user_id == current_user.id).count()
+    
+    # 2. Joined Items
+    joined_query = db.query(CollectionItem, Product).join(Product, CollectionItem.product_id == Product.id)\
+        .filter(CollectionItem.user_id == current_user.id)
+    joined_count = joined_query.count()
+    
+    joined_sample = []
+    for item, prod in joined_query.limit(5).all():
+        joined_sample.append({
+            "item_id": item.id,
+            "product_id": item.product_id,
+            "product_name": prod.product_name,
+            "loose_price": prod.loose_price
+        })
+
+    # 3. Check Price History existence
+    history_count = db.query(PriceHistory).count()
+    
+    return {
+        "user_id": current_user.id,
+        "raw_item_count": raw_count,
+        "joined_item_count": joined_count,
+        "history_total_rows": history_count,
+        "joined_sample": joined_sample
+    }
