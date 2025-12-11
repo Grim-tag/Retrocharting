@@ -9,11 +9,25 @@ router = APIRouter()
 
 # Simple secret key check
 # In production, this should be in .env
+from app.routers.auth import get_current_user
+from app.models.user import User
+
 ADMIN_SECRET_KEY = os.getenv("ADMIN_SECRET_KEY", "admin_secret_123")
 
-async def verify_admin_key(x_admin_key: str = Header(...)):
-    if x_admin_key != ADMIN_SECRET_KEY:
-        raise HTTPException(status_code=401, detail="Invalid Admin Key")
+async def get_admin_access(
+    x_admin_key: str = Header(None, alias="X-Admin-Key"),
+    current_user: User = Depends(get_current_user)
+):
+    # 1. Check API Key (Service-to-Service)
+    if x_admin_key and x_admin_key == ADMIN_SECRET_KEY:
+        return True
+    
+    # 2. Check User Admin Status (Client-to-Service)
+    if current_user and current_user.is_admin:
+        return True
+    
+    # Fail
+    raise HTTPException(status_code=403, detail="Admin Access Required")
 
 @router.get("/stats", dependencies=[Depends(verify_admin_key)])
 def get_admin_stats(db: Session = Depends(get_db)):
