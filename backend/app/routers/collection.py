@@ -104,8 +104,6 @@ def add_to_collection(
         product_id=item_in.product_id,
         condition=item_in.condition,
         paid_price=item_in.paid_price,
-        condition=item_in.condition,
-        paid_price=item_in.paid_price,
         notes=item_in.notes,
         user_images=item_in.user_images
     )
