@@ -13,3 +13,4 @@ google-auth
 APScheduler
 thefuzz
 python-Levenshtein
+python-multipart
