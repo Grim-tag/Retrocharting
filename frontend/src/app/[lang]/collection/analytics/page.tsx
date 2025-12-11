@@ -40,7 +40,7 @@ export default function AnalyticsPage() {
             try {
                 const [sumRes, histRes, movRes] = await Promise.all([
                     getPortfolioSummary(token),
-                    getPortfolioHistory(token, 30),
+                    getPortfolioHistory(token, -1),
                     getPortfolioMovers(token, 30)
                 ]);
                 setSummary(sumRes);
@@ -166,7 +166,7 @@ export default function AnalyticsPage() {
 
                 {/* Chart Section */}
                 <div className="bg-[#1f2533] p-6 rounded-xl border border-[#2a3142] mb-8 print:border-black print:bg-white print:break-inside-avoid">
-                    <h3 className="text-xl font-bold mb-6 print:text-black">Value History (30 Days)</h3>
+                    <h3 className="text-xl font-bold mb-6 print:text-black">Value History (Calculated from Acquisition)</h3>
                     <div className="h-[300px] w-full">
                         {isMounted && historyLoc.length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%">

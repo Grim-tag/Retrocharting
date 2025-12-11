@@ -86,6 +86,29 @@ def get_portfolio_history(
         item_product_map = {item.id: item.product_id for item, prod in items}
         product_ids = [item.product_id for item, prod in items]
         
+        # DYNAMIC RANGE CALCULATION
+        if range_days == -1:
+            # Find earliest date (purchase_date or added_at)
+            min_date = datetime.utcnow().date()
+            for item, _ in items:
+                d = None
+                if item.purchase_date:
+                    if isinstance(item.purchase_date, datetime): d = item.purchase_date.date()
+                    else: d = item.purchase_date
+                
+                # If we want to fallback to added_at? No, user explicitly wants "date d'obtention".
+                # If no purchase_date is set, what do we do? Assume today?
+                # Let's say if purchase_date is None, ignore it for range calculation or assume recent.
+                
+                if d and d < min_date:
+                    min_date = d
+            
+            # Calculate days from min_date to today
+            days_diff = (datetime.utcnow().date() - min_date).days
+            # Cap at 3650 days (10 years) to avoid performance kill
+            range_days = min(days_diff, 3650)
+            if range_days < 7: range_days = 30 # Minimum 1 week context
+            
         # 2. Get Price History for all these products
         # We need a robust way to find "price at date X"
         # Let's fetch all history points for these products
