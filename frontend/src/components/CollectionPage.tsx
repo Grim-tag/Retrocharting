@@ -77,7 +77,15 @@ export default function CollectionPage({ dict, lang }: { dict: any; lang: string
                         </div>
                     </div>
 
-                    <div className="flex gap-8 text-center">
+
+                    <div className="flex gap-8 text-center items-center">
+                        <button
+                            onClick={() => router.push(`/${lang}/import`)}
+                            className="bg-[#2a3142] hover:bg-[#3a4152] text-gray-300 hover:text-white border border-gray-600 px-4 py-2 rounded flex items-center gap-2 transition-colors text-sm"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                            Import CSV
+                        </button>
                         <div>
                             <div className="text-3xl font-bold text-[#ff6600]">{totalItems}</div>
                             <div className="text-xs uppercase tracking-wide text-gray-400">Items</div>
