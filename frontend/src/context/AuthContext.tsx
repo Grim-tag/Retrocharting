@@ -49,14 +49,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     const login = async (credential: string) => {
+        // loginWithGoogle will throw if it fails now
         const data = await loginWithGoogle(credential);
         if (data && data.access_token) {
             localStorage.setItem('rc_token', data.access_token);
             setToken(data.access_token);
             const u = await fetchMe(data.access_token);
             setUser(u);
-        } else {
-            throw new Error("L'authentification Google a échoué (Token invalide ou erreur serveur).");
         }
     };
 

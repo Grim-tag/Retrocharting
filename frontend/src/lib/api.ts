@@ -184,9 +184,11 @@ export async function loginWithGoogle(credential: string): Promise<{ access_toke
     try {
         const response = await axios.post(`${API_URL}/auth/google`, { credential });
         return response.data;
-    } catch (error) {
+    } catch (error: any) {
         console.error("Google Login failed", error);
-        return null;
+        // Propagate the specific backend error message if available
+        const msg = error.response?.data?.detail || error.message || "Login failed";
+        throw new Error(msg);
     }
 }
 
