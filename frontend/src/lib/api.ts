@@ -369,6 +369,9 @@ export interface CSVMatchResult {
         platform: string;
         condition: string;
         paid_price?: string;
+        currency?: string;
+        purchase_date?: string;
+        comment?: string;
         csv_index: number;
     };
     match?: {
