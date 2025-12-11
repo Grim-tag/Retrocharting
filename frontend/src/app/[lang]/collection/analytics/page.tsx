@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { getPortfolioSummary, getPortfolioHistory, getPortfolioMovers } from '@/lib/api';
+import { getPortfolioSummary, getPortfolioHistory, getPortfolioMovers, getPortfolioDebug } from '@/lib/api';
 import { useRouter, useParams } from 'next/navigation';
 import { getCurrencyForLang, convertCurrency, formatCurrency } from '@/lib/currency';
 import {
@@ -21,6 +21,7 @@ export default function AnalyticsPage() {
     const [summary, setSummary] = useState<any>(null);
     const [history, setHistory] = useState<any[]>([]);
     const [movers, setMovers] = useState<any>(null);
+    const [debugData, setDebugData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [isMounted, setIsMounted] = useState(false);
     const [reportDate, setReportDate] = useState('');
@@ -45,6 +46,13 @@ export default function AnalyticsPage() {
                 setSummary(sumRes);
                 setHistory(histRes);
                 setMovers(movRes);
+
+                // If history is empty, fetch debug info
+                if (!histRes || histRes.length === 0) {
+                    const dbg = await getPortfolioDebug(token);
+                    setDebugData(dbg);
+                }
+
             } catch (e) {
                 console.error("Failed to load analytics data", e);
             } finally {
@@ -209,8 +217,14 @@ export default function AnalyticsPage() {
                                 </AreaChart>
                             </ResponsiveContainer>
                         ) : (
-                            <div className="flex items-center justify-center h-full text-gray-500">
-                                {isMounted ? "No history data available yet." : "Loading chart..."}
+                            <div className="flex flex-col items-center justify-center h-full text-gray-500 gap-4">
+                                <p>{isMounted ? "No history data available yet." : "Loading chart..."}</p>
+                                {debugData && (
+                                    <div className="text-xs font-mono text-left bg-black p-4 rounded border border-gray-700 max-w-lg overflow-auto">
+                                        <p className="font-bold text-[#ff6600] mb-2">DEBUG INFO:</p>
+                                        <pre>{JSON.stringify(debugData, null, 2)}</pre>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
