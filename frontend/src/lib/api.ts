@@ -347,14 +347,54 @@ export async function getPortfolioMovers(token: string, days = 30): Promise<any>
     }
 }
 
-export async function getPortfolioDebug(token: string): Promise<any> {
+
+// --- Import APIs ---
+
+export interface CSVMatchResult {
+    item: {
+        title: string;
+        platform: string;
+        condition: string;
+        paid_price?: string;
+        csv_index: number;
+    };
+    match?: {
+        id: number;
+        product_name: string;
+        console_name: string;
+        image_url?: string;
+        score: number;
+    };
+    best_guess?: {
+        id: number;
+        product_name: string;
+        console_name: string;
+        image_url?: string;
+        score: number;
+    };
+    reason?: string;
+}
+
+export interface ImportAnalysisResult {
+    matches: CSVMatchResult[];
+    ambiguous: CSVMatchResult[];
+    unmatched: CSVMatchResult[];
+}
+
+export async function uploadCsv(file: File, token: string): Promise<ImportAnalysisResult | null> {
+    const formData = new FormData();
+    formData.append('file', file);
+
     try {
-        const response = await axios.get(`${API_URL}/portfolio/debug`, {
-            headers: { Authorization: `Bearer ${token}` }
+        const response = await axios.post(`${API_URL}/import/upload`, formData, {
+            headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'multipart/form-data'
+            }
         });
         return response.data;
-    } catch (error) {
-        console.error("Failed to fetch portfolio debug", error);
-        return { error: "Failed to fetch debug info" };
+    } catch (error: any) {
+        console.error("CSV upload failed", error);
+        throw new Error(error.response?.data?.detail || "Upload failed");
     }
 }
