@@ -152,6 +152,24 @@ export default function CollectionPage({ dict, lang }: { dict: any; lang: string
                                                     <span className="text-gray-600">-</span>
                                                 )}
                                             </td>
+                                            <td className="p-4 text-center">
+                                                <div className="flex items-center justify-center gap-2">
+                                                    <button
+                                                        onClick={() => setEditItem(item)}
+                                                        className="p-1.5 text-blue-400 hover:bg-blue-900/30 rounded transition-colors"
+                                                        title="Edit Item"
+                                                    >
+                                                        <PencilIcon className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(item.id)}
+                                                        className="p-1.5 text-red-400 hover:bg-red-900/30 rounded transition-colors"
+                                                        title="Delete Item"
+                                                    >
+                                                        <TrashIcon className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            </td>
                                         </tr>
                                     );
                                 })}
