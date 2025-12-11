@@ -1,8 +1,11 @@
-import React from 'react';
+'use client';
+
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Poppins } from "next/font/google";
 import "../globals.css";
+import { useAuth } from '@/context/AuthContext';
 
 const poppins = Poppins({
     variable: "--font-poppins",
@@ -15,14 +18,28 @@ export default function AdminLayout({
 }: {
     children: React.ReactNode;
 }) {
-    // TODO: Replace with real Auth (Phase 2.1)
-    // For now, this is just a skeleton. Real protection to come.
-    // const isAuth = false; // Toggle this to test protection
-    const isAuth = true;
+    const { user, loading: authLoading, isAuthenticated } = useAuth();
+    const router = useRouter();
+    const [isClient, setIsClient] = useState(false);
 
-    if (!isAuth) {
-        redirect('/');
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
+
+    useEffect(() => {
+        if (authLoading) return;
+
+        if (!isAuthenticated || !user?.is_admin) {
+            router.push('/');
+        }
+    }, [isAuthenticated, user, authLoading, router]);
+
+    // Prevent hydration mismatch or flash of content
+    if (!isClient || authLoading) {
+        return <div className="min-h-screen bg-[#0f121e] flex items-center justify-center text-white">Loading...</div>;
     }
+
+    if (!user?.is_admin) return null; // Component will redirect via effect
 
     return (
         <html lang="en">

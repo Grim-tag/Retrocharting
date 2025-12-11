@@ -23,6 +23,7 @@ interface AuthContextType {
     logout: () => void;
     refreshUser: () => Promise<void>;
     isAuthenticated: boolean;
+    loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -30,6 +31,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [token, setToken] = useState<string | null>(null);
+    const [loading, setLoading] = useState(true);
 
     // Load from local storage on mount
     useEffect(() => {
@@ -40,7 +42,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             fetchMe(storedToken).then(u => {
                 if (u) setUser(u);
                 else logout(); // Invalid token
-            });
+            }).finally(() => setLoading(false));
+        } else {
+            setLoading(false);
         }
     }, []);
 
@@ -77,7 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return (
         <GoogleOAuthProvider clientId={clientId}>
-            <AuthContext.Provider value={{ user, token, login, logout, refreshUser, isAuthenticated: !!user }}>
+            <AuthContext.Provider value={{ user, token, login, logout, refreshUser, isAuthenticated: !!user, loading }}>
                 {children}
             </AuthContext.Provider>
         </GoogleOAuthProvider>
