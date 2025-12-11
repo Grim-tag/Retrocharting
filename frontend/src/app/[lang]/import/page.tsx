@@ -3,7 +3,9 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { API_URL } from '@/lib/api';
+import { getApiUrl } from '@/lib/api';
+
+const API_URL = `${getApiUrl()}/api/v1`;
 
 export default function ImportPage({ params }: { params: { lang: string } }) {
     const { lang } = params;

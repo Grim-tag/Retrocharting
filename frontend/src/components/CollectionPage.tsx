@@ -146,7 +146,11 @@ export default function CollectionPage({ dict, lang }: { dict: any; lang: string
                                             <td className="p-4 text-right font-mono">
                                                 {profitLoc !== null ? (
                                                     <span className={profitLoc >= 0 ? 'text-green-500' : 'text-red-500'}>
-                                                    </div>
+                                                        {profitLoc > 0 ? '+' : ''}{formatCurrency(profitLoc, currency)}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-gray-600">-</span>
+                                                )}
                                             </td>
                                         </tr>
                                     );
