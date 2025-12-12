@@ -195,9 +195,16 @@ def startup_event():
         if 'last_active' not in user_cols:
              print("Migrating: Adding 'last_active' column to users table...")
              with engine.connect() as conn:
-                # Postgres TIMESTAMP, SQLite DATETIME. TIMESTAMP is standard enough.
-                conn.execute(text("ALTER TABLE users ADD COLUMN last_active TIMESTAMP"))
                 conn.commit()
+        
+        # 5. ScraperLog 'source' column
+        if 'scraper_logs' in inspector.get_table_names():
+            log_cols = [c['name'] for c in inspector.get_columns('scraper_logs')]
+            if 'source' not in log_cols:
+                print("Migrating: Adding 'source' column to scraper_logs table...")
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE scraper_logs ADD COLUMN source VARCHAR DEFAULT 'scraper'"))
+                    conn.commit()
         
     except Exception as e:
         print(f"Auto-migration failed: {e}")
