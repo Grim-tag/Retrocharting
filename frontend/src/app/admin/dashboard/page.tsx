@@ -1,9 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getApiUrl } from "@/lib/api";
 import { useAuth } from '@/context/AuthContext';
-import axios from 'axios';
+import { apiClient } from "@/lib/client";
 
 type AdminStats = {
     total_products: number;
@@ -33,12 +32,11 @@ export default function AdminDashboard() {
     useEffect(() => {
         async function loadData() {
             if (!token) return;
-            const apiUrl = getApiUrl();
             setLoading(true);
             try {
                 const [statsRes, usersRes] = await Promise.all([
-                    axios.get(`${apiUrl}/api/v1/admin/stats`, { headers: { Authorization: `Bearer ${token}` } }),
-                    axios.get(`${apiUrl}/api/v1/admin/users`, { headers: { Authorization: `Bearer ${token}` } })
+                    apiClient.get('/admin/stats'),
+                    apiClient.get('/admin/users')
                 ]);
                 setStats(statsRes.data);
                 setUsers(usersRes.data);
