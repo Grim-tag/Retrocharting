@@ -96,8 +96,9 @@ def startup_event():
         # SAFE SCRAPING: Run every 5 minutes, 10 items per batch (to avoid OOM/Zombie)
         scheduler.add_job(scrape_missing_data, 'interval', minutes=5, args=[300, 10], id='auto_scrape', replace_existing=True)
         
-        # IGDB ENRICHMENT: Run every 15 minutes, 25 items per batch
-        scheduler.add_job(enrichment_job, 'interval', minutes=15, args=[600, 25], id='auto_enrich', replace_existing=True)
+        # IGDB ENRICHMENT: Run every 15 minutes, 500 items per batch (Turbo Mode)
+        # 500 items * ~0.4s = ~200s (3.3 mins) processing time. plenty of buffer in 15 mins.
+        scheduler.add_job(enrichment_job, 'interval', minutes=15, args=[600, 500], id='auto_enrich', replace_existing=True)
         
         scheduler.start()
         print("APScheduler started: Scraping & IGDB jobs registered.")
