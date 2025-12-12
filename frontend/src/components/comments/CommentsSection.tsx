@@ -119,8 +119,8 @@ export default function CommentsSection({ productId, lang }: CommentsSectionProp
                 <form onSubmit={handleSubmit} className="mb-8">
                     <div className="flex gap-4">
                         <img
-                            src={user.avatar_url || "https://www.gravatar.com/avatar?d=mp"}
-                            alt={user.username}
+                            src={user.avatar_url ?? "https://www.gravatar.com/avatar?d=mp"}
+                            alt={user.username ?? "User"}
                             className="w-10 h-10 rounded-full border border-[#2a3142]"
                         />
                         <div className="flex-1">
