@@ -114,7 +114,15 @@ def scrape_single_product(product_info):
                 original_url = img.get('src')
                 try:
                     # Sync upload
-                    upload_result = cloudinary.uploader.upload(original_url, folder="retrocharting/products")
+                    # SEO Optimization: Slugify filename and force WebP
+                    seo_filename = slugify(f"{product_name}-{console_name}")
+                    upload_result = cloudinary.uploader.upload(
+                        original_url, 
+                        folder="retrocharting/products",
+                        public_id=seo_filename,
+                        format="webp",
+                        overwrite=True
+                    )
                     updates['image_url'] = upload_result['secure_url']
                 except Exception:
                     updates['image_url'] = original_url # Fallback
