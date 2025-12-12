@@ -73,6 +73,7 @@ function AdminGuard({ children }: { children: React.ReactNode }) {
                     <NavItem href="/admin/dashboard" label="Dashboard" />
                     <NavItem href="/admin/games" label="Games Catalog" />
                     <NavItem href="/admin/health" label="Catalog Health" />
+                    <NavItem href="/admin/comments" label="Comments" />
                     <NavItem href="/admin/translations" label="Translations" />
                     <div className="pt-4 mt-4 border-t border-[#2a3142]">
                         <NavItem href="/" label="Back to Site" />
