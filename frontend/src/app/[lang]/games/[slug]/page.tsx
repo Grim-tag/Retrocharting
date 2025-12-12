@@ -165,6 +165,21 @@ export default async function Page({
 
                         {/* Cross Platform Links */}
                         <CrossPlatformLinks productId={product.id} />
+
+                        {/* Actions moved to Left Column */}
+                        <div className="flex flex-col gap-3 mt-6">
+                            <AddToCollectionButton product={product} lang={lang} />
+                            <AddToWishlistButton
+                                product={product}
+                                lang={lang}
+                                label={dict.product.actions.add_wishlist}
+                            />
+                        </div>
+
+                        {/* Trust / Info moved to Left Column */}
+                        <div className="mt-6">
+                            <WhyThisPrice salesCount={product.sales_count || 0} dict={dict} />
+                        </div>
                     </div>
 
                     {/* Right: Details */}
@@ -234,19 +249,6 @@ export default async function Page({
                                     definition="Original manual only. No game, no box."
                                 />
                             )}
-                        </div>
-
-                        {/* Why This Price - Trust Booster */}
-                        <WhyThisPrice salesCount={product.sales_count || 0} dict={dict} />
-
-                        {/* Actions */}
-                        <div className="flex gap-4 mb-8">
-                            <AddToCollectionButton product={product} lang={lang} />
-                            <AddToWishlistButton
-                                product={product}
-                                lang={lang}
-                                label={dict.product.actions.add_wishlist}
-                            />
                         </div>
 
                         {/* eBay Listings */}
