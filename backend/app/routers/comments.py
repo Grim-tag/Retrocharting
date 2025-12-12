@@ -62,7 +62,6 @@ def create_comment(
         product_id=comment.product_id,
         content=comment.content,
         parent_id=comment.parent_id,
-        parent_id=comment.parent_id,
         status="pending" # Default to pending for moderation
     )
     db.add(new_comment)
