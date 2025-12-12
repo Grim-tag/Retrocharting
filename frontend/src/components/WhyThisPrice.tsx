@@ -36,8 +36,8 @@ export default function WhyThisPrice({ salesCount = 0, dict }: WhyThisPriceProps
                 {t.title}
             </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
-                <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-6 text-sm text-center">
+                <div className="flex flex-col gap-2 items-center">
                     <div className="font-bold text-gray-200 flex items-center gap-2">
                         <ChartBarIcon className="w-4 h-4 text-[#ff6600]" />
                         {t.real_data.title}
@@ -53,7 +53,7 @@ export default function WhyThisPrice({ salesCount = 0, dict }: WhyThisPriceProps
                     </p>
                 </div>
 
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2 items-center">
                     <div className="font-bold text-gray-200 flex items-center gap-2">
                         <ShieldCheckIcon className="w-4 h-4 text-[#ff6600]" />
                         {t.outlier.title}
@@ -63,7 +63,7 @@ export default function WhyThisPrice({ salesCount = 0, dict }: WhyThisPriceProps
                     </p>
                 </div>
 
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2 items-center">
                     <div className="font-bold text-gray-200 flex items-center gap-2">
                         <ClockIcon className="w-4 h-4 text-[#ff6600]" />
                         {t.updated.title}
