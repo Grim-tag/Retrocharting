@@ -10,7 +10,10 @@ from app.models.sales_transaction import SalesTransaction
 from app.schemas.product import Product as ProductSchema
 from app.services.ebay_client import ebay_client
 from app.models.user import User
+from app.services.ebay_client import ebay_client
+from app.models.user import User
 from app.routers.auth import get_current_admin_user
+from app.routers.admin import get_admin_access
 from app.services.igdb import igdb_service
 from datetime import datetime
 
@@ -726,15 +729,16 @@ def get_incomplete_products(
         
     return query.offset(skip).limit(limit).all()
 
-@router.post("/admin/enrich-all")
+@router.api_route("/admin/enrich-all", methods=["GET", "POST"])
 def trigger_mass_enrichment(
     limit: int = 100,
     background_tasks: BackgroundTasks = None,
-    current_user: 'User' = Depends(get_current_admin_user)
+    auth: bool = Depends(get_admin_access)
 ):
     """
     Triggers a background job to enrich missing product data using IGDB.
     Uses the robust job service with logging.
+    Supports GET (browser) and POST (curl).
     """
     from app.services.enrichment import enrichment_job
     # 600 seconds duration limit (10 mins) per batch call
