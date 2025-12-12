@@ -11,6 +11,8 @@ from app.schemas.product import Product as ProductSchema
 from app.services.ebay_client import ebay_client
 from app.models.user import User
 from app.routers.auth import get_current_admin_user
+from app.services.igdb import igdb_service
+from datetime import datetime
 
 router = APIRouter()
 
@@ -275,6 +277,85 @@ def update_listings_background(product_id: int):
     finally:
         db.close()
 
+def enrich_product_with_igdb(product_id: int):
+    """
+    Background task to fetch details from IGDB and update the product.
+    """
+    from app.db.session import SessionLocal
+    db = SessionLocal()
+    try:
+        product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
+        if not product:
+            return
+
+        print(f"IGDB: Attempting to enrich {product.product_name}...")
+        
+        # 1. Search for game
+        # Clean name logic? Remove [PAL] [JP] etc?
+        search_query = product.product_name
+        # Simple cleanup
+        for term in ['[PAL]', '[JP]', '[NTSC]', 'PAL', 'NTSC-U', 'NTSC-J']:
+             search_query = search_query.replace(term, '').strip()
+
+        games = igdb_service.search_game(search_query)
+        if not games:
+            print(f"IGDB: No match found for {search_query}")
+            return
+
+        # Simple matching strategy: Take the first result or closest release date?
+        # For now, take first.
+        match = games[0]
+        game_id = match['id']
+        
+        # 2. Get Details
+        details = igdb_service.get_game_details(game_id)
+        if not details:
+            return
+            
+        # 3. Update Product
+        updated = False
+        
+        if not product.description and 'summary' in details:
+            product.description = details['summary']
+            updated = True
+            
+        if not product.release_date and 'first_release_date' in details:
+            # IGDB returns timestamp
+            ts = details['first_release_date']
+            product.release_date = datetime.fromtimestamp(ts)
+            updated = True
+            
+        if (not product.genre or product.genre == 'Unknown') and 'genres' in details:
+            # "Action, Adventure"
+            genre_list = [g['name'] for g in details['genres']]
+            product.genre = ", ".join(genre_list)
+            updated = True
+            
+        # Developer / Publisher
+        if 'involved_companies' in details:
+            companies = details['involved_companies']
+            pub = [c['company']['name'] for c in companies if c.get('publisher', False)]
+            dev = [c['company']['name'] for c in companies if c.get('developer', False)]
+            
+            if (not product.publisher) and pub:
+                product.publisher = pub[0] # Take first
+                updated = True
+            
+            if (not product.developer) and dev:
+                product.developer = dev[0]
+                updated = True
+                
+        if updated:
+            db.commit()
+            print(f"IGDB: Successfully enriched {product.product_name}")
+        else:
+            print(f"IGDB: Data found but no fields needed update for {product.product_name}")
+
+    except Exception as e:
+        print(f"IGDB Enrichment Error: {e}")
+    finally:
+        db.close()
+
 @router.get("/{product_id}/listings")
 def get_product_listings(
     product_id: int, 
@@ -358,12 +439,21 @@ def update_product(
     return product
 
 @router.get("/{product_id}", response_model=ProductSchema)
-def read_product(product_id: int, db: Session = Depends(get_db)):
+def read_product(
+    product_id: int, 
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
     product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
     if product is None:
         raise HTTPException(status_code=404, detail="Product not found")
         
-    # Manually populate computed fields not in DB table but in Schema
+    # Trigger Auto-Enrichment if description is missing
+    # We check if we already tried recently? (Maybe add a last_enriched flag later)
+    # For now, if description is empty, try to fetch it.
+    if not product.description or len(product.description) < 10:
+        background_tasks.add_task(enrich_product_with_igdb, product_id)
+        
     # Manually populate computed fields not in DB table but in Schema
     # Use PriceHistory count as a proxy for "Market Data Points" since SalesTransaction table is not yet live.
     product.sales_count = db.query(PriceHistory).filter(PriceHistory.product_id == product_id).count()
