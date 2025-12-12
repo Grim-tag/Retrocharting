@@ -121,3 +121,9 @@ def get_scraper_logs(limit: int = 20, db: Session = Depends(get_db)):
         return logs
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/fix-listings", dependencies=[Depends(get_admin_access)])
+def trigger_listing_fix(background_tasks: BackgroundTasks):
+    from app.services.listing_fixer import fix_listings_job
+    background_tasks.add_task(fix_listings_job)
+    return {"message": "Listing classification fix started in background."}
