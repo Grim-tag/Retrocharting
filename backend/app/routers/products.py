@@ -726,41 +726,6 @@ def get_incomplete_products(
         
     return query.offset(skip).limit(limit).all()
 
-def mass_enrich_products(limit: int = 100):
-    """
-    Background task to iterate over products missing description and enrich them via IGDB.
-    """
-    from app.db.session import SessionLocal
-    db = SessionLocal()
-    
-    print(f"Starting Mass IGDB Enrichment (Limit: {limit})")
-    
-    try:
-        # Find candidates
-        products = db.query(ProductModel).filter(
-            or_(
-                ProductModel.description == None, 
-                ProductModel.description == "",
-                ProductModel.publisher == None,
-                ProductModel.publisher == ""
-            )
-        ).limit(limit).all() # Process in chunks to avoid blocking too long
-        
-        count = 0
-        for p in products:
-            # Call enrichment directly (synchronously within this background thread)
-            enrich_product_with_igdb(p.id)
-            count += 1
-            import time
-            time.sleep(0.3) # Rate limit politeness (IGDB is 4/sec, we do ~3/sec)
-            
-        print(f"Mass Enrichment Completed. Processed {count} items.")
-        
-    except Exception as e:
-        print(f"Mass Enrichment Error: {e}")
-    finally:
-        db.close()
-
 @router.post("/admin/enrich-all")
 def trigger_mass_enrichment(
     limit: int = 100,
@@ -769,8 +734,11 @@ def trigger_mass_enrichment(
 ):
     """
     Triggers a background job to enrich missing product data using IGDB.
+    Uses the robust job service with logging.
     """
-    background_tasks.add_task(mass_enrich_products, limit)
-    return {"status": "started", "message": f"Enriching up to {limit} products in background."}
+    from app.services.enrichment import enrichment_job
+    # 600 seconds duration limit (10 mins) per batch call
+    background_tasks.add_task(enrichment_job, max_duration=600, limit=limit)
+    return {"status": "started", "message": f"Enriching up to {limit} products in background (Robust Job)."}
 
 # Imports moved to top

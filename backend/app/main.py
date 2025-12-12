@@ -90,12 +90,17 @@ def startup_event():
     try:
         from apscheduler.schedulers.background import BackgroundScheduler
         from app.services.scraper import scrape_missing_data
-        
+        from app.services.enrichment import enrichment_job
+
         scheduler = BackgroundScheduler()
         # SAFE SCRAPING: Run every 5 minutes, 10 items per batch (to avoid OOM/Zombie)
         scheduler.add_job(scrape_missing_data, 'interval', minutes=5, args=[300, 10], id='auto_scrape', replace_existing=True)
+        
+        # IGDB ENRICHMENT: Run every 15 minutes, 25 items per batch
+        scheduler.add_job(enrichment_job, 'interval', minutes=15, args=[600, 25], id='auto_enrich', replace_existing=True)
+        
         scheduler.start()
-        print("APScheduler started: Scraping job registered (SAFE: 10 items / 5 mins).")
+        print("APScheduler started: Scraping & IGDB jobs registered.")
     except Exception as e:
         print(f"Failed to start scheduler: {e}")
 

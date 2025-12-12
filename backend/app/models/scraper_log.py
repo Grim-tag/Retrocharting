@@ -11,3 +11,4 @@ class ScraperLog(Base):
     items_processed = Column(Integer, default=0)
     status = Column(String, default="running") # 'running', 'completed', 'error'
     error_message = Column(String, nullable=True)
+    source = Column(String, default="scraper") # 'scraper', 'igdb'
