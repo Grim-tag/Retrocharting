@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Boolean
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from app.db.session import Base
 from datetime import datetime
 
@@ -25,6 +25,6 @@ class Comment(Base):
     # Relationships
     user = relationship("User", backref="comments")
     product = relationship("Product", back_populates="comments")
-    replies = relationship("Comment", backref=relationship("Comment", remote_side=[id]), cascade="all, delete-orphan")
+    replies = relationship("Comment", backref=backref('parent', remote_side=[id]), cascade="all, delete-orphan")
 
 # Need to update Product model to have 'comments' relationship
