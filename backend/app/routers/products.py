@@ -159,19 +159,25 @@ def update_listings_background(product_id: int):
             t = title.lower()
             
             # 1. Junk / Parts
-            if any(x in t for x in ['repro', 'mod', 'hs', 'for parts', 'broken', 'defective']):
+            if any(x in t for x in ['repro', 'mod', 'hs', 'for parts', 'broken', 'defective', 'junk', 'non fonctionnel']):
                 return 'PARTS'
             
             # 2. Box Only
-            if any(x in t for x in ['box only', 'boite seule', 'boîte seule', 'empty box', 'case only', 'boitier seul']):
+            # Expanded regex-like checks
+            if any(x in t for x in ['box only', 'boite seule', 'boîte seule', 'empty box', 'case only', 'boitier seul', 'boîte vide', 'boite vide']):
                 return 'BOX_ONLY'
-                
-            # 3. Manual Only
-            if any(x in t for x in ['manual only', 'notice seule', 'booklet only', 'insert only']):
-                return 'MANUAL_ONLY'
             
-            # 4. Standard Conditions (mapped from eBay or presumed)
-            # eBay gives conditionId but we might want to override based on title keywords if ambiguous
+            # 3. Manual Only
+            if any(x in t for x in ['manual only', 'notice seule', 'booklet only', 'insert only', 'notice only', 'manuel seul']):
+                return 'MANUAL_ONLY'
+
+            # 4. Strict "Notice" or "Boite" detection if it starts with it or is prominent?
+            # User example: "NOTICE Super Mario 64..."
+            if 'notice' in t and ('jeu' not in t and 'game' not in t):
+                 return 'MANUAL_ONLY'
+            if ('boite' in t or 'boîte' in t) and ('jeu' not in t and 'game' not in t and 'console' not in t):
+                 return 'BOX_ONLY'
+
             return default_cond
 
         try:
@@ -202,9 +208,17 @@ def update_listings_background(product_id: int):
                 base_cond = item.get('condition', 'Used')
                 condition_code = classify_item(item['title'], base_cond)
                 
-                # Good Deal Logic (Only for standard games, not parts/box/manual)
+                # Good Deal Logic
                 is_good_deal = False
-                if condition_code not in ['PARTS', 'BOX_ONLY', 'MANUAL_ONLY']:
+                if condition_code == 'MANUAL_ONLY' and product.manual_only_price and price_val > 0:
+                    # Good deal if < 80% of manual price (manuals vary a lot, 70% might be too strict?)
+                    if price_val < (product.manual_only_price * 0.8):
+                        is_good_deal = True
+                elif condition_code == 'BOX_ONLY' and product.box_only_price and price_val > 0:
+                     if price_val < (product.box_only_price * 0.8):
+                        is_good_deal = True
+                elif condition_code not in ['PARTS', 'BOX_ONLY', 'MANUAL_ONLY']:
+                     # Game Good Deal
                      if product.loose_price and price_val > 0:
                         if price_val < (product.loose_price * 0.7):
                             is_good_deal = True

@@ -21,6 +21,7 @@ interface Listing {
 export default function ListingsTable({ productId }: { productId: number }) {
     const [listings, setListings] = useState<Listing[]>([]);
     const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState<'games' | 'extras'>('games');
     const { currency } = useCurrency();
 
     const [isUpdating, setIsUpdating] = useState(false);
@@ -48,6 +49,14 @@ export default function ListingsTable({ productId }: { productId: number }) {
         };
     }, [productId]);
 
+    // Split listings
+    const gameListings = listings.filter(l => !['BOX_ONLY', 'MANUAL_ONLY', 'PARTS'].includes(l.condition));
+    const extraListings = listings.filter(l => ['BOX_ONLY', 'MANUAL_ONLY'].includes(l.condition));
+    // We could hide PARTS or put them in extras? Let's assume extras for now.
+
+    // Determine which to show
+    const currentListings = activeTab === 'games' ? gameListings : extraListings;
+
     if (loading) {
         return <div className="text-gray-400 text-center py-4">Loading offers...</div>;
     }
@@ -58,12 +67,33 @@ export default function ListingsTable({ productId }: { productId: number }) {
 
     return (
         <div className="bg-[#1f2533] border border-[#2a3142] rounded overflow-hidden">
-            {/* Header removed as requested */}
+            <div className="flex border-b border-[#2a3142]">
+                <button
+                    onClick={() => setActiveTab('games')}
+                    className={`flex-1 py-3 text-sm font-bold uppercase tracking-wide transition-colors ${activeTab === 'games'
+                            ? 'bg-[#2a3142] text-white border-b-2 border-[#ff6600]'
+                            : 'text-gray-500 hover:text-gray-300 hover:bg-[#252b3b]'
+                        }`}
+                >
+                    Games ({gameListings.length})
+                </button>
+                <button
+                    onClick={() => setActiveTab('extras')}
+                    className={`flex-1 py-3 text-sm font-bold uppercase tracking-wide transition-colors ${activeTab === 'extras'
+                            ? 'bg-[#2a3142] text-white border-b-2 border-[#ff6600]'
+                            : 'text-gray-500 hover:text-gray-300 hover:bg-[#252b3b]'
+                        }`}
+                >
+                    Box & Manuals ({extraListings.length})
+                </button>
+            </div>
+
             {isUpdating && (
-                <div className="bg-[#2a3142] text-xs text-blue-400 px-4 py-1 text-center animate-pulse">
-                    Updating offers in background...
+                <div className="bg-[#151922] text-xs text-blue-400 px-4 py-1 text-center animate-pulse border-b border-[#2a3142]">
+                    Updating offers...
                 </div>
             )}
+
             <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm text-gray-400">
                     <thead className="bg-[#151922] text-xs uppercase font-medium">
@@ -77,51 +107,54 @@ export default function ListingsTable({ productId }: { productId: number }) {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-[#2a3142]">
-                        {listings.map((item) => (
-                            <tr key={item.id} className="hover:bg-[#2a3142] transition-colors">
-                                <td className="px-4 py-3">
-                                    {item.image_url ? (
-                                        <img src={item.image_url} alt={item.title} className="w-12 h-12 object-cover rounded" />
-                                    ) : (
-                                        <div className="w-12 h-12 bg-[#0f121e] rounded flex items-center justify-center text-xs">No Pic</div>
-                                    )}
-                                </td>
-                                <td className="px-4 py-3 text-white font-medium max-w-xs truncate" title={item.title}>
-                                    {item.title}
-                                    {item.is_good_deal && (
-                                        <span className="ml-2 bg-green-500/20 text-green-400 text-[10px] font-bold px-1.5 py-0.5 rounded border border-green-500/50 uppercase tracking-wide">
-                                            🔥 Bonne Affaire
-                                        </span>
-                                    )}
-                                </td>
-                                <td className="px-4 py-3 text-gray-300">
-                                    {item.seller_name || item.source}
-                                </td>
-                                <td className="px-4 py-3">
-                                    {item.condition || "Used"}
-                                </td>
-                                <td className="px-4 py-3 text-right text-white font-bold">
-                                    {/* 
-                                       We assume incoming listings might be in mixed currencies. 
-                                       Ideally, backend should normalize first, but formatPrice handles generic numeric display. 
-                                       If backend sends EUR/USD distinction, we'd need smarter logic. 
-                                       For now, apply simple formatting. 
-                                    */}
-                                    {/* Using formatPrice will force conversion to target locale currency */}
-                                    {formatPrice(item.price, currency)}
-                                </td>
-                                <td className="px-4 py-3 text-center">
-                                    <a
-                                        href={item.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="bg-[#007bff] hover:bg-[#0056b3] text-white text-xs font-bold py-1.5 px-3 rounded inline-block transition-colors"
-                                    >
-                                        BUY
-                                    </a>
-                                </td>
-                            </tr>
-                        ))}
+                        {currentListings.length === 0 ? (
+                            <tr><td colSpan={6} className="p-8 text-center text-gray-500">No listings in this category.</td></tr>
+                        ) : (
+                            currentListings.map((item) => (
+                                <tr key={item.id} className="hover:bg-[#2a3142] transition-colors">
+                                    <td className="px-4 py-3">
+                                        {item.image_url ? (
+                                            <img src={item.image_url} alt={item.title} className="w-12 h-12 object-cover rounded" />
+                                        ) : (
+                                            <div className="w-12 h-12 bg-[#0f121e] rounded flex items-center justify-center text-xs">No Pic</div>
+                                        )}
+                                    </td>
+                                    <td className="px-4 py-3 text-white font-medium max-w-xs">
+                                        <div className="flex flex-col gap-1">
+                                            <span className="truncate" title={item.title}>{item.title}</span>
+                                            {item.is_good_deal && (
+                                                <div className="flex items-center">
+                                                    <span className="bg-green-500/20 text-green-400 text-[10px] font-bold px-1.5 py-0.5 rounded border border-green-500/50 uppercase tracking-wide flex items-center gap-1">
+                                                        🔥 Good Deal
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </td>
+                                    <td className="px-4 py-3 text-gray-300">
+                                        {item.seller_name || item.source}
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        {item.condition === 'MANUAL_ONLY' ? <span className="text-yellow-500">Manual Only</span> :
+                                            item.condition === 'BOX_ONLY' ? <span className="text-orange-500">Box Only</span> :
+                                                item.condition || "Used"}
+                                    </td>
+                                    <td className="px-4 py-3 text-right text-white font-bold">
+                                        {formatPrice(item.price, currency)}
+                                    </td>
+                                    <td className="px-4 py-3 text-center">
+                                        <a
+                                            href={item.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="bg-[#007bff] hover:bg-[#0056b3] text-white text-xs font-bold py-1.5 px-3 rounded inline-block transition-colors"
+                                        >
+                                            BUY
+                                        </a>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
                     </tbody>
                 </table>
             </div>
