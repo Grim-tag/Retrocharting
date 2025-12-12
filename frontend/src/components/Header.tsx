@@ -71,7 +71,7 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
         },
         { id: 'consoles', label: dict.header.nav.consoles, href: getPath('consoles') },
         { id: 'accessories', label: dict.header.nav.accessories, href: getPath('accessories') },
-        { id: 'collectibles', label: dict.header.nav.collectibles, href: getPath('collectibles') },
+        // { id: 'collectibles', label: dict.header.nav.collectibles, href: getPath('collectibles') },
     ];
 
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
