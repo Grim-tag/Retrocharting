@@ -7,7 +7,7 @@ import { convertPriceToUSD, getCurrencySymbol } from '@/lib/currency';
 import { useCurrency } from '@/context/CurrencyContext';
 
 export default function AddToCollectionButton({ product, lang }: { product: Product, lang: string }) {
-    const { isAuthenticated, token } = useAuth();
+    const { isAuthenticated, token, refreshUser } = useAuth();
     const [isOpen, setIsOpen] = useState(false);
     const [condition, setCondition] = useState('LOOSE');
     const [notes, setNotes] = useState('');
@@ -47,6 +47,10 @@ export default function AddToCollectionButton({ product, lang }: { product: Prod
             }
 
             await addToCollection(token, product.id, condition, notes, finalPrice);
+
+            // Refresh User to get new XP
+            await refreshUser();
+
             setSuccess(true);
             setTimeout(() => {
                 setSuccess(false);

@@ -12,7 +12,7 @@ interface CommentsSectionProps {
 }
 
 export default function CommentsSection({ productId, lang }: CommentsSectionProps) {
-    const { user, login } = useAuth();
+    const { user, login, refreshUser } = useAuth();
     const [comments, setComments] = useState<Comment[]>([]);
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(false);
@@ -80,6 +80,9 @@ export default function CommentsSection({ productId, lang }: CommentsSectionProp
             setComments(prev => [posted, ...prev]);
             setTotal(prev => prev + 1);
             setNewComment('');
+
+            // Refresh User to get new XP
+            refreshUser();
         } catch (e: any) {
             setError(e.message || 'Failed to post comment');
         } finally {
