@@ -43,19 +43,24 @@ export async function postComment(productId: number, content: string, token: str
 
 // --- Admin ---
 
-export async function getPendingComments(token: string): Promise<Comment[]> {
-    const config = { headers: { Authorization: `Bearer ${token}`, "X-Admin-Key": "admin_secret_123" } };
-    // Using header auth for simplicity + admin key if needed, assuming user is admin.
-    const res = await apiClient.get(`/comments/admin/pending`, config);
+export async function getCommentsAdmin(status?: 'pending' | 'approved' | 'rejected', token: string = ''): Promise<Comment[]> {
+    const config = {
+        headers: { Authorization: `Bearer ${token}`, "X-Admin-Key": "admin_secret_123" },
+        params: status ? { status } : {}
+    };
+    const res = await apiClient.get(`/comments/admin/all`, config);
     return res.data;
 }
 
-export async function approveComment(commentId: number, token: string) {
+export async function updateCommentStatus(commentId: number, status: 'approved' | 'rejected' | 'pending', token: string) {
     const config = { headers: { Authorization: `Bearer ${token}`, "X-Admin-Key": "admin_secret_123" } };
-    await apiClient.patch(`/comments/${commentId}/approve`, {}, config);
+    await apiClient.patch(`/comments/${commentId}/status`, null, {
+        ...config,
+        params: { status_update: status }
+    });
 }
 
-export async function deleteComment(commentId: number, token: string) {
+export async function deleteRejectedComments(token: string) {
     const config = { headers: { Authorization: `Bearer ${token}`, "X-Admin-Key": "admin_secret_123" } };
-    await apiClient.delete(`/comments/${commentId}`, config);
+    await apiClient.delete(`/comments/admin/rejected`, config);
 }

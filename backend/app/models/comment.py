@@ -20,10 +20,11 @@ class Comment(Base):
     # status: 'pending', 'approved', 'rejected'. Default 'approved' for now as requested, or 'pending'? 
     # User said "pouvoir les approuvés", implies approval flow. 
     # Let's default to 'approved' for trusted users/start, but support the field.
-    is_approved = Column(Boolean, default=True) 
+    # Moderation Status: 'pending', 'approved', 'rejected'
+    status = Column(String, default="pending", index=True)
 
     # Relationships
-    user = relationship("User", backref="comments")
+    user = relationship("User", back_populates="comments")
     product = relationship("Product", back_populates="comments")
     replies = relationship("Comment", backref=backref('parent', remote_side=[id]), cascade="all, delete-orphan")
 

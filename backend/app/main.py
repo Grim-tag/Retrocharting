@@ -200,7 +200,6 @@ def startup_event():
              with engine.connect() as conn:
                 conn.commit()
         
-        # 5. ScraperLog 'source' column
         if 'scraper_logs' in inspector.get_table_names():
             log_cols = [c['name'] for c in inspector.get_columns('scraper_logs')]
             if 'source' not in log_cols:
@@ -208,7 +207,22 @@ def startup_event():
                 with engine.connect() as conn:
                     conn.execute(text("ALTER TABLE scraper_logs ADD COLUMN source VARCHAR DEFAULT 'scraper'"))
                     conn.commit()
-        
+
+        # 6. Comment 'status' column migration
+        if 'comments' in inspector.get_table_names():
+            comment_cols = [c['name'] for c in inspector.get_columns('comments')]
+            if 'status' not in comment_cols:
+                print("Migrating: Adding 'status' column to comments table...")
+                with engine.connect() as conn:
+                    # Add column
+                    conn.execute(text("ALTER TABLE comments ADD COLUMN status VARCHAR DEFAULT 'pending'"))
+                    
+                    # Backfill from is_approved if exists
+                    if 'is_approved' in comment_cols:
+                        conn.execute(text("UPDATE comments SET status = 'approved' WHERE is_approved = true"))
+                        conn.execute(text("UPDATE comments SET status = 'pending' WHERE is_approved = false"))
+                    
+                    conn.commit()
     except Exception as e:
         print(f"Auto-migration failed: {e}")
         import traceback

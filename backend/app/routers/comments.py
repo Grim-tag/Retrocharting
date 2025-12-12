@@ -62,7 +62,8 @@ def create_comment(
         product_id=comment.product_id,
         content=comment.content,
         parent_id=comment.parent_id,
-        is_approved=True # Auto-approve for now, unless flagged later
+        parent_id=comment.parent_id,
+        status="pending" # Default to pending for moderation
     )
     db.add(new_comment)
     db.commit()
@@ -93,7 +94,7 @@ def get_product_comments(
     """
     query = db.query(Comment).filter(
         Comment.product_id == product_id, 
-        Comment.is_approved == True
+        Comment.status == 'approved'
     ).order_by(Comment.created_at.desc())
     
     total = query.count()
@@ -114,12 +115,15 @@ def get_product_comments(
 
 # --- Admin Endpoints ---
 
-@router.get("/admin/pending", dependencies=[Depends(get_admin_access)])
-def get_pending_comments(db: Session = Depends(get_db)):
-    """Get comments waiting for approval"""
-    comments = db.query(Comment).filter(Comment.is_approved == False).all()
-    # Map result...
-    return comments
+@router.get("/admin/all", dependencies=[Depends(get_admin_access)])
+def get_all_comments_admin(status: Optional[str] = None, db: Session = Depends(get_db)):
+    """Get comments filtered by status"""
+    query = db.query(Comment)
+    if status:
+        query = query.filter(Comment.status == status)
+    
+    # Return newest first
+    return query.order_by(Comment.created_at.desc()).all()
 
 @router.delete("/{comment_id}", dependencies=[Depends(get_admin_access)])
 def delete_comment(comment_id: int, db: Session = Depends(get_db)):
@@ -130,13 +134,20 @@ def delete_comment(comment_id: int, db: Session = Depends(get_db)):
     db.delete(comment)
     db.commit()
     return {"message": "Comment deleted"}
+
+@router.delete("/admin/rejected", dependencies=[Depends(get_admin_access)])
+def delete_rejected_comments(db: Session = Depends(get_db)):
+    """Bulk delete all rejected comments"""
+    count = db.query(Comment).filter(Comment.status == 'rejected').delete()
+    db.commit()
+    return {"message": f"Deleted {count} rejected comments"}
     
-@router.patch("/{comment_id}/approve", dependencies=[Depends(get_admin_access)])
-def approve_comment(comment_id: int, db: Session = Depends(get_db)):
+@router.patch("/{comment_id}/status", dependencies=[Depends(get_admin_access)])
+def update_comment_status(comment_id: int, status_update: str = Query(..., regex="^(approved|rejected|pending)$"), db: Session = Depends(get_db)):
     comment = db.query(Comment).filter(Comment.id == comment_id).first()
     if not comment:
         raise HTTPException(status_code=404, detail="Comment not found")
     
-    comment.is_approved = True
+    comment.status = status_update
     db.commit()
-    return {"message": "Comment approved"}
+    return {"message": f"Comment status updated to {status_update}"}

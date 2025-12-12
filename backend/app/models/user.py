@@ -25,3 +25,4 @@ class User(Base):
     # Relationships
     collection_items = relationship("CollectionItem", back_populates="user")
     sniper_watches = relationship("SniperWatch", back_populates="user")
+    comments = relationship("Comment", back_populates="user", cascade="all, delete-orphan")
