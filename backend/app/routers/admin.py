@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from app.db.session import get_db
 from app.models.product import Product
 import os
@@ -50,11 +50,26 @@ def get_admin_stats(db: Session = Depends(get_db)):
         total_value_query = db.query(func.sum(Product.cib_price)).filter(Product.cib_price.isnot(None))
         total_value = total_value_query.scalar() or 0.0
 
+        # Missing Descriptions (for IGDB enrichment tracking)
+        missing_description_count = db.query(Product).filter(or_(Product.description == None, Product.description == "")).count()
+        
+        # Missing Details (Publisher/Developer/Genre - approximate check)
+        missing_details_count = db.query(Product).filter(
+            or_(
+                Product.publisher == None, 
+                Product.publisher == "",
+                Product.developer == None,
+                Product.developer == ""
+            )
+        ).count()
+
         return {
             "total_products": total_products,
             "scraped_products": scraped_products,
             "scraped_percentage": round(scraped_percentage, 1),
-            "total_value": round(total_value, 2)
+            "total_value": round(total_value, 2),
+            "missing_description_count": missing_description_count,
+            "missing_details_count": missing_details_count
         }
     except Exception as e:
         print(f"Error producing admin stats: {e}")
