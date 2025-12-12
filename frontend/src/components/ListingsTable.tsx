@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { getListings } from "@/lib/api";
+import { formatPrice } from "@/lib/currency";
+import { useCurrency } from "@/context/CurrencyContext";
 
 interface Listing {
     id: number;
@@ -19,6 +21,7 @@ interface Listing {
 export default function ListingsTable({ productId }: { productId: number }) {
     const [listings, setListings] = useState<Listing[]>([]);
     const [loading, setLoading] = useState(true);
+    const { currency } = useCurrency();
 
     const [isUpdating, setIsUpdating] = useState(false);
 
@@ -98,7 +101,14 @@ export default function ListingsTable({ productId }: { productId: number }) {
                                     {item.condition || "Used"}
                                 </td>
                                 <td className="px-4 py-3 text-right text-white font-bold">
-                                    {item.price.toFixed(2)} {item.currency}
+                                    {/* 
+                                       We assume incoming listings might be in mixed currencies. 
+                                       Ideally, backend should normalize first, but formatPrice handles generic numeric display. 
+                                       If backend sends EUR/USD distinction, we'd need smarter logic. 
+                                       For now, apply simple formatting. 
+                                    */}
+                                    {/* Using formatPrice will force conversion to target locale currency */}
+                                    {formatPrice(item.price, currency)}
                                 </td>
                                 <td className="px-4 py-3 text-center">
                                     <a

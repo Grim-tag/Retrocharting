@@ -6,7 +6,8 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { getPortfolioSummary, getPortfolioHistory, getPortfolioMovers, getPortfolioDebug } from '@/lib/api';
 import { useRouter, useParams } from 'next/navigation';
-import { getCurrencyForLang, convertCurrency, formatCurrency } from '@/lib/currency';
+import { convertPrice, formatPrice } from '@/lib/currency';
+import { useCurrency } from '@/context/CurrencyContext';
 import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer
 } from 'recharts';
@@ -16,7 +17,8 @@ export default function AnalyticsPage() {
     const router = useRouter();
     const params = useParams();
     const lang = (params?.lang as string) || 'en'; // Safe access options
-    const currency = getCurrencyForLang(lang);
+
+    const { currency } = useCurrency();
 
     const [summary, setSummary] = useState<any>(null);
     const [history, setHistory] = useState<any[]>([]);
@@ -82,15 +84,15 @@ export default function AnalyticsPage() {
     }
 
     // Convert values for display
-    const totalValueLoc = convertCurrency(summary?.total_value || 0, 'USD', currency);
-    const totalInvestedLoc = convertCurrency(summary?.total_invested || 0, 'USD', currency);
-    const totalProfitLoc = convertCurrency(summary?.total_profit || 0, 'USD', currency);
+    const totalValueLoc = convertPrice(summary?.total_value || 0, currency);
+    const totalInvestedLoc = convertPrice(summary?.total_invested || 0, currency);
+    const totalProfitLoc = convertPrice(summary?.total_profit || 0, currency);
 
     // Convert chart data and ensure it's valid for Recharts
     const historyLoc = Array.isArray(history) ? history.map(h => ({
         ...h,
-        value: convertCurrency(h.value || 0, 'USD', currency),
-        invested: convertCurrency(h.invested || 0, 'USD', currency)
+        value: convertPrice(h.value || 0, currency),
+        invested: convertPrice(h.invested || 0, currency)
     })) : [];
 
     return (
@@ -123,7 +125,7 @@ export default function AnalyticsPage() {
                     <div className="bg-[#1f2533] p-6 rounded-xl border border-[#2a3142] print:border-black print:bg-white">
                         <h3 className="text-gray-400 uppercase text-xs font-bold mb-2 print:text-black">Total Value</h3>
                         <div className="text-3xl font-bold text-[#22c55e]">
-                            {formatCurrency(totalValueLoc, currency)}
+                            {formatPrice(totalValueLoc, currency)}
                         </div>
                         <div className="text-xs text-gray-500 mt-2">Current market value</div>
                     </div>
@@ -132,7 +134,7 @@ export default function AnalyticsPage() {
                     <div className="bg-[#1f2533] p-6 rounded-xl border border-[#2a3142] print:border-black print:bg-white">
                         <h3 className="text-gray-400 uppercase text-xs font-bold mb-2 print:text-black">Total Invested</h3>
                         <div className="text-3xl font-bold text-white print:text-black">
-                            {formatCurrency(totalInvestedLoc, currency)}
+                            {formatPrice(totalInvestedLoc, currency)}
                         </div>
                         <div className="text-xs text-gray-500 mt-2">Based on paid price</div>
                     </div>
@@ -140,8 +142,8 @@ export default function AnalyticsPage() {
                     {/* Card 3: Unrealized Profit */}
                     <div className="bg-[#1f2533] p-6 rounded-xl border border-[#2a3142] print:border-black print:bg-white">
                         <h3 className="text-gray-400 uppercase text-xs font-bold mb-2 print:text-black">Total Profit</h3>
-                        <div className={`text-3xl font-bold ${totalProfitLoc >= 0 ? 'text-[#22c55e]' : 'text-red-500'}`}>
-                            {totalProfitLoc > 0 ? '+' : ''}{formatCurrency(totalProfitLoc, currency)}
+                        <div className={`text-3xl font-bold ${totalProfitLoc && totalProfitLoc >= 0 ? 'text-[#22c55e]' : 'text-red-500'}`}>
+                            {totalProfitLoc && totalProfitLoc > 0 ? '+' : ''}{formatPrice(totalProfitLoc, currency)}
                         </div>
                         <div className="text-xs text-gray-500 mt-2">Unrealized gains</div>
                     </div>
@@ -155,7 +157,7 @@ export default function AnalyticsPage() {
                                     {summary.top_items[0].name}
                                 </div>
                                 <div className="text-[#ff6600] font-bold text-xl">
-                                    {formatCurrency(convertCurrency(summary.top_items[0].value, 'USD', currency), currency)}
+                                    {formatPrice(convertPrice(summary.top_items[0].value, currency), currency)}
                                 </div>
                             </div>
                         ) : (
@@ -198,15 +200,16 @@ export default function AnalyticsPage() {
                                         tickLine={false}
                                         axisLine={false}
                                         tickFormatter={(val) => {
-                                            if (val >= 1000) return `${currency === 'EUR' ? '€' : '$'}${(val / 1000).toFixed(1)}k`;
-                                            return `${currency === 'EUR' ? '€' : '$'}${val}`;
+                                            const sym = currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : '$';
+                                            if (val >= 1000) return `${sym}${(val / 1000).toFixed(1)}k`;
+                                            return `${sym}${val}`;
                                         }}
                                     />
                                     <RechartsTooltip
                                         contentStyle={{ backgroundColor: '#1f2533', borderColor: '#2a3142', color: '#fff' }}
                                         formatter={(value: number, name: string) => {
                                             const label = name === 'value' ? 'Market Value' : 'Invested';
-                                            return [formatCurrency(value, currency), label];
+                                            return [formatPrice(value, currency), label];
                                         }}
                                         labelFormatter={(label) => {
                                             if (!label) return '';
@@ -262,7 +265,7 @@ export default function AnalyticsPage() {
                                     </div>
                                 </div>
                                 <div className="font-bold text-[#ff6600]">
-                                    {formatCurrency(convertCurrency(item.value, 'USD', currency), currency)}
+                                    {formatPrice(convertPrice(item.value, currency), currency)}
                                 </div>
                             </div>
                         ))}
@@ -273,8 +276,8 @@ export default function AnalyticsPage() {
                         <h3 className="text-xl font-bold mb-4 print:text-black">Top Movers (30 Days)</h3>
                         {movers?.gainers && movers.gainers.length > 0 ? (
                             movers.gainers.slice(0, 5).map((item: any, i: number) => {
-                                const currentLoc = convertCurrency(item.current_price, 'USD', currency);
-                                const absChangeLoc = convertCurrency(item.abs_change, 'USD', currency);
+                                const currentLoc = convertPrice(item.current_price, currency);
+                                const absChangeLoc = convertPrice(item.abs_change, currency);
 
                                 return (
                                     <div key={i} className="flex items-center justify-between py-3 border-b border-[#2a3142] last:border-0 print:border-gray-200">
@@ -288,10 +291,10 @@ export default function AnalyticsPage() {
                                         </div>
                                         <div className="text-right">
                                             <div className="font-bold text-white print:text-black">
-                                                {formatCurrency(currentLoc, currency)}
+                                                {formatPrice(currentLoc, currency)}
                                             </div>
                                             <div className="text-xs text-green-500">
-                                                +{formatCurrency(absChangeLoc, currency)}
+                                                +{formatPrice(absChangeLoc, currency)}
                                             </div>
                                         </div>
                                     </div>

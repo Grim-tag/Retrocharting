@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { CollectionItem, updateCollectionItem } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { getCurrencyForLang, convertCurrency } from '@/lib/currency';
+import { convertPrice, convertPriceToUSD, getCurrencySymbol } from '@/lib/currency';
+import { useCurrency } from '@/context/CurrencyContext';
 
 interface CollectionItemModalProps {
     item: CollectionItem | null;
@@ -20,8 +21,8 @@ export default function CollectionItemModal({ item, isOpen, onClose, onSave, lan
     const [userImages, setUserImages] = useState<string[]>([]);
     const [loading, setLoading] = useState(false);
 
-    const currency = getCurrencyForLang(lang);
-    const symbol = currency === 'EUR' ? '€' : '$';
+    const { currency } = useCurrency();
+    const symbol = getCurrencySymbol(currency);
 
     useEffect(() => {
         if (item) {
@@ -30,8 +31,12 @@ export default function CollectionItemModal({ item, isOpen, onClose, onSave, lan
 
             // Convert stored USD price to display currency
             if (item.paid_price !== null && item.paid_price !== undefined) {
-                const displayed = convertCurrency(item.paid_price, 'USD', currency);
-                setPaidPriceStr(displayed.toFixed(2));
+                const displayed = convertPrice(item.paid_price, currency);
+                if (displayed !== null) {
+                    setPaidPriceStr(displayed.toFixed(2));
+                } else {
+                    setPaidPriceStr('');
+                }
             } else {
                 setPaidPriceStr('');
             }
@@ -66,7 +71,7 @@ export default function CollectionItemModal({ item, isOpen, onClose, onSave, lan
                 const numericPrice = parseFloat(paidPriceStr.replace(',', '.'));
                 if (!isNaN(numericPrice)) {
                     // Convert FROM user currency TO USD
-                    finalPrice = convertCurrency(numericPrice, currency, 'USD');
+                    finalPrice = convertPriceToUSD(numericPrice, currency);
                 }
             }
 

@@ -40,6 +40,7 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
 }
 
 import { AuthProvider } from "@/context/AuthContext";
+import { CurrencyProvider } from "@/context/CurrencyContext";
 
 export default async function PublicLayout({
     children,
@@ -54,17 +55,19 @@ export default async function PublicLayout({
     return (
         <html lang={lang}>
             <body className={`${poppins.variable} antialiased bg-[#1f2533] text-white font-sans flex flex-col min-h-screen`}>
-                <AuthProvider>
-                    <Header dict={dict} lang={lang} />
+                <CurrencyProvider>
+                    <AuthProvider>
+                        <Header dict={dict} lang={lang} />
 
-                    <ProductSearch placeholder={dict.header.search_placeholder} lang={lang} />
+                        <ProductSearch placeholder={dict.header.search_placeholder} lang={lang} />
 
-                    <main className="flex-grow">
-                        {children}
-                    </main>
+                        <main className="flex-grow">
+                            {children}
+                        </main>
 
-                    <Footer dict={dict} lang={lang} />
-                </AuthProvider>
+                        <Footer dict={dict} lang={lang} />
+                    </AuthProvider>
+                </CurrencyProvider>
             </body>
         </html>
     );

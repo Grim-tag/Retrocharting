@@ -1,5 +1,7 @@
 import React from 'react';
 import { InformationCircleIcon } from '@heroicons/react/24/outline';
+import { formatPrice } from '@/lib/currency';
+import { useCurrency } from '@/context/CurrencyContext';
 
 interface PriceCardProps {
     label: string;
@@ -11,6 +13,7 @@ interface PriceCardProps {
 
 export default function PriceCard({ label, price, color = "text-white", definition, bestValue }: PriceCardProps) {
     const hasPrice = price !== null && price !== undefined && price > 0;
+    const { currency } = useCurrency();
 
     return (
         <div className={`bg-[#1f2533] border ${bestValue ? 'border-[#007bff] shadow-[0_0_15px_rgba(0,123,255,0.2)]' : 'border-[#2a3142]'} p-6 rounded text-center relative group transition-transform hover:-translate-y-1`}>
@@ -36,7 +39,7 @@ export default function PriceCard({ label, price, color = "text-white", definiti
             {/* Price Display */}
             <div className={`text-3xl font-bold ${hasPrice ? color : 'text-gray-600 text-xl'}`}>
                 {hasPrice ? (
-                    `$${price.toFixed(2)}`
+                    formatPrice(price, currency)
                 ) : (
                     <span className="flex flex-col items-center">
                         <span className="text-lg">--</span>

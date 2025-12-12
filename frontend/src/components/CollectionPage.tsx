@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import CollectionItemModal from './CollectionItemModal';
 import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
-import { getCurrencyForLang, convertCurrency, formatCurrency } from '@/lib/currency';
+import { formatPrice, convertPrice } from '@/lib/currency';
+import { useCurrency } from '@/context/CurrencyContext';
 
 export default function CollectionPage({ dict, lang }: { dict: any; lang: string }) {
     const { user, token, isAuthenticated } = useAuth();
@@ -15,7 +16,7 @@ export default function CollectionPage({ dict, lang }: { dict: any; lang: string
     const [loading, setLoading] = useState(true);
     const [editItem, setEditItem] = useState<CollectionItem | null>(null);
 
-    const currency = getCurrencyForLang(lang);
+    const { currency } = useCurrency();
 
     useEffect(() => {
         if (!loading && !isAuthenticated) {
@@ -48,7 +49,8 @@ export default function CollectionPage({ dict, lang }: { dict: any; lang: string
     };
 
     const totalValueUSD = items.reduce((sum, item) => sum + (item.estimated_value || 0), 0);
-    const totalValueLocalized = convertCurrency(totalValueUSD, 'USD', currency);
+    // Convert USD Total to Selected Currency
+    const totalValueLocalized = convertPrice(totalValueUSD, currency);
     const totalItems = items.length;
 
     if (loading) return <div className="min-h-screen bg-[#1f2533] flex items-center justify-center text-white">Loading Collection...</div>;
@@ -92,7 +94,7 @@ export default function CollectionPage({ dict, lang }: { dict: any; lang: string
                         </div>
                         <div>
                             <div className="text-3xl font-bold text-green-400">
-                                {formatCurrency(totalValueLocalized, currency)}
+                                {formatPrice(totalValueUSD, currency)}
                             </div>
                             <div className="text-xs uppercase tracking-wide text-gray-400">Est. Value</div>
                         </div>
@@ -125,10 +127,6 @@ export default function CollectionPage({ dict, lang }: { dict: any; lang: string
                                     const paidUSD = item.paid_price;
                                     const profitUSD = paidUSD !== null && paidUSD !== undefined ? valueUSD - paidUSD : null;
 
-                                    const valueLoc = convertCurrency(valueUSD, 'USD', currency);
-                                    const paidLoc = paidUSD !== null && paidUSD !== undefined ? convertCurrency(paidUSD, 'USD', currency) : null;
-                                    const profitLoc = profitUSD !== null ? convertCurrency(profitUSD, 'USD', currency) : null;
-
                                     return (
                                         <tr key={item.id} className="hover:bg-[#32394d] transition-colors">
                                             <td className="p-4 flex items-center gap-3">
@@ -146,15 +144,15 @@ export default function CollectionPage({ dict, lang }: { dict: any; lang: string
                                                 </span>
                                             </td>
                                             <td className="p-4 text-right font-mono text-gray-300">
-                                                {paidLoc !== null ? formatCurrency(paidLoc, currency) : '-'}
+                                                {formatPrice(paidUSD, currency)}
                                             </td>
                                             <td className="p-4 text-right font-mono text-green-400">
-                                                {formatCurrency(valueLoc, currency)}
+                                                {formatPrice(valueUSD, currency)}
                                             </td>
                                             <td className="p-4 text-right font-mono">
-                                                {profitLoc !== null ? (
-                                                    <span className={profitLoc >= 0 ? 'text-green-500' : 'text-red-500'}>
-                                                        {profitLoc > 0 ? '+' : ''}{formatCurrency(profitLoc, currency)}
+                                                {profitUSD !== null ? (
+                                                    <span className={profitUSD >= 0 ? 'text-green-500' : 'text-red-500'}>
+                                                        {profitUSD > 0 ? '+' : ''}{formatPrice(Math.abs(profitUSD), currency)}
                                                     </span>
                                                 ) : (
                                                     <span className="text-gray-600">-</span>

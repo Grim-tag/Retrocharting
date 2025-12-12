@@ -9,6 +9,7 @@ import { routeMap, reverseRouteMap } from '@/lib/route-config';
 
 import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '@/context/AuthContext';
+import CurrencySelector from './CurrencySelector';
 
 export default function Header({ dict, lang }: { dict: any; lang: string }) {
     const router = useRouter();
@@ -179,6 +180,11 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
                                 />
                             </div>
                         )}
+
+                        {/* Currency Selector */}
+                        <div className="flex items-center gap-2 border-l border-[#2a3142] pl-4 ml-2">
+                            <CurrencySelector />
+                        </div>
 
                         {/* Language Switcher */}
                         <div className="flex items-center gap-2 border-l border-[#2a3142] pl-4 ml-2">

@@ -3,10 +3,11 @@
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { addToCollection, Product } from '@/lib/api';
-import { getCurrencyForLang, convertCurrency } from '@/lib/currency';
+import { convertPriceToUSD, getCurrencySymbol } from '@/lib/currency';
+import { useCurrency } from '@/context/CurrencyContext';
 
 export default function AddToCollectionButton({ product, lang }: { product: Product, lang: string }) {
-    const { isAuthenticated, token, login } = useAuth();
+    const { isAuthenticated, token } = useAuth();
     const [isOpen, setIsOpen] = useState(false);
     const [condition, setCondition] = useState('LOOSE');
     const [notes, setNotes] = useState('');
@@ -14,8 +15,8 @@ export default function AddToCollectionButton({ product, lang }: { product: Prod
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
 
-    const currency = getCurrencyForLang(lang);
-    const symbol = currency === 'EUR' ? '€' : '$';
+    const { currency } = useCurrency();
+    const symbol = getCurrencySymbol(currency);
 
     if (!isAuthenticated) {
         return (
@@ -41,7 +42,7 @@ export default function AddToCollectionButton({ product, lang }: { product: Prod
                 const numericPrice = parseFloat(paidPriceStr.replace(',', '.'));
                 if (!isNaN(numericPrice)) {
                     // Convert FROM user currency TO USD
-                    finalPrice = convertCurrency(numericPrice, currency, 'USD');
+                    finalPrice = convertPriceToUSD(numericPrice, currency);
                 }
             }
 
@@ -116,9 +117,9 @@ export default function AddToCollectionButton({ product, lang }: { product: Prod
                                 className="w-full bg-[#0f121e] border border-[#3a4152] rounded p-2 text-sm text-white focus:border-[#ff6600] outline-none"
                                 placeholder={`e.g. 15.00`}
                             />
-                            {currency === 'EUR' && paidPriceStr && (
+                            {currency !== 'USD' && paidPriceStr && (
                                 <p className="text-[10px] text-gray-500 mt-1 text-right">
-                                    Saved as ~${convertCurrency(parseFloat(paidPriceStr), 'EUR', 'USD').toFixed(2)} USD
+                                    Saved as ~${convertPriceToUSD(parseFloat(paidPriceStr), currency).toFixed(2)} USD
                                 </p>
                             )}
                         </div>
