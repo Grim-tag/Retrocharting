@@ -208,7 +208,7 @@ export async function fetchMe(token: string): Promise<any> {
 export interface CollectionItem {
     id: number;
     product_id: number;
-    condition: 'LOOSE' | 'CIB' | 'NEW' | 'GRADED';
+    condition: 'LOOSE' | 'CIB' | 'NEW' | 'GRADED' | 'WISHLIST';
     notes?: string;
     paid_price?: number;
     purchase_date?: string; // ISO Date
