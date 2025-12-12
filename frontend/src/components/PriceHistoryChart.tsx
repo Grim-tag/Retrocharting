@@ -14,28 +14,25 @@ import {
 
 interface PriceHistoryChartProps {
     history: PriceHistoryPoint[];
+    className?: string;
 }
 
 import { useCurrency } from "@/context/CurrencyContext";
 import { getCurrencySymbol } from "@/lib/currency";
 
-export default function PriceHistoryChart({ history }: PriceHistoryChartProps) {
+export default function PriceHistoryChart({ history, className }: PriceHistoryChartProps) {
     const { currency } = useCurrency();
     const symbol = getCurrencySymbol(currency);
 
     if (!history || history.length === 0) {
         return (
-            <div className="h-[300px] bg-[#1f2533] border border-[#2a3142] rounded flex items-center justify-center text-gray-500">
+            <div className={`bg-[#1f2533] border border-[#2a3142] rounded flex items-center justify-center text-gray-500 ${className || 'h-[300px]'}`}>
                 No price history available.
             </div>
         );
     }
 
     // Process data for chart
-    // We need to group by date and have keys for each condition
-    // Input: [{date: '2023-01-01', price: 10, condition: 'loose'}, ...]
-    // Output: [{date: '2023-01-01', loose: 10, cib: 20, ...}, ...]
-
     const dataMap: Record<string, any> = {};
     const conditions = new Set<string>();
 
@@ -61,7 +58,7 @@ export default function PriceHistoryChart({ history }: PriceHistoryChartProps) {
     };
 
     return (
-        <div className="h-[400px] w-full bg-[#1f2533] border border-[#2a3142] p-4 rounded">
+        <div className={`w-full bg-[#1f2533] border border-[#2a3142] p-4 rounded ${className || 'h-[400px]'}`}>
             <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={data}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#2a3142" />

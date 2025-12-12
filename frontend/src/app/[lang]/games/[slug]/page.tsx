@@ -16,6 +16,7 @@ import { routeMap } from "@/lib/route-config";
 import { groupedSystems } from "@/data/systems";
 import ConsoleGameCatalog from "@/components/ConsoleGameCatalog";
 import ProductActions from "@/components/ProductActions";
+import ProductDetails from "@/components/ProductDetails";
 
 // --- Helper to extract ID from slug ---
 // format: title-console-id (e.g. metal-gear-solid-ps1-4402)
@@ -187,7 +188,7 @@ export default async function Page({
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-                    {/* Left: Image + Desktop Actions */}
+                    {/* Left: Image + Desktop Actions + Description */}
                     <div className="md:col-span-4 flex flex-col gap-4">
                         <div className="bg-[#1f2533] border border-[#2a3142] p-4 rounded flex items-center justify-center min-h-[200px] sm:min-h-[400px]">
                             {product.image_url ? (
@@ -204,13 +205,18 @@ export default async function Page({
                         <div className="hidden md:block">
                             <ProductActions product={product} lang={lang} dict={dict} />
                         </div>
+
+                        {/* DESKTOP: Description moved to Left Sidebar */}
+                        <div className="hidden md:block">
+                            <ProductDetails product={product} dict={dict} lang={lang} gamesSlug={gamesSlug} />
+                        </div>
                     </div>
 
                     {/* Right: Details */}
                     <div className="md:col-span-8">
 
-                        {/* Price Cards (Mobile: 2 cols, Desktop: 3 cols) */}
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
+                        {/* Price Cards (Mobile: 2 cols, Desktop: 5 cols single row) */}
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-6">
                             <PriceCard
                                 label={dict.product.prices.loose}
                                 price={product.loose_price}
@@ -230,27 +236,29 @@ export default async function Page({
                                 definition="Brand new, sealed in original factory packaging."
                             />
                             {/* New Cards for Box/Manual */}
-                            {product.box_only_price && product.box_only_price > 0 && (
-                                <PriceCard
-                                    label="Box Only"
-                                    price={product.box_only_price}
-                                    color="text-[#f59e0b]" // amber
-                                    definition="Original box only. No game, no manual."
-                                />
-                            )}
-                            {product.manual_only_price && product.manual_only_price > 0 && (
-                                <PriceCard
-                                    label="Manual Only"
-                                    price={product.manual_only_price}
-                                    color="text-[#ef4444]" // red
-                                    definition="Original manual only. No game, no box."
-                                />
-                            )}
+                            <PriceCard
+                                label="Box Only"
+                                price={product.box_only_price || 0}
+                                color="text-[#f59e0b]" // amber
+                                definition="Original box only. No game, no manual."
+                            />
+                            <PriceCard
+                                label="Manual Only"
+                                price={product.manual_only_price || 0}
+                                color="text-[#ef4444]" // red
+                                definition="Original manual only. No game, no box."
+                            />
+                        </div>
+
+                        {/* Middle: Compact Price History Chart */}
+                        <div className="mb-6">
+                            <h3 className="text-white text-sm font-bold mb-2 uppercase tracking-wider text-gray-400">Price Trend</h3>
+                            <PriceHistoryChart history={history} className="h-[200px]" />
                         </div>
 
                         {/* eBay Listings - The CORE Value */}
                         <div className="mb-8">
-                            <h3 className="text-white text-lg font-bold mb-3 md:hidden">Live Market Data</h3>
+                            <h3 className="text-white text-lg font-bold mb-3">Live Market Data</h3>
                             <ListingsTable productId={product.id} />
                         </div>
 
@@ -259,74 +267,9 @@ export default async function Page({
                             <ProductActions product={product} lang={lang} dict={dict} />
                         </div>
 
-                        {/* Details & Description */}
-                        <div className="bg-[#1f2533] border border-[#2a3142] p-6 rounded mb-8 mt-8">
-                            <h2 className="text-xl font-bold text-white mb-4">{dict.product.details.description}</h2>
-                            <p className="text-gray-300 mb-6 leading-relaxed">
-                                {product.description || "No description available."}
-                            </p>
-
-                            <div className="grid grid-cols-2 gap-4 text-sm">
-                                <div>
-                                    <span className="text-gray-500 block">{dict.product.details.publisher}</span>
-                                    <span className="text-white font-medium">{product.publisher || "-"}</span>
-                                </div>
-                                <div>
-                                    <span className="text-gray-500 block">{dict.product.details.developer}</span>
-                                    <span className="text-white font-medium">{product.developer || "-"}</span>
-                                </div>
-                                <div>
-                                    <span className="text-gray-500 block">{dict.product.details.release_date}</span>
-                                    <span className="text-white font-medium">{product.release_date ? new Date(product.release_date).toLocaleDateString() : "-"}</span>
-                                </div>
-                                <div>
-                                    <span className="text-gray-500 block">{dict.product.details.genre}</span>
-                                    <span className="text-white font-medium">
-                                        {product.genre ? (
-                                            product.genre.split(',').map((g, i) => {
-                                                const genreName = g.trim();
-                                                const consoleSlug = product.console_name.toLowerCase().replace(/ /g, '-');
-                                                // Only link if we have a valid genre name
-                                                if (!genreName) return null;
-                                                return (
-                                                    <span key={i}>
-                                                        {i > 0 && ", "}
-                                                        {/* Link to new console URL structure */}
-                                                        <Link
-                                                            href={`/${lang}/${gamesSlug}/${consoleSlug}?genre=${encodeURIComponent(genreName)}`}
-                                                            className="hover:text-[#ff6600] hover:underline transition-colors"
-                                                        >
-                                                            {genreName}
-                                                        </Link>
-                                                    </span>
-                                                );
-                                            })
-                                        ) : "-"}
-                                    </span>
-                                </div>
-                                <div>
-                                    <span className="text-gray-500 block">{dict.product.details.players}</span>
-                                    <span className="text-white font-medium">{product.players || "-"}</span>
-                                </div>
-                                <div>
-                                    <span className="text-gray-500 block">{dict.product.details.rating}</span>
-                                    <span className="text-white font-medium">{product.esrb_rating || "-"}</span>
-                                </div>
-                                <div>
-                                    <span className="text-gray-500 block">EAN</span>
-                                    <span className="text-white font-medium">{product.ean || "-"}</span>
-                                </div>
-                                <div>
-                                    <span className="text-gray-500 block">GTIN/UPC</span>
-                                    <span className="text-white font-medium">{product.gtin || "-"}</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Price History */}
-                        <div className="bg-[#1f2533] border border-[#2a3142] p-6 rounded mb-8 mt-8">
-                            <h2 className="text-xl font-bold text-white mb-4">{dict.product.history.title}</h2>
-                            <PriceHistoryChart history={history} />
+                        {/* MOBILE: Description moved to Bottom */}
+                        <div className="block md:hidden mb-8">
+                            <ProductDetails product={product} dict={dict} lang={lang} gamesSlug={gamesSlug} />
                         </div>
                     </div>
                 </div>
