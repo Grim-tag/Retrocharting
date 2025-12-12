@@ -109,3 +109,15 @@ def get_admin_users(db: Session = Depends(get_db)):
     except Exception as e:
         print(f"Error fetching users: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/logs", dependencies=[Depends(get_admin_access)])
+def get_scraper_logs(limit: int = 20, db: Session = Depends(get_db)):
+    """
+    Returns recent scraper/enrichment logs for debugging.
+    """
+    try:
+        from app.models.scraper_log import ScraperLog
+        logs = db.query(ScraperLog).order_by(ScraperLog.start_time.desc()).limit(limit).all()
+        return logs
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
