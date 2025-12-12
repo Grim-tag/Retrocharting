@@ -9,7 +9,7 @@ from google.oauth2 import id_token
 from google.auth.transport import requests
 from typing import Optional
 from datetime import datetime
-from app.services.gamification import add_xp
+
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import os
 
