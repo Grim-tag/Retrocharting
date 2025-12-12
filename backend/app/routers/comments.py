@@ -68,6 +68,10 @@ def create_comment(
     db.commit()
     db.refresh(new_comment)
     
+    # Gamification: +10 XP
+    from app.services.gamification import GamificationService
+    GamificationService.add_xp(current_user.id, 10, db)
+
     # Return with username
     return {
         "id": new_comment.id,
@@ -75,7 +79,8 @@ def create_comment(
         "username": current_user.username,
         "content": new_comment.content,
         "created_at": new_comment.created_at,
-        "parent_id": new_comment.parent_id
+        "parent_id": new_comment.parent_id,
+        "status": new_comment.status
     }
 
 @router.get("/product/{product_id}")

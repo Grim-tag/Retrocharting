@@ -119,6 +119,10 @@ def add_to_collection(
     db.add(new_item)
     db.commit()
     db.refresh(new_item)
+
+    # Gamification: +50 XP
+    from app.services.gamification import GamificationService
+    GamificationService.add_xp(current_user.id, 50, db)
     
     return _format_item_response(new_item, product)
 

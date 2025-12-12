@@ -126,13 +126,27 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
                                         <img src={user.avatar_url} alt="User" className="w-8 h-8 rounded-full border border-[#ff6600]" />
                                     </button>
                                 )}
-                                <div className="text-sm">
+                                <div className="text-sm flex flex-col leading-tight">
                                     <button
                                         onClick={() => router.push(`/${lang}/profile`)}
-                                        className="font-bold text-white hover:text-[#ff6600] transition-colors"
+                                        className="font-bold text-white hover:text-[#ff6600] transition-colors flex items-center gap-1"
                                     >
                                         {user.username || "Choose Pseudo"}
+                                        {user.rank && (
+                                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-extrabold uppercase ${user.rank === 'Graded' ? 'bg-gradient-to-r from-yellow-400 to-yellow-600 text-black' :
+                                                user.rank === 'New' ? 'bg-green-500 text-white' :
+                                                    user.rank === 'CIB' ? 'bg-blue-500 text-white' :
+                                                        'bg-gray-600 text-gray-300'
+                                                }`}>
+                                                {user.rank}
+                                            </span>
+                                        )}
                                     </button>
+                                    {user.xp !== undefined && (
+                                        <div className="text-[10px] text-gray-400 font-mono">
+                                            XP: {user.xp}
+                                        </div>
+                                    )}
                                 </div>
                                 <button
                                     onClick={() => router.push(`/${lang}/sniper`)}
@@ -268,7 +282,15 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
                                         <img src={user.avatar_url} alt="User" className="w-8 h-8 rounded-full border border-[#ff6600]" />
                                     )}
                                     <div className="flex-1">
-                                        <div className="font-bold text-white">{user.username}</div>
+                                        <div className="font-bold text-white flex items-center gap-2">
+                                            {user.username}
+                                            {user.rank && (
+                                                <span className="text-xs bg-[#ff6600] text-white px-2 py-0.5 rounded-full">
+                                                    {user.rank}
+                                                </span>
+                                            )}
+                                        </div>
+                                        {user.xp !== undefined && <div className="text-xs text-gray-400">XP: {user.xp}</div>}
                                     </div>
                                     <button
                                         onClick={() => {
