@@ -142,6 +142,7 @@ def update_listings_background(product_id: int):
         # Construct query: Product Name + Console
         query = f"{product.product_name} {product.console_name}"
         
+        
         # Determine eBay Category ID based on Product Genre
         # 139971 = Video Game Consoles
         # 54968  = Video Game Accessories & Controllers
@@ -153,9 +154,34 @@ def update_listings_background(product_id: int):
         elif product.genre in ['Accessories', 'Controllers']:
             category_id = "54968"
             
+        # Helper for Classification
+        def classify_item(title: str, default_cond: str) -> str:
+            t = title.lower()
+            
+            # 1. Junk / Parts
+            if any(x in t for x in ['repro', 'mod', 'hs', 'for parts', 'broken', 'defective']):
+                return 'PARTS'
+            
+            # 2. Box Only
+            if any(x in t for x in ['box only', 'boite seule', 'boîte seule', 'empty box', 'case only', 'boitier seul']):
+                return 'BOX_ONLY'
+                
+            # 3. Manual Only
+            if any(x in t for x in ['manual only', 'notice seule', 'booklet only', 'insert only']):
+                return 'MANUAL_ONLY'
+            
+            # 4. Standard Conditions (mapped from eBay or presumed)
+            # eBay gives conditionId but we might want to override based on title keywords if ambiguous
+            return default_cond
+
         try:
             # Fetch listings from eBay
-            ebay_results = ebay_client.search_items(query, limit=10, category_ids=category_id)
+            ebay_results = ebay_client.search_items(query, limit=20, category_ids=category_id)
+            
+            # Accumulators for average calculation
+            prices_box = []
+            prices_manual = []
+            prices_loose = []
             
             # Process and save to DB
             for item in ebay_results:
@@ -171,30 +197,36 @@ def update_listings_background(product_id: int):
                 if 'price' in item and 'value' in item['price']:
                     price_val = float(item['price']['value'])
                     currency = item['price']['currency']
-
-                # Good Deal Logic
-                is_good_deal = False
-                if product.loose_price and price_val > 0:
-                    # If listing price is < 70% of loose price, it's a good deal
-                    if price_val < (product.loose_price * 0.7):
-                        is_good_deal = True
                 
+                # CLASSIFY
+                base_cond = item.get('condition', 'Used')
+                condition_code = classify_item(item['title'], base_cond)
+                
+                # Good Deal Logic (Only for standard games, not parts/box/manual)
+                is_good_deal = False
+                if condition_code not in ['PARTS', 'BOX_ONLY', 'MANUAL_ONLY']:
+                     if product.loose_price and price_val > 0:
+                        if price_val < (product.loose_price * 0.7):
+                            is_good_deal = True
+                
+                # Collect prices for averaging
+                if price_val > 0:
+                    if condition_code == 'BOX_ONLY': prices_box.append(price_val)
+                    elif condition_code == 'MANUAL_ONLY': prices_manual.append(price_val)
+                    elif condition_code not in ['PARTS']: prices_loose.append(price_val) # Rough proxy for now
+
                 image_url = None
                 if 'thumbnailImages' in item and item['thumbnailImages']:
                     image_url = item['thumbnailImages'][0]['imageUrl']
 
                 if existing:
-                    # Update
                     existing.price = price_val
-                    existing.currency = currency
                     existing.title = item['title']
-                    existing.url = item['itemWebUrl']
-                    existing.image_url = image_url
+                    existing.condition = condition_code # Update condition
+                    existing.is_good_deal = is_good_deal
                     existing.last_updated = datetime.utcnow()
                     existing.status = 'active'
-                    existing.is_good_deal = is_good_deal
                 else:
-                    # Insert
                     new_listing = Listing(
                         product_id=product_id,
                         source='eBay',
@@ -202,7 +234,7 @@ def update_listings_background(product_id: int):
                         title=item['title'],
                         price=price_val,
                         currency=currency,
-                        condition=item.get('condition', 'Used'),
+                        condition=condition_code,
                         url=item['itemWebUrl'],
                         image_url=image_url,
                         seller_name='eBay User',
@@ -212,8 +244,16 @@ def update_listings_background(product_id: int):
                     )
                     db.add(new_listing)
             
+            # Update Product averages for Box/Manual if we found new data
+            if prices_box:
+                avg_box = sum(prices_box) / len(prices_box)
+                product.box_only_price = avg_box
+            if prices_manual:
+                avg_man = sum(prices_manual) / len(prices_manual)
+                product.manual_only_price = avg_man
+                
             db.commit()
-            print(f"Background update completed for product {product_id}")
+            print(f"Background update completed for product {product_id}. Box Avg: {product.box_only_price}")
             
         except Exception as e:
             print(f"Error in background eBay update: {e}")

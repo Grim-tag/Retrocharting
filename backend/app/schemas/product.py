@@ -9,6 +9,8 @@ class ProductBase(BaseModel):
     loose_price: Optional[float] = None
     cib_price: Optional[float] = None
     new_price: Optional[float] = None
+    box_only_price: Optional[float] = None
+    manual_only_price: Optional[float] = None
     genre: Optional[str] = None
     release_date: Optional[date] = None
     image_url: Optional[str] = None

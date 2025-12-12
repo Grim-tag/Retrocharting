@@ -24,8 +24,8 @@ cloudinary.config(
 async def scrape_single_product(db: Session, product: "Product"):
     """
     Smart Scraper:
-    1. If metadata (desc, image, publisher) is missing -> Scrape HTML (Slow, but gets details).
-    2. If metadata exists -> Use API (Fast, gets latest price).
+    1. If metadata (desc, image, publisher) is missing -> Scrape HTML.
+    2. ALWAYS Use API (if token available) to update prices to catch Box/Manual.
     """
     # Check if we need rich metadata
     needs_metadata = (
@@ -35,15 +35,20 @@ async def scrape_single_product(db: Session, product: "Product"):
         not product.publisher
     )
 
+    success_meta = True
     if needs_metadata:
         # Fallback to HTML scraping
-        return _scrape_html_logic(db, product)
-    elif settings.PRICECHARTING_API_TOKEN:
-        # Fast API Update
-        return _update_product_via_api(db, product)
+        success_meta = _scrape_html_logic(db, product)
+    
+    success_api = False
+    if settings.PRICECHARTING_API_TOKEN:
+        # Fast API Update for reliable prices
+        success_api = _update_product_via_api(db, product)
     else:
-        # No API Token, fallback to HTML
-        return _scrape_html_logic(db, product)
+        # If no API, we relied on HTML for prices too
+        success_api = success_meta
+        
+    return success_meta or success_api
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -244,10 +249,13 @@ def _update_product_via_api(db: Session, product: "Product") -> bool:
         if data.get("status") != "success":
             return False
             
+    
         # Update Prices (API returns cents)
         if "loose-price" in data: product.loose_price = float(data["loose-price"]) / 100.0
         if "cib-price" in data: product.cib_price = float(data["cib-price"]) / 100.0
         if "new-price" in data: product.new_price = float(data["new-price"]) / 100.0
+        if "box-only-price" in data: product.box_only_price = float(data["box-only-price"]) / 100.0
+        if "manual-only-price" in data: product.manual_only_price = float(data["manual-only-price"]) / 100.0
         
         # Add Price History Entry (Today)
         # We add one entry for today to keep history alive
@@ -276,6 +284,8 @@ def _update_product_via_api(db: Session, product: "Product") -> bool:
         upsert_history(product.loose_price, "loose")
         upsert_history(product.cib_price, "cib")
         upsert_history(product.new_price, "new")
+        upsert_history(product.box_only_price, "box_only")
+        upsert_history(product.manual_only_price, "manual_only")
         
         return True
         

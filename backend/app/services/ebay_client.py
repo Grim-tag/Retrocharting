@@ -38,6 +38,20 @@ class EbayClient:
                 print(f"Response: {e.response.text}")
             return None
 
+    NEGATIVE_KEYWORDS_STRICT = ['repro', 'reproduction', 'mod', 'modded', 'fake', 'copie']
+    
+    def _filter_results(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Hard filter to remove absolute junk before it even reaches the classifier.
+        """
+        clean_items = []
+        for item in items:
+            title = item.get('title', '').lower()
+            if any(keyword in title for keyword in self.NEGATIVE_KEYWORDS_STRICT):
+                continue
+            clean_items.append(item)
+        return clean_items
+
     def search_items(self, query: str, limit: int = 10, condition: Optional[str] = None, category_ids: Optional[str] = None) -> List[Dict[str, Any]]:
         """
         Search for items on eBay.
@@ -69,6 +83,9 @@ class EbayClient:
                 params["filter"] += ",conditionIds:{3000}" 
             elif condition.lower() == "loose":
                 params["filter"] += ",conditionIds:{3000}"
+                
+        # If no explicit category, try to default to Video Games (139973) if query looks like a game?
+        # No, let caller handle categories.
 
         try:
             response = requests.get(self.BASE_URL, headers=headers, params=params)
@@ -82,7 +99,11 @@ class EbayClient:
             
             response.raise_for_status()
             data = response.json()
-            return data.get("itemSummaries", [])
+            raw_items = data.get("itemSummaries", [])
+            
+            # Apply strict filtering
+            return self._filter_results(raw_items)
+            
         except requests.exceptions.RequestException as e:
             print(f"eBay API Error: {e}")
             if e.response:

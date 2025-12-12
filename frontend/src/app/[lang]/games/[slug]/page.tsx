@@ -217,6 +217,23 @@ export default async function Page({
                                 color="text-[#00ff00]"
                                 definition="Brand new, sealed in original factory packaging."
                             />
+                            {/* New Cards for Box/Manual */}
+                            {product.box_only_price && product.box_only_price > 0 && (
+                                <PriceCard
+                                    label="Box Only"
+                                    price={product.box_only_price}
+                                    color="text-[#f59e0b]" // amber
+                                    definition="Original box only. No game, no manual."
+                                />
+                            )}
+                            {product.manual_only_price && product.manual_only_price > 0 && (
+                                <PriceCard
+                                    label="Manual Only"
+                                    price={product.manual_only_price}
+                                    color="text-[#ef4444]" // red
+                                    definition="Original manual only. No game, no box."
+                                />
+                            )}
                         </div>
 
                         {/* Why This Price - Trust Booster */}

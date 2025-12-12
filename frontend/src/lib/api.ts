@@ -12,6 +12,8 @@ export interface Product {
     loose_price: number;
     cib_price: number;
     new_price: number;
+    box_only_price?: number; // Optional as not all products might have it
+    manual_only_price?: number; // Optional
     image_url?: string;
     description?: string;
     publisher?: string;

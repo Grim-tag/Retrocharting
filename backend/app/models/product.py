@@ -12,6 +12,8 @@ class Product(Base):
     loose_price = Column(Float)
     cib_price = Column(Float)
     new_price = Column(Float)
+    box_only_price = Column(Float, nullable=True) # New: Price for Box Only
+    manual_only_price = Column(Float, nullable=True) # New: Price for Manual Only
     genre = Column(String, nullable=True)
     release_date = Column(Date, nullable=True)
     image_url = Column(String, nullable=True)
