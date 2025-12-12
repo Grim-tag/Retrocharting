@@ -22,7 +22,9 @@ origins = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "https://retrocharting-frontend.onrender.com",
-    "https://retrocharting.onrender.com" # In case domain varies
+    "https://retrocharting.onrender.com",
+    "https://retrocharting.com",
+    "https://www.retrocharting.com"
 ]
 
 app.add_middleware(

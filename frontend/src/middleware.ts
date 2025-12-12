@@ -106,7 +106,7 @@ function addSecurityHeaders(response: NextResponse) {
         style-src 'self' 'unsafe-inline' https://accounts.google.com;
         img-src * blob: data:;
         font-src 'self';
-        connect-src 'self' https://retrocharting-frontend.onrender.com https://retrocharting.com https://retrocharting-backend.onrender.com https://accounts.google.com https://oauth2.googleapis.com;
+        connect-src 'self' https://retrocharting-frontend.onrender.com https://retrocharting.com https://www.retrocharting.com https://retrocharting-backend.onrender.com https://accounts.google.com https://oauth2.googleapis.com;
         frame-src https://accounts.google.com;
         frame-ancestors 'none';
         upgrade-insecure-requests;
