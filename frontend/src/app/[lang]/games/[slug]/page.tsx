@@ -17,6 +17,7 @@ import { groupedSystems } from "@/data/systems";
 import ConsoleGameCatalog from "@/components/ConsoleGameCatalog";
 import ProductActions from "@/components/ProductActions";
 import ProductDetails from "@/components/ProductDetails";
+import CommentsSection from "@/components/comments/CommentsSection";
 
 // --- Helper to extract ID from slug ---
 // format: title-console-id (e.g. metal-gear-solid-ps1-4402)
@@ -260,6 +261,11 @@ export default async function Page({
                         <div className="mb-8">
                             <h3 className="text-white text-lg font-bold mb-3">Live Market Data</h3>
                             <ListingsTable productId={product.id} />
+                        </div>
+
+                        {/* User Comments - NEW */}
+                        <div className="mb-8">
+                            <CommentsSection productId={product.id} lang={lang} />
                         </div>
 
                         {/* MOBILE: Actions moved BELOW Listings */}
