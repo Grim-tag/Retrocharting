@@ -16,7 +16,13 @@ interface PriceHistoryChartProps {
     history: PriceHistoryPoint[];
 }
 
+import { useCurrency } from "@/context/CurrencyContext";
+import { getCurrencySymbol } from "@/lib/currency";
+
 export default function PriceHistoryChart({ history }: PriceHistoryChartProps) {
+    const { currency } = useCurrency();
+    const symbol = getCurrencySymbol(currency);
+
     if (!history || history.length === 0) {
         return (
             <div className="h-[300px] bg-[#1f2533] border border-[#2a3142] rounded flex items-center justify-center text-gray-500">
@@ -68,7 +74,7 @@ export default function PriceHistoryChart({ history }: PriceHistoryChartProps) {
                     <YAxis
                         stroke="#9ca3af"
                         tick={{ fill: '#9ca3af' }}
-                        tickFormatter={(val) => `$${val}`}
+                        tickFormatter={(val) => `${symbol}${val}`}
                     />
                     <Tooltip
                         contentStyle={{ backgroundColor: '#1f2533', borderColor: '#2a3142', color: '#fff' }}
