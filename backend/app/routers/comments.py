@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.comment import Comment
 from app.models.user import User
-from app.routers.auth import get_current_user, get_optional_user
+from app.routers.auth import get_current_user
 from app.routers.admin import get_admin_access
 from typing import List, Optional
 from pydantic import BaseModel
