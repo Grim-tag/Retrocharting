@@ -40,3 +40,22 @@ export async function postComment(productId: number, content: string, token: str
 
     return res.data;
 }
+
+// --- Admin ---
+
+export async function getPendingComments(token: string): Promise<Comment[]> {
+    const config = { headers: { Authorization: `Bearer ${token}`, "X-Admin-Key": "admin_secret_123" } };
+    // Using header auth for simplicity + admin key if needed, assuming user is admin.
+    const res = await apiClient.get(`/comments/admin/pending`, config);
+    return res.data;
+}
+
+export async function approveComment(commentId: number, token: string) {
+    const config = { headers: { Authorization: `Bearer ${token}`, "X-Admin-Key": "admin_secret_123" } };
+    await apiClient.patch(`/comments/${commentId}/approve`, {}, config);
+}
+
+export async function deleteComment(commentId: number, token: string) {
+    const config = { headers: { Authorization: `Bearer ${token}`, "X-Admin-Key": "admin_secret_123" } };
+    await apiClient.delete(`/comments/${commentId}`, config);
+}
