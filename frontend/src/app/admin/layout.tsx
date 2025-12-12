@@ -7,6 +7,7 @@ import { Poppins } from "next/font/google";
 import "../globals.css";
 import { useAuth } from '@/context/AuthContext';
 import { AuthProvider } from '@/context/AuthContext';
+import { CurrencyProvider } from '@/context/CurrencyContext';
 
 const poppins = Poppins({
     variable: "--font-poppins",
@@ -22,11 +23,13 @@ export default function AdminLayout({
     return (
         <html lang="en">
             <body className={`${poppins.variable} antialiased bg-[#0f121e] text-white font-sans flex h-screen`}>
-                <AuthProvider>
-                    <AdminGuard>
-                        {children}
-                    </AdminGuard>
-                </AuthProvider>
+                <CurrencyProvider>
+                    <AuthProvider>
+                        <AdminGuard>
+                            {children}
+                        </AdminGuard>
+                    </AuthProvider>
+                </CurrencyProvider>
             </body>
         </html>
     );
