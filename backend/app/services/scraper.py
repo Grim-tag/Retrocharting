@@ -334,24 +334,24 @@ def _scrape_html_logic(db: Session, product: "Product") -> bool:
                         print(f"  Cloudinary upload failed: {e}")
                         product.image_url = original_url
 
-            # 2. Description
-            desc_elem = soup.select_one('#product_description')
-            if desc_elem:
-                product.description = desc_elem.get_text(strip=True).replace("Description:", "").strip()
+            # 2. Description (Disabled in favor of IGDB API)
+            # desc_elem = soup.select_one('#product_description')
+            # if desc_elem:
+            #     product.description = desc_elem.get_text(strip=True).replace("Description:", "").strip()
 
-            # 3. Details
-            for tr in soup.select('tr'):
-                tds = tr.select('td')
-                if len(tds) >= 2:
-                    key = tds[0].get_text(strip=True)
-                    value = tds[1].get_text(strip=True)
-                    
-                    if "Genre:" in key: product.genre = value.replace("edit", "").strip()
-                    elif "Publisher:" in key: product.publisher = value.replace("edit", "").strip()
-                    elif "Developer:" in key: product.developer = value.replace("edit", "").strip()
-                    elif "ESRB Rating:" in key: product.esrb_rating = value.replace("edit", "").strip()
-                    elif "Player Count:" in key: product.players = value.replace("edit", "").strip()
-                    elif "Description:" in key: product.description = value.strip()
+            # 3. Details (Disabled in favor of IGDB API)
+            # for tr in soup.select('tr'):
+            #     tds = tr.select('td')
+            #     if len(tds) >= 2:
+            #         key = tds[0].get_text(strip=True)
+            #         value = tds[1].get_text(strip=True)
+            #         
+            #         if "Genre:" in key: product.genre = value.replace("edit", "").strip()
+            #         elif "Publisher:" in key: product.publisher = value.replace("edit", "").strip()
+            #         elif "Developer:" in key: product.developer = value.replace("edit", "").strip()
+            #         elif "ESRB Rating:" in key: product.esrb_rating = value.replace("edit", "").strip()
+            #         elif "Player Count:" in key: product.players = value.replace("edit", "").strip()
+            #         elif "Description:" in key: product.description = value.strip()
 
             # 4. Prices
             price_ids = {

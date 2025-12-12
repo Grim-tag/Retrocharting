@@ -69,7 +69,9 @@ class IGDBService:
         """
         url = "https://api.igdb.com/v4/games"
         # Fetching precise fields we need
-        body = f'fields name, summary, storyline, first_release_date, involved_companies.company.name, genres.name, cover.url, total_rating; where id = {game_id};'
+        # age_ratings.rating: 8=E, 9=E10, 10=T, 11=M, 12=AO
+        # game_modes: 1=Single, 2=Multiplayer...
+        body = f'fields name, summary, storyline, first_release_date, involved_companies.company.name, genres.name, cover.url, total_rating, age_ratings.rating, age_ratings.category, game_modes.name, multiplayer_modes.onlinemax, multiplayer_modes.offlinecoopmax, multiplayer_modes.offlinemax; where id = {game_id};'
         
         try:
             response = requests.post(url, headers=self._headers(), data=body)

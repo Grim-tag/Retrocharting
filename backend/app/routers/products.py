@@ -345,6 +345,46 @@ def enrich_product_with_igdb(product_id: int):
                 product.developer = dev[0]
                 updated = True
                 
+        # ESRB Rating
+        # IGDB Rating Enum: 6=RP, 7=EC, 8=E, 9=E10+, 10=T, 11=M, 12=AO
+        if not product.esrb_rating and 'age_ratings' in details:
+            esrb_map = {8: "E", 9: "E10+", 10: "T", 11: "M", 12: "AO", 7: "EC", 6: "RP"}
+            for r in details['age_ratings']:
+                if r.get('category') == 1: # ESRB
+                    rating_id = r.get('rating')
+                    if rating_id in esrb_map:
+                        product.esrb_rating = esrb_map[rating_id]
+                        updated = True
+                        break
+
+        # Players
+        if not product.players:
+            # Try multiplayer modes first for exact numbers
+            if 'multiplayer_modes' in details:
+                # Find max players
+                max_players = 1
+                for mode in details['multiplayer_modes']:
+                    off = mode.get('offlinemax', 0)
+                    on = mode.get('onlinemax', 0)
+                    coop = mode.get('offlinecoopmax', 0)
+                    max_players = max(max_players, off, on, coop)
+                
+                if max_players > 1:
+                    product.players = str(max_players)
+                    updated = True
+            
+            # Fallback to game modes if "Single player" only
+            if not product.players and 'game_modes' in details:
+                modes = [m['name'] for m in details['game_modes']]
+                if "Multiplayer" in modes or "Co-operative" in modes:
+                    # If we didn't get a number from multiplayer_modes but it says multiplayer... invalid?
+                    # Let's just leave it blank or default/guess? 
+                    # Actually if we fail to get a number, 1 is safer or "1-2"?
+                    pass
+                elif "Single player" in modes:
+                    product.players = "1"
+                    updated = True
+
         if updated:
             db.commit()
             print(f"IGDB: Successfully enriched {product.product_name}")
@@ -685,5 +725,52 @@ def get_incomplete_products(
         query = query.filter(~stmt)
         
     return query.offset(skip).limit(limit).all()
+
+def mass_enrich_products(limit: int = 100):
+    """
+    Background task to iterate over products missing description and enrich them via IGDB.
+    """
+    from app.db.session import SessionLocal
+    db = SessionLocal()
+    
+    print(f"Starting Mass IGDB Enrichment (Limit: {limit})")
+    
+    try:
+        # Find candidates
+        products = db.query(ProductModel).filter(
+            or_(
+                ProductModel.description == None, 
+                ProductModel.description == "",
+                ProductModel.publisher == None,
+                ProductModel.publisher == ""
+            )
+        ).limit(limit).all() # Process in chunks to avoid blocking too long
+        
+        count = 0
+        for p in products:
+            # Call enrichment directly (synchronously within this background thread)
+            enrich_product_with_igdb(p.id)
+            count += 1
+            import time
+            time.sleep(0.3) # Rate limit politeness (IGDB is 4/sec, we do ~3/sec)
+            
+        print(f"Mass Enrichment Completed. Processed {count} items.")
+        
+    except Exception as e:
+        print(f"Mass Enrichment Error: {e}")
+    finally:
+        db.close()
+
+@router.post("/admin/enrich-all")
+def trigger_mass_enrichment(
+    limit: int = 100,
+    background_tasks: BackgroundTasks = None,
+    current_user: 'User' = Depends(get_current_admin_user)
+):
+    """
+    Triggers a background job to enrich missing product data using IGDB.
+    """
+    background_tasks.add_task(mass_enrich_products, limit)
+    return {"status": "started", "message": f"Enriching up to {limit} products in background."}
 
 # Imports moved to top
