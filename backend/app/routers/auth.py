@@ -135,6 +135,40 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Security(securi
         
     return user
 
+def get_current_user_optional(credentials: HTTPAuthorizationCredentials = Security(security, scopes=[]), db: Session = Depends(get_db)) -> Optional[User]:
+    """
+    Same as get_current_user but returns None if token is invalid or missing, instead of raising 401.
+    Note: HTTPBearer(auto_error=False) might be needed if we want to support 'no header' scenario without 403.
+    Actually, Security(security, auto_error=False) checks if header is missing.
+    """
+    try:
+        # We need to access security logic manually if we want to be truly optional including missing header
+        # But 'credentials' arg implies header exists.
+        # Let's simplify: Just rely on get_admin_access handling the fallback if this fails? 
+        # No, if we use Depends(get_current_user), fastAPI handles it.
+        # To make it optional we need a new dependency that uses auto_error=False.
+        return get_current_user(credentials, db)
+    except:
+        return None
+
+# Re-defining this to be robust for API keys usage where no Bearer token exists
+security_optional = HTTPBearer(auto_error=False)
+
+def get_current_user_silent(
+    credentials: Optional[HTTPAuthorizationCredentials] = Security(security_optional), 
+    db: Session = Depends(get_db)
+) -> Optional[User]:
+    if not credentials:
+        return None
+    try:
+        token = credentials.credentials
+        payload = verify_token(token)
+        if payload is None: return None
+        user_id = int(payload.get("sub"))
+        return db.query(User).filter(User.id == user_id).first()
+    except:
+        return None
+
 def get_current_admin_user(current_user: User = Depends(get_current_user)) -> User:
     if not current_user.is_admin:
         raise HTTPException(

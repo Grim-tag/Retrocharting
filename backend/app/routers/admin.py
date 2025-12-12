@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends, HTTPException, Header, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_
 from app.db.session import get_db
@@ -9,20 +9,27 @@ router = APIRouter()
 
 # Simple secret key check
 # In production, this should be in .env
-from app.routers.auth import get_current_user
+# Simple secret key check
+# In production, this should be in .env
+from app.routers.auth import get_current_user, get_current_user_silent
 from app.models.user import User
 
 ADMIN_SECRET_KEY = os.getenv("ADMIN_SECRET_KEY", "admin_secret_123")
 
 async def get_admin_access(
     x_admin_key: str = Header(None, alias="X-Admin-Key"),
-    current_user: User = Depends(get_current_user)
+    key: str = Query(None),
+    current_user: User = Depends(get_current_user_silent)
 ):
-    # 1. Check API Key (Service-to-Service)
+    # 1. Check API Key (Header)
     if x_admin_key and x_admin_key == ADMIN_SECRET_KEY:
         return True
+        
+    # 2. Check API Key (Query Param - for browser convenience)
+    if key and key == ADMIN_SECRET_KEY:
+        return True
     
-    # 2. Check User Admin Status (Client-to-Service)
+    # 3. Check User Admin Status (Client-to-Service)
     if current_user and current_user.is_admin:
         return True
     
