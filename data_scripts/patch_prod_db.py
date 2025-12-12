@@ -33,3 +33,23 @@ with engine.connect() as conn:
         conn.execute(text("ALTER TABLE products ADD COLUMN players TEXT"))
         conn.commit()
         print("Done.")
+    # Check new prices
+    try:
+        conn.execute(text("SELECT box_only_price FROM products LIMIT 1"))
+        print("'box_only_price' exists.")
+    except Exception:
+        print("Adding 'box_only_price'...")
+        conn.execute(text("ALTER TABLE products ADD COLUMN box_only_price FLOAT"))
+        conn.commit()
+        print("Done.")
+
+    try:
+        conn.execute(text("SELECT manual_only_price FROM products LIMIT 1"))
+        print("'manual_only_price' exists.")
+    except Exception:
+        print("Adding 'manual_only_price'...")
+        conn.execute(text("ALTER TABLE products ADD COLUMN manual_only_price FLOAT"))
+        conn.execute(text("ALTER TABLE products ADD COLUMN pricecharting_id INTEGER")) 
+        # Also ensuring PC ID exists just in case
+        conn.commit()
+        print("Done.")
