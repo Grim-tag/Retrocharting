@@ -112,10 +112,29 @@ class EbayClient:
                 is_box = False
                 is_manual = False
                 
-                # Keywords
-                box_terms = ['BOITE', 'BOX', 'CASE', 'EMPTY BOX', 'VIDE']
-                manual_terms = ['NOTICE', 'MANUAL', 'INSTRUCTION', 'BOOKLET', 'LIVRET']
-                no_game_terms = ['PAS DE JEU', 'NO GAME', 'EMPTY', 'VIDE', 'BOITE SEULE', 'NOTICE SEULE', 'MANUAL ONLY', 'BOX ONLY']
+                # Keywords (Multi-language: FR, EN, DE, ES, IT, PT, NL)
+                box_terms = [
+                    'BOITE', 'BOX', 'CASE', 'EMPTY BOX', 'VIDE', 
+                    'OVP', 'SCHACHTEL', 'HÜLLE', 
+                    'CAJA', 'ESTUCHE', 
+                    'SCATOLA', 'CUSTODIA', 
+                    'CAIXA', 
+                    'DOOS'
+                ]
+                manual_terms = [
+                    'NOTICE', 'MANUAL', 'INSTRUCTION', 'BOOKLET', 'LIVRET', 
+                    'ANLEITUNG', 'HANDBUCH', 
+                    'MANUALE', 'LIBRETTO', 
+                    'HANDLEIDING'
+                ]
+                no_game_terms = [
+                    'PAS DE JEU', 'NO GAME', 'EMPTY', 'VIDE', 'BOITE SEULE', 'NOTICE SEULE', 'MANUAL ONLY', 'BOX ONLY',
+                    'KEIN SPIEL', 'NUR', 'OHNE SPIEL',
+                    'SIN JUEGO', 'SOLO',
+                    'SENZA GIOCO',
+                    'SEM JOGO',
+                    'GEEN SPEL', 'ZONDER SPEL'
+                ]
                 
                 # Logic: 
                 # If title contains explicit "No Game" markers -> Check if Box or Manual
