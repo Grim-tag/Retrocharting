@@ -49,7 +49,7 @@ from app.models.sales_transaction import SalesTransaction
 from app.models.comment import Comment
 from app.models.user import User
 from app.models.collection_item import CollectionItem
-from app.models.sniper_watch import SniperWatch
+from app.models.sniper import SniperWatch
 from app.core.config import settings
 
 # Configure Cloudinary
