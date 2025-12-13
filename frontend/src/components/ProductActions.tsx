@@ -1,7 +1,7 @@
 import React from 'react';
 import AddToCollectionButton from "@/components/AddToCollectionButton";
 import AddToWishlistButton from "@/components/AddToWishlistButton";
-import WhyThisPrice from "@/components/WhyThisPrice";
+
 
 interface ProductActionsProps {
     product: any;
@@ -20,9 +20,7 @@ export default function ProductActions({ product, lang, dict }: ProductActionsPr
                     label={dict.product.actions.add_wishlist}
                 />
             </div>
-            <div className="mt-6">
-                <WhyThisPrice salesCount={product.sales_count || 0} dict={dict} />
-            </div>
+
         </>
     );
 }

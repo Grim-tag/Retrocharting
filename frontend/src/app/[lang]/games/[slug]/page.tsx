@@ -217,6 +217,9 @@ export default async function Page({
                         {/* DESKTOP: Description moved to Left Sidebar */}
                         <div className="hidden md:block">
                             <ProductDetails product={product} dict={dict} lang={lang} gamesSlug={gamesSlug} />
+                            <div className="mt-8">
+                                <WhyThisPrice salesCount={product.sales_count || 0} dict={dict} />
+                            </div>
                         </div>
                     </div>
 
@@ -283,6 +286,9 @@ export default async function Page({
                         {/* MOBILE: Description moved to Bottom */}
                         <div className="block md:hidden mb-8">
                             <ProductDetails product={product} dict={dict} lang={lang} gamesSlug={gamesSlug} />
+                            <div className="mt-8">
+                                <WhyThisPrice salesCount={product.sales_count || 0} dict={dict} />
+                            </div>
                         </div>
                     </div>
                 </div>
