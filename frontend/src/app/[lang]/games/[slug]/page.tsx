@@ -69,13 +69,13 @@ export async function generateMetadata({ params, searchParams }: { params: Promi
 
     if (lang === 'fr') {
         return {
-            title: `Cote ${product.product_name} ${shortConsoleName} & Argus | RetroCharting`,
+            title: `${dict.product.market.suffix} ${product.product_name} ${shortConsoleName} & Argus | RetroCharting`,
             description: `Valeur actuelle et historique de prix pour ${product.product_name} sur ${product.console_name}. Suivez la cote de votre collection de jeux vidéo.`,
         };
     }
 
     return {
-        title: `${product.product_name} ${shortConsoleName} Price Guide | RetroCharting`,
+        title: `${product.product_name} ${shortConsoleName} ${dict.product.market.suffix} | RetroCharting`,
         description: `Current market value and price history for ${product.product_name} on ${product.console_name}. Track your video game collection value.`,
     };
 }
@@ -167,7 +167,7 @@ export default async function Page({
                 {/* 1. TITLE: Always Top (Full Width) */}
                 <div className="flex items-start justify-between gap-4 mb-6">
                     <h1 className="text-2xl sm:text-4xl font-bold text-white leading-tight">
-                        {product.product_name} {shortConsoleName} Prices
+                        {product.product_name} {shortConsoleName} {dict.product.market.suffix}
                     </h1>
                     {/* Region Flag Badge */}
                     <div className="hidden sm:block">
@@ -192,7 +192,7 @@ export default async function Page({
                 <div className="text-[#ff6600] font-bold text-lg mb-6 flex items-center gap-2 -mt-4">
                     <span>{product.console_name}</span>
                     <span className="w-1 h-1 bg-gray-500 rounded-full"></span>
-                    <span className="text-gray-400 font-normal text-sm">Prices updated daily</span>
+                    <span className="text-gray-400 font-normal text-sm">{dict.product.market.updated_daily}</span>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
@@ -202,7 +202,7 @@ export default async function Page({
                             {product.image_url ? (
                                 <img src={product.image_url} alt={`${product.product_name} ${product.console_name}`} className="w-full h-full object-contain shadow-lg" />
                             ) : (
-                                <span className="text-gray-500 font-bold text-xl">No Image</span>
+                                <span className="text-gray-500 font-bold text-xl">{dict.product.market.no_image}</span>
                             )}
                         </div>
 
@@ -231,46 +231,46 @@ export default async function Page({
                             <PriceCard
                                 label={dict.product.prices.loose}
                                 price={product.loose_price}
-                                definition="Cartridge / Disc only. No box, no manual."
+                                definition={dict.product.conditions.loose}
                             />
                             <PriceCard
                                 label={dict.product.prices.cib}
                                 price={product.cib_price}
                                 color="text-[#007bff]"
-                                definition="Complete In Box. Includes original box and manual."
+                                definition={dict.product.conditions.cib}
                                 bestValue={true}
                             />
                             <PriceCard
                                 label={dict.product.prices.new}
                                 price={product.new_price}
                                 color="text-[#00ff00]"
-                                definition="Brand new, sealed in original factory packaging."
+                                definition={dict.product.conditions.new}
                             />
                             {/* New Cards for Box/Manual */}
                             <PriceCard
-                                label="Box Only"
+                                label={dict.product.conditions.box_only}
                                 price={product.box_only_price || 0}
                                 color="text-[#f59e0b]" // amber
-                                definition="Original box only. No game, no manual."
+                                definition={dict.product.conditions.box_only}
                             />
                             <PriceCard
-                                label="Manual Only"
+                                label={dict.product.conditions.manual_only}
                                 price={product.manual_only_price || 0}
                                 color="text-[#ef4444]" // red
-                                definition="Original manual only. No game, no box."
+                                definition={dict.product.conditions.manual_only}
                             />
                         </div>
 
                         {/* Middle: Compact Price History Chart */}
                         <div className="mb-6">
-                            <h3 className="text-white text-sm font-bold mb-2 uppercase tracking-wider text-gray-400">Price Trend</h3>
-                            <PriceHistoryChart history={history} className="h-[200px]" />
+                            <h3 className="text-white text-sm font-bold mb-2 uppercase tracking-wider text-gray-400">{dict.product.market.price_trend}</h3>
+                            <PriceHistoryChart history={history} className="h-[200px]" dict={dict} />
                         </div>
 
                         {/* eBay Listings - The CORE Value */}
                         <div className="mb-8">
-                            <h3 className="text-white text-lg font-bold mb-3">Live Market Data</h3>
-                            <ListingsTable productId={product.id} />
+                            <h3 className="text-white text-lg font-bold mb-3">{dict.product.market.title}</h3>
+                            <ListingsTable productId={product.id} dict={dict} />
                         </div>
 
                         {/* User Comments - NEW */}

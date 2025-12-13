@@ -18,7 +18,7 @@ interface Listing {
     is_good_deal?: boolean;
 }
 
-export default function ListingsTable({ productId }: { productId: number }) {
+export default function ListingsTable({ productId, dict }: { productId: number; dict: any }) {
     const [listings, setListings] = useState<Listing[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'games' | 'extras'>('games');
@@ -58,11 +58,11 @@ export default function ListingsTable({ productId }: { productId: number }) {
     const currentListings = activeTab === 'games' ? gameListings : extraListings;
 
     if (loading) {
-        return <div className="text-gray-400 text-center py-4">Loading offers...</div>;
+        return <div className="text-gray-400 text-center py-4">{dict.product.listings.table.loading}</div>;
     }
 
     if (listings.length === 0) {
-        return <div className="text-gray-400 text-center py-4">No offers found.</div>;
+        return <div className="text-gray-400 text-center py-4">{dict.product.listings.table.empty}</div>;
     }
 
     return (
@@ -71,20 +71,20 @@ export default function ListingsTable({ productId }: { productId: number }) {
                 <button
                     onClick={() => setActiveTab('games')}
                     className={`flex-1 py-3 text-sm font-bold uppercase tracking-wide transition-colors ${activeTab === 'games'
-                            ? 'bg-[#2a3142] text-white border-b-2 border-[#ff6600]'
-                            : 'text-gray-500 hover:text-gray-300 hover:bg-[#252b3b]'
+                        ? 'bg-[#2a3142] text-white border-b-2 border-[#ff6600]'
+                        : 'text-gray-500 hover:text-gray-300 hover:bg-[#252b3b]'
                         }`}
                 >
-                    Games ({gameListings.length})
+                    {dict.product.listings.tabs.games} ({gameListings.length})
                 </button>
                 <button
                     onClick={() => setActiveTab('extras')}
                     className={`flex-1 py-3 text-sm font-bold uppercase tracking-wide transition-colors ${activeTab === 'extras'
-                            ? 'bg-[#2a3142] text-white border-b-2 border-[#ff6600]'
-                            : 'text-gray-500 hover:text-gray-300 hover:bg-[#252b3b]'
+                        ? 'bg-[#2a3142] text-white border-b-2 border-[#ff6600]'
+                        : 'text-gray-500 hover:text-gray-300 hover:bg-[#252b3b]'
                         }`}
                 >
-                    Box & Manuals ({extraListings.length})
+                    {dict.product.listings.tabs.extras} ({extraListings.length})
                 </button>
             </div>
 
@@ -98,12 +98,12 @@ export default function ListingsTable({ productId }: { productId: number }) {
                 <table className="w-full text-left text-sm text-gray-400">
                     <thead className="bg-[#151922] text-xs uppercase font-medium">
                         <tr>
-                            <th className="px-4 py-3">Image</th>
-                            <th className="px-4 py-3">Title</th>
-                            <th className="px-4 py-3">Seller</th>
-                            <th className="px-4 py-3">Condition</th>
-                            <th className="px-4 py-3 text-right">Price</th>
-                            <th className="px-4 py-3 text-center">Action</th>
+                            <th className="px-4 py-3">{dict.product.listings.table.image}</th>
+                            <th className="px-4 py-3">{dict.product.listings.table.title}</th>
+                            <th className="px-4 py-3">{dict.product.listings.table.seller}</th>
+                            <th className="px-4 py-3">{dict.product.listings.table.condition}</th>
+                            <th className="px-4 py-3 text-right">{dict.product.listings.table.price}</th>
+                            <th className="px-4 py-3 text-center">{dict.product.listings.table.action || ""}</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-[#2a3142]">
@@ -116,7 +116,7 @@ export default function ListingsTable({ productId }: { productId: number }) {
                                         {item.image_url ? (
                                             <img src={item.image_url} alt={item.title} className="w-12 h-12 object-cover rounded" />
                                         ) : (
-                                            <div className="w-12 h-12 bg-[#0f121e] rounded flex items-center justify-center text-xs">No Pic</div>
+                                            <div className="w-12 h-12 bg-[#0f121e] rounded flex items-center justify-center text-xs">{dict.product.listings.table.no_pic}</div>
                                         )}
                                     </td>
                                     <td className="px-4 py-3 text-white font-medium max-w-xs">
@@ -125,7 +125,7 @@ export default function ListingsTable({ productId }: { productId: number }) {
                                             {item.is_good_deal && (
                                                 <div className="flex items-center">
                                                     <span className="bg-green-500/20 text-green-400 text-[10px] font-bold px-1.5 py-0.5 rounded border border-green-500/50 uppercase tracking-wide flex items-center gap-1">
-                                                        🔥 Good Deal
+                                                        🔥 {dict.product.listings.table.good_deal}
                                                     </span>
                                                 </div>
                                             )}
@@ -135,8 +135,8 @@ export default function ListingsTable({ productId }: { productId: number }) {
                                         {item.seller_name || item.source}
                                     </td>
                                     <td className="px-4 py-3">
-                                        {item.condition === 'MANUAL_ONLY' ? <span className="text-yellow-500">Manual Only</span> :
-                                            item.condition === 'BOX_ONLY' ? <span className="text-orange-500">Box Only</span> :
+                                        {item.condition === 'MANUAL_ONLY' ? <span className="text-yellow-500">{dict.product.listings.table.manual_only}</span> :
+                                            item.condition === 'BOX_ONLY' ? <span className="text-orange-500">{dict.product.listings.table.box_only}</span> :
                                                 item.condition || "Used"}
                                     </td>
                                     <td className="px-4 py-3 text-right text-white font-bold">
@@ -149,7 +149,7 @@ export default function ListingsTable({ productId }: { productId: number }) {
                                             rel="noopener noreferrer"
                                             className="bg-[#007bff] hover:bg-[#0056b3] text-white text-xs font-bold py-1.5 px-3 rounded inline-block transition-colors"
                                         >
-                                            BUY
+                                            {dict.product.listings.table.buy}
                                         </a>
                                     </td>
                                 </tr>

@@ -107,6 +107,42 @@
             "confidence": "Confidence Score",
             "based_on": "Based on {{count}} verified transactions",
             "thousands": "thousands of"
+        },
+        "market": {
+            "title": "Live Market Data",
+            "updated_daily": "Prices updated daily",
+            "price_trend": "Price Trend",
+            "no_history": "No price history available.",
+            "suffix": "Prices",
+            "no_image": "No Image"
+        },
+        "conditions": {
+            "loose": "Cartridge / Disc only. No box, no manual.",
+            "cib": "Complete In Box. Includes original box and manual.",
+            "new": "Brand new, sealed in original factory packaging.",
+            "box_only": "Original box only. No game, no manual.",
+            "manual_only": "Original manual only. No game, no box."
+        },
+        "listings": {
+            "tabs": {
+                "games": "Games",
+                "extras": "Box & Manuals"
+            },
+            "table": {
+                "image": "Image",
+                "title": "Title",
+                "seller": "Seller",
+                "condition": "Condition",
+                "price": "Price",
+                "action": "Action",
+                "buy": "BUY",
+                "no_pic": "No Pic",
+                "loading": "Loading offers...",
+                "empty": "No listings in this category.",
+                "good_deal": "Good Deal",
+                "manual_only": "Manual Only",
+                "box_only": "Box Only"
+            }
         }
     },
     "list": {

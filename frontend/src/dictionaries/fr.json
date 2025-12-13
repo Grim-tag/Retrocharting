@@ -107,6 +107,42 @@
             "confidence": "Score de Confiance",
             "based_on": "Basé sur {{count}} transactions vérifiées",
             "thousands": "des milliers de"
+        },
+        "market": {
+            "title": "Données du Marché en Temps Réel",
+            "updated_daily": "Prix mis à jour quotidiennement",
+            "price_trend": "Évolution du Prix",
+            "no_history": "Pas d'historique de prix disponible.",
+            "suffix": "Cote",
+            "no_image": "Pas d'image"
+        },
+        "conditions": {
+            "loose": "Cartouche / Disque seul. Sans boite, sans notice.",
+            "cib": "Complet en Boite. Inclut la boite d'origine et la notice.",
+            "new": "Neuf, scellé dans l'emballage d'origine.",
+            "box_only": "Boite d'origine seule. Sans jeu, sans notice.",
+            "manual_only": "Notice d'origine seule. Sans jeu, sans boite."
+        },
+        "listings": {
+            "tabs": {
+                "games": "Jeux",
+                "extras": "Boites & Notices"
+            },
+            "table": {
+                "image": "Image",
+                "title": "Titre",
+                "seller": "Vendeur",
+                "condition": "État",
+                "price": "Prix",
+                "action": "Action",
+                "buy": "ACHETER",
+                "no_pic": "Pas d'img",
+                "loading": "Chargement des offres...",
+                "empty": "Aucune offre trouvée.",
+                "good_deal": "Bonne Affaire",
+                "manual_only": "Notice seule",
+                "box_only": "Boite seule"
+            }
         }
     },
     "list": {
