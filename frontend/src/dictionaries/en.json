@@ -113,7 +113,7 @@
             "updated_daily": "Prices updated daily",
             "price_trend": "Price Trend",
             "no_history": "No price history available.",
-            "suffix": "Prices",
+            "suffix": "Prices & Value",
             "no_image": "No Image"
         },
         "conditions": {
