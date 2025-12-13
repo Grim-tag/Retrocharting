@@ -135,7 +135,7 @@ export default async function AccessoryPage({ params }: { params: Promise<{ slug
                         </div>
 
                         {/* eBay Listings - Will auto-filter using category logic we just added! */}
-                        <ListingsTable productId={product.id} />
+                        <ListingsTable productId={product.id} dict={dict} />
 
                         {/* Details & Description */}
                         <div className="bg-[#1f2533] border border-[#2a3142] p-6 rounded mb-8 mt-8">
