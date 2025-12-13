@@ -89,7 +89,7 @@ export default function CollectionPage({ dict, lang }: { dict: any; lang: string
                                 <p className="text-gray-400 text-sm">{user?.email}</p>
                                 {user?.username && (
                                     <Link
-                                        href={`/${lang}/user/${user.username}`}
+                                        href={`/${lang}/user/${user.username.toLowerCase()}`}
                                         className="text-xs bg-[#2a3142] hover:bg-[#ff6600] text-gray-300 hover:text-white px-2 py-0.5 rounded transition-colors flex items-center gap-1"
                                         target="_blank"
                                     >

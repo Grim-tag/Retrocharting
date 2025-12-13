@@ -1,6 +1,8 @@
 
+
 import { notFound } from "next/navigation";
-import { getPublicProfile, getPublicCollection } from "@/lib/api"; // Note: getDictionary handled differently in server components usually
+import { getPublicCollection } from "@/lib/api";
+import { getPublicProfile } from "@/lib/cached-api"; // Cached version
 import Link from "next/link";
 import { getGameUrl } from "@/lib/utils";
 
@@ -9,8 +11,13 @@ import { getDictionary as fetchDict } from "@/lib/get-dictionary";
 
 export async function generateMetadata({ params }: { params: Promise<{ username: string }> }) {
     const { username } = await params;
+    const profile = await getPublicProfile(username);
+
+    // If profile exists, use exact database casing (e.g. "Grimtag"), otherwise fallback to URL param
+    const checkName = profile?.username || username;
+
     return {
-        title: `${username}'s Profile - RetroCharting`,
+        title: `${checkName}'s Profile - RetroCharting`,
     };
 }
 
@@ -18,6 +25,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
     const { lang, username } = await params;
     const dict = await fetchDict(lang);
     const profile = await getPublicProfile(username);
+
 
     if (!profile) {
         notFound();
