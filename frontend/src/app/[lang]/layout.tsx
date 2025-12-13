@@ -24,12 +24,28 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
 
     // We can just construct it.
 
+    if (lang === 'fr') {
+        return {
+            title: "RetroCharting | Cote Argus Jeux Vidéo & Gestion de Collection",
+            description: "Suivez la cote de vos jeux vidéo, estimez la valeur de votre collection et trouvez les meilleures affaires pour Nintendo, PlayStation, Xbox et Sega.",
+            metadataBase: new URL(baseUrl),
+            alternates: {
+                canonical: '/fr',
+                languages: {
+                    'en': '/',
+                    'fr': '/fr',
+                    'x-default': '/',
+                },
+            },
+        };
+    }
+
     return {
         title: "RetroCharting | Video Game Price Guide & Collection Tracker",
         description: "Track video game prices, monitor your collection value, and find the best deals for Nintendo, PlayStation, Xbox, and Sega games.",
         metadataBase: new URL(baseUrl),
         alternates: {
-            canonical: lang === 'en' ? '/' : `/${lang}`,
+            canonical: '/',
             languages: {
                 'en': '/',
                 'fr': '/fr',

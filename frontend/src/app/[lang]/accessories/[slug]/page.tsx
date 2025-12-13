@@ -83,7 +83,7 @@ export default async function AccessoryPage({ params }: { params: Promise<{ slug
                     <div className="md:col-span-4">
                         <div className="bg-[#1f2533] border border-[#2a3142] p-4 rounded flex items-center justify-center min-h-[400px]">
                             {product.image_url ? (
-                                <img src={product.image_url} alt={product.product_name} className="max-w-full max-h-[400px] object-contain shadow-lg" />
+                                <img src={product.image_url} alt={product.product_name} className="w-full h-full object-contain shadow-lg" />
                             ) : (
                                 <span className="text-gray-500 font-bold text-xl">No Image</span>
                             )}

@@ -5,6 +5,23 @@ import Breadcrumbs from "@/components/seo/Breadcrumbs";
 import JsonLd, { generateCollectionSchema } from "@/components/seo/JsonLd";
 import { getDictionary } from "@/lib/get-dictionary";
 import { routeMap } from "@/lib/route-config";
+import { Metadata } from "next";
+
+export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
+    const { lang } = await params;
+
+    if (lang === 'fr') {
+        return {
+            title: "Cote Jeux Vidéo par Console | Nintendo, PlayStation, Sega, Xbox",
+            description: "Explorez notre catalogue de consoles et trouvez la cote argus de tous les jeux vidéo. Nintendo 64, Gamecube, PS1, PS2, et plus encore.",
+        };
+    }
+
+    return {
+        title: "Video Game Prices by Console | Nintendo, PlayStation, Sega, Xbox",
+        description: "Browse our console catalog and find video game values. Nintendo 64, Gamecube, PS1, PS2, and more.",
+    };
+}
 
 export default async function GamesPage({ params }: { params: Promise<{ lang: string }> }) {
     const { lang } = await params;
@@ -25,6 +42,7 @@ export default async function GamesPage({ params }: { params: Promise<{ lang: st
 
     return (
         <main className="flex-grow bg-[#0f121e] py-8">
+
             <div className="max-w-[1400px] mx-auto px-4">
 
                 <JsonLd data={schema} />

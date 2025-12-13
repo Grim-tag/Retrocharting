@@ -67,9 +67,16 @@ export async function generateMetadata({ params, searchParams }: { params: Promi
 
     const shortConsoleName = formatConsoleName(product.console_name);
 
+    if (lang === 'fr') {
+        return {
+            title: `Cote ${product.product_name} ${shortConsoleName} & Argus | RetroCharting`,
+            description: `Valeur actuelle et historique de prix pour ${product.product_name} sur ${product.console_name}. Suivez la cote de votre collection de jeux vidéo.`,
+        };
+    }
+
     return {
-        title: `${product.product_name} ${shortConsoleName} Prices | RetroCharting`,
-        description: `Current value and price history for ${product.product_name} on ${product.console_name}. Track your collection value.`,
+        title: `${product.product_name} ${shortConsoleName} Price Guide | RetroCharting`,
+        description: `Current market value and price history for ${product.product_name} on ${product.console_name}. Track your video game collection value.`,
     };
 }
 
@@ -191,9 +198,9 @@ export default async function Page({
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
                     {/* Left: Image + Desktop Actions + Description */}
                     <div className="md:col-span-4 flex flex-col gap-4">
-                        <div className="bg-[#1f2533] border border-[#2a3142] p-4 rounded flex items-center justify-center min-h-[200px] sm:min-h-[400px]">
+                        <div className="bg-[#1f2533] border border-[#2a3142] p-4 rounded flex items-center justify-center min-h-[400px]">
                             {product.image_url ? (
-                                <img src={product.image_url} alt={`${product.product_name} ${product.console_name}`} className="max-w-full max-h-[300px] sm:max-h-[400px] object-contain shadow-lg" />
+                                <img src={product.image_url} alt={`${product.product_name} ${product.console_name}`} className="w-full h-full object-contain shadow-lg" />
                             ) : (
                                 <span className="text-gray-500 font-bold text-xl">No Image</span>
                             )}

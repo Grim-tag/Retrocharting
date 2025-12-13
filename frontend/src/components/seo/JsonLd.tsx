@@ -29,13 +29,17 @@ export const generateProductSchema = (product: any, url: string) => ({
         '@type': 'Brand',
         name: product.publisher || product.console_name,
     },
+    // VideoGame specific properties
+    category: 'Video Game',
+    gamePlatform: product.console_name,
     offers: {
         '@type': 'AggregateOffer',
         url: url,
         priceCurrency: 'USD',
         lowPrice: product.loose_price || 0,
-        highPrice: product.new_price || product.cib_price || 0,
-        offerCount: 1, // Simplified
+        highPrice: Math.max(product.new_price || 0, product.cib_price || 0, product.loose_price || 0),
+        offerCount: product.sales_count > 0 ? product.sales_count : 1, // Use sales count as proxy
+        availability: 'https://schema.org/InStock'
     },
 });
 
