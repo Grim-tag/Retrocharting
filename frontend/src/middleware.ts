@@ -19,6 +19,17 @@ export function middleware(request: NextRequest) {
         return NextResponse.next();
     }
 
+    // [NEW] Domain Redirection: Clean traffic to retrocharting.com
+    // Redirects *.onrender.com -> retrocharting.com
+    const host = request.headers.get("host") || "";
+    if (host.includes(".onrender.com")) {
+        const url = new URL(pathname, "https://retrocharting.com");
+        request.nextUrl.searchParams.forEach((value, key) => {
+            url.searchParams.set(key, value);
+        });
+        return NextResponse.redirect(url, 301);
+    }
+
     // 2. Handle /en/ Redirects (Canonical: /en/x -> /x)
     // If the path starts with /en, we redirect to the root version to avoid duplicates.
     // CRITICAL: We must skip this if it's an internal rewrite (marked by param).
