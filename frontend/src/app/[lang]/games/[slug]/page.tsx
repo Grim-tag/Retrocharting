@@ -45,6 +45,7 @@ function isSystemSlug(slug: string): string | null {
 
 export async function generateMetadata({ params, searchParams }: { params: Promise<{ slug: string; lang: string }>; searchParams: Promise<{ genre?: string }> }): Promise<Metadata> {
     const { slug, lang } = await params;
+    const dict = await getDictionary(lang);
 
     // 1. Check if it's a Console Page
     const systemName = isSystemSlug(slug);
@@ -266,6 +267,12 @@ export default async function Page({
                             <h3 className="text-white text-sm font-bold mb-2 uppercase tracking-wider text-gray-400">{dict.product.market.price_trend}</h3>
                             <PriceHistoryChart history={history} className="h-[200px]" dict={dict} />
                         </div>
+
+                        {/* SEO Market Analysis (Full Width / Inserted Here) */}
+                        <div className="md:col-span-12 -mx-4 md:mx-0">
+                            <MarketAnalysis product={product} dict={dict} lang={lang} />
+                        </div>
+
 
                         {/* SEO Market Analysis (Full Width / Inserted Here) */}
                         <div className="md:col-span-12 -mx-4 md:mx-0">
