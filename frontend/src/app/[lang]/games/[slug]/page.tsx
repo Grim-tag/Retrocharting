@@ -233,7 +233,7 @@ export default async function Page({
                         </div>
 
                         {/* Cross Platform Links */}
-                        <CrossPlatformLinks productId={product.id} />
+                        <CrossPlatformLinks productId={product.id} lang={lang} />
 
                         {/* DESKTOP: Actions moved to Left Column */}
                         <div className="hidden md:block">
