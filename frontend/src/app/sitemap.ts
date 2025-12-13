@@ -1,6 +1,8 @@
 
 import { MetadataRoute } from 'next';
 import { getSitemapProducts } from '@/lib/api';
+import { getGameUrl, formatConsoleName } from '@/lib/utils';
+import { routeMap } from '@/lib/route-config';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const baseUrl = 'https://retrocharting.com';
@@ -31,28 +33,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const consoleSet = new Set<string>();
 
     products.forEach((product) => {
-        // Generate Product URL
-        // Format: /games/console-slug/game-slug-id
-        const consoleSlug = product.console_name.toLowerCase().replace(/ /g, '-');
-        const productSlug = product.product_name.toLowerCase().replace(/ /g, '-').replace(/[^\w-]/g, '');
-        const fullSlug = `${productSlug}-${product.id}`;
-
-        // Add for both languages? Or just canonical?
-        // Let's add for 'fr' as primary, or both? Sitemaps usually want all valid URLs.
-        // Duplicate content risk? Canonical handles that.
-        // Let's add 'fr' and 'en'.
+        // Collect Console for Category URL
+        // We still need a slugs for the category set, but products use getGameUrl
+        const consoleSlug = formatConsoleName(product.console_name).toLowerCase().replace(/ /g, '-');
+        consoleSet.add(consoleSlug);
 
         ['fr', 'en'].forEach(lang => {
+            // Use the centralized helper to match application routing exactly
+            const path = getGameUrl(product, lang);
+            // Note: getGameUrl returns absolute path /... , we append to baseUrl
+            // But wait, getGameUrl might return /games/... for EN and /fr/games/... for FR
+            // So we just concat.
+
             productUrls.push({
-                url: `${baseUrl}/${lang}/games/${consoleSlug}/${fullSlug}`,
+                url: `${baseUrl}${path}`,
                 lastModified: new Date(product.updated_at || new Date()),
                 changeFrequency: 'weekly',
                 priority: 0.8,
             });
         });
-
-        // Collect Console for Category URL
-        consoleSet.add(consoleSlug);
     });
 
     // 3. Generate Console URLs

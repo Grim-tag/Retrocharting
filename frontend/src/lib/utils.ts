@@ -63,8 +63,13 @@ export function getGameUrl(product: { id: number; product_name: string; console_
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/(^-|-$)/g, '');
 
-    // 3. Append ID at the end with "prices" keyword
-    const fullSlug = `${titleSlug}-${consoleSlug}-prices-${product.id}`;
+    // 3. Append ID at the end with localized keyword
+    const suffixMap: Record<string, string> = {
+        'fr': 'cote-prix',
+        'en': 'prices'
+    };
+    const suffix = suffixMap[lang] || 'prices';
+    const fullSlug = `${titleSlug}-${consoleSlug}-${suffix}-${product.id}`;
 
     // 4. Construct path (handle root for EN)
     if (lang === 'en') {

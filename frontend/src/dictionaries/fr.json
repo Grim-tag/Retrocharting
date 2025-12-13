@@ -113,7 +113,7 @@
             "updated_daily": "Prix mis à jour quotidiennement",
             "price_trend": "Évolution du Prix",
             "no_history": "Pas d'historique de prix disponible.",
-            "suffix": "Cote",
+            "suffix": "Cote & prix",
             "no_image": "Pas d'image"
         },
         "conditions": {
