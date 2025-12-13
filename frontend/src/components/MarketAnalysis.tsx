@@ -44,6 +44,7 @@ export default function MarketAnalysis({ product, dict, lang }: MarketAnalysisPr
     let dealText = "";
     let popularityText = "";
     let actionText = "";
+    let savePercent = 0;
 
     if (mode === 'retro') {
         const gapRatio = cibPrice / (loosePrice || 1);
@@ -56,7 +57,7 @@ export default function MarketAnalysis({ product, dict, lang }: MarketAnalysisPr
             trendSeed === 1 ? (templates.trend_up || "") : (templates.trend_down || "");
     } else {
         // Modern
-        const savePercent = newPrice > 0 ? Math.round(((newPrice - loosePrice) / newPrice) * 100) : 0;
+        savePercent = newPrice > 0 ? Math.round(((newPrice - loosePrice) / newPrice) * 100) : 0;
 
         if (templates.deal_good) {
             dealText = savePercent > 20
