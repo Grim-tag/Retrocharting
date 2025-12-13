@@ -1,6 +1,6 @@
 
 import { notFound } from "next/navigation";
-import { getPublicProfile, getPublicCollection, getDictionary } from "@/lib/api"; // Note: getDictionary handled differently in server components usually
+import { getPublicProfile, getPublicCollection } from "@/lib/api"; // Note: getDictionary handled differently in server components usually
 import Link from "next/link";
 import { getGameUrl } from "@/lib/utils";
 
