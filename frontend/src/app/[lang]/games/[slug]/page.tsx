@@ -185,7 +185,7 @@ export default async function Page({
                 <Breadcrumbs items={breadcrumbItems} />
                 <AlternateLinksRegistrar
                     en={getGameUrl(product, 'en')}
-                    fr={`/fr${getGameUrl(product, 'fr')}`}
+                    fr={getGameUrl(product, 'fr')}
                 />
 
                 {/* --- MOBILE OPTIMIZED LAYOUT START --- */}
