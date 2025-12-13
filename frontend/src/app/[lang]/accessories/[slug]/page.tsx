@@ -91,7 +91,7 @@ export default async function AccessoryPage({ params }: { params: Promise<{ slug
                         </div>
 
                         {/* Cross Platform Links - Should typically be empty for accessories but harmless to keep */}
-                        <CrossPlatformLinks productId={product.id} />
+                        <CrossPlatformLinks productId={product.id} lang={lang} />
                     </div>
 
                     {/* Right: Details */}
