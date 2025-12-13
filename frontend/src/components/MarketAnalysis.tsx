@@ -12,14 +12,15 @@ interface MarketAnalysisProps {
 }
 
 export default function MarketAnalysis({ product, dict, lang }: MarketAnalysisProps) {
-    const { currency, rates } = useCurrency();
+    const { currency } = useCurrency();
     const symbol = getCurrencySymbol(currency);
 
     // Helper for Price Formatting
     const formatPrice = (price: number | null) => {
         if (!price) return "N/A";
-        const converted = convertPrice(price, currency, rates);
-        return `${symbol}${converted}`;
+        const converted = convertPrice(price, currency);
+        if (converted === null) return "N/A";
+        return `${symbol}${converted.toFixed(2)}`;
     };
 
     // 1. Determine Era (Retro vs Modern)
