@@ -265,7 +265,7 @@ export default async function Page({
 
                         {/* Middle: Compact Price History Chart */}
                         <div className="mb-6">
-                            <h3 className="text-white text-sm font-bold mb-2 uppercase tracking-wider text-gray-400">{dict.product.market.price_trend}</h3>
+                            <h2 className="text-white text-sm font-bold mb-2 uppercase tracking-wider text-gray-400">{dict.product.market.price_trend}</h2>
                             <PriceHistoryChart history={history} className="h-[200px]" dict={dict} />
                         </div>
 
@@ -279,7 +279,7 @@ export default async function Page({
 
                         {/* eBay Listings - The CORE Value */}
                         <div className="mb-8">
-                            <h3 className="text-white text-lg font-bold mb-3">{dict.product.market.title}</h3>
+                            <h2 className="text-white text-lg font-bold mb-3">{dict.product.market.title}</h2>
                             <ListingsTable productId={product.id} dict={dict} />
                         </div>
 
