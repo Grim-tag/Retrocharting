@@ -267,6 +267,11 @@ export default async function Page({
                             <PriceHistoryChart history={history} className="h-[200px]" dict={dict} />
                         </div>
 
+                        {/* SEO Market Analysis (Full Width / Inserted Here) */}
+                        <div className="md:col-span-12 -mx-4 md:mx-0">
+                            <MarketAnalysis product={product} dict={dict} lang={lang} />
+                        </div>
+
                         {/* eBay Listings - The CORE Value */}
                         <div className="mb-8">
                             <h3 className="text-white text-lg font-bold mb-3">{dict.product.market.title}</h3>

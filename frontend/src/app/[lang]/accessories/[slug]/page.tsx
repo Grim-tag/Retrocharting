@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getProductById, getProductHistory } from "@/lib/api";
 import ListingsTable from "@/components/ListingsTable";
+import MarketAnalysis from "@/components/MarketAnalysis";
 import PriceHistoryChart from "@/components/PriceHistoryChart";
 import { Metadata } from "next";
 import { formatConsoleName, getGameUrl } from "@/lib/utils";
@@ -159,7 +160,12 @@ export default async function AccessoryPage({ params }: { params: Promise<{ slug
                         {/* Price History */}
                         <div className="bg-[#1f2533] border border-[#2a3142] p-6 rounded mb-8 mt-8">
                             <h2 className="text-xl font-bold text-white mb-4">{dict.product.history.title}</h2>
-                            <PriceHistoryChart history={history} />
+                            <PriceHistoryChart history={history} dict={dict} />
+                        </div>
+
+                        {/* SEO Market Analysis */}
+                        <div className="-mx-4 md:mx-0">
+                            <MarketAnalysis product={product} dict={dict} lang={lang} />
                         </div>
                     </div>
                 </div>

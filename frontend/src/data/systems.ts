@@ -87,3 +87,17 @@ export const groupedSystems: Record<string, string[]> = {
         "JP PC Engine", "JP PC Engine CD", "JP LaserActive", "JP MSX", "JP MSX2"
     ]
 };
+
+export const MODERN_SYSTEMS = [
+    "Playstation 4", "Playstation 5",
+    "Xbox One", "Xbox Series X",
+    "Nintendo Switch", "Nintendo Switch 2",
+    "JP Playstation 4", "JP Playstation 5",
+    "JP Xbox One", "JP Xbox Series X",
+    "JP Nintendo Switch", "JP Nintendo Switch 2",
+    "PAL Playstation 4", "PAL Playstation 5",
+    "PAL Xbox One", "PAL Xbox Series X",
+    "PAL Nintendo Switch", "PAL Nintendo Switch 2",
+    "Asian English Playstation 4", "Asian English Playstation 5",
+    "Asian English Switch", "Asian English Switch 2"
+];

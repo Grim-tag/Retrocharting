@@ -1,0 +1,102 @@
+"use client";
+
+import React from 'react';
+import { useCurrency } from "@/context/CurrencyContext";
+import { getCurrencySymbol, convertPrice } from "@/lib/currency";
+import { MODERN_SYSTEMS } from "@/data/systems";
+
+interface MarketAnalysisProps {
+    product: any;
+    dict: any;
+    lang: string;
+}
+
+export default function MarketAnalysis({ product, dict, lang }: MarketAnalysisProps) {
+    const { currency, rates } = useCurrency();
+    const symbol = getCurrencySymbol(currency);
+
+    // Helper for Price Formatting
+    const formatPrice = (price: number | null) => {
+        if (!price) return "N/A";
+        const converted = convertPrice(price, currency, rates);
+        return `${symbol}${converted}`;
+    };
+
+    // 1. Determine Era (Retro vs Modern)
+    // Basic logic: Check if console is in MODERN_SYSTEMS list
+    const isModern = MODERN_SYSTEMS.some(sys => product.console_name.includes(sys));
+    const mode = isModern ? 'modern' : 'retro';
+    const templates = dict.product.seo[mode];
+
+    // 2. Prepare Variables
+    const loosePrice = product.loose_price || 0;
+    const cibPrice = product.cib_price || loosePrice * 1.5; // Fallback estimate if missing
+    const newPrice = product.new_price || cibPrice * 2;
+
+    // Gap Analysis (Retro)
+    const gapRatio = cibPrice / (loosePrice || 1);
+    const gapText = gapRatio > 2.5 ? templates.gap_high : templates.gap_low;
+
+    // Trend Analysis (Placeholder logic - would need real history trend)
+    // Randomly assigning stable/up/down based on ID for consistency without real trend data yet
+    const trendSeed = product.id % 3;
+    const trendText = trendSeed === 0 ? templates.trend_stable :
+        trendSeed === 1 ? templates.trend_up : templates.trend_down;
+
+    // Deal Analysis (Modern)
+    const savePercent = newPrice > 0 ? Math.round(((newPrice - loosePrice) / newPrice) * 100) : 0;
+    const dealText = savePercent > 20
+        ? templates.deal_good.replace('{{save_percent}}', savePercent.toString())
+        : templates.deal_bad;
+
+    const popularityText = trendSeed === 1 ? templates.pop_high : templates.pop_neutral;
+    const actionText = savePercent > 20 ? templates.action_buy : templates.action_wait;
+
+    // 3. Generate Text
+    const generateText = (template: string) => {
+        return template
+            .replace(/{{name}}/g, product.product_name)
+            .replace(/{{console}}/g, product.console_name)
+            .replace(/{{platform}}/g, product.console_name) // Alias
+            .replace(/{{year}}/g, product.release_date ? new Date(product.release_date).getFullYear().toString() : '????')
+            .replace(/{{loose_price}}/g, formatPrice(loosePrice))
+            .replace(/{{cib_price}}/g, formatPrice(cibPrice))
+            .replace(/{{new_price}}/g, formatPrice(newPrice))
+            .replace(/{{gap_text}}/g, gapText)
+            .replace(/{{trend_text}}/g, trendText)
+            .replace(/{{deal_text}}/g, dealText)
+            .replace(/{{popularity_text}}/g, popularityText)
+            .replace(/{{action_text}}/g, actionText)
+            .replace(/{{save_percent}}/g, savePercent.toString());
+    };
+
+    return (
+        <section className="bg-[#1f2533] border-y border-[#2a3142] py-8 my-8">
+            <div className="max-w-[1400px] mx-auto px-4 grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+
+                {/* Block 1: The Money Question */}
+                <div>
+                    <h2 className="text-xl font-bold text-white mb-3 flex items-center gap-2">
+                        <span className="text-[#ff6600]">#</span>
+                        {generateText(templates.h1)}
+                    </h2>
+                    <p className="text-gray-300 leading-relaxed text-sm text-justify">
+                        {generateText(templates.value_analysis)}
+                    </p>
+                </div>
+
+                {/* Block 2: The Context Question */}
+                <div>
+                    <h2 className="text-xl font-bold text-white mb-3 flex items-center gap-2">
+                        <span className="text-[#007bff]">?</span>
+                        {generateText(templates.h2)}
+                    </h2>
+                    <p className="text-gray-300 leading-relaxed text-sm text-justify">
+                        {generateText(templates.context_analysis)}
+                    </p>
+                </div>
+
+            </div>
+        </section>
+    );
+}
