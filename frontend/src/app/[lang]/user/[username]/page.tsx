@@ -4,8 +4,8 @@ import { getPublicProfile, getPublicCollection, getDictionary } from "@/lib/api"
 import Link from "next/link";
 import { getGameUrl } from "@/lib/utils";
 
-// Helper to get dictionary (quick fix if not exported, but should be from params usually)
-import { getDictionary as fetchDict } from "@/app/[lang]/dictionaries";
+// Helper to get dictionary
+import { getDictionary as fetchDict } from "@/lib/get-dictionary";
 
 export async function generateMetadata({ params }: { params: Promise<{ username: string }> }) {
     const { username } = await params;
