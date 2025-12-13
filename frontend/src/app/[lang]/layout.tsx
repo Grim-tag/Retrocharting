@@ -56,8 +56,8 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
 }
 
 import { AuthProvider } from "@/context/AuthContext";
-
 import { CurrencyProvider } from "@/context/CurrencyContext";
+import { LanguageAlternateProvider } from "@/context/LanguageAlternateContext";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
 
 export default async function PublicLayout({
@@ -75,17 +75,18 @@ export default async function PublicLayout({
             <body className={`${poppins.variable} antialiased bg-[#1f2533] text-white font-sans flex flex-col min-h-screen`}>
                 <GoogleAnalytics gaId="G-RZP4756CJS" />
                 <CurrencyProvider>
-                    <AuthProvider>
-                        <Header dict={dict} lang={lang} />
+                    <LanguageAlternateProvider>
+                        <AuthProvider>
+                            <Header dict={dict} lang={lang} />
 
-                        <ProductSearch placeholder={dict.header.search_placeholder} lang={lang} />
+                            <ProductSearch placeholder={dict.header.search_placeholder} lang={lang} />
 
-                        <main className="flex-grow">
-                            {children}
-                        </main>
+                            <main className="flex-grow">
+                                {children}
+                            </main>
 
-                        <Footer dict={dict} lang={lang} />
-                    </AuthProvider>
+                            <Footer dict={dict} lang={lang} />
+                        </AuthProvider>
                 </CurrencyProvider>
             </body>
         </html>

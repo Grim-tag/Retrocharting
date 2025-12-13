@@ -45,6 +45,7 @@ function isSystemSlug(slug: string): string | null {
 }
 
 import { getProductById } from "@/lib/cached-api"; // Use Cached Version
+import AlternateLinksRegistrar from "@/components/AlternateLinksRegistrar";
 
 // ... imports ...
 
@@ -184,6 +185,10 @@ export default async function Page({
 
                 <JsonLd data={schema} />
                 <Breadcrumbs items={breadcrumbItems} />
+                <AlternateLinksRegistrar
+                    en={getGameUrl(product, 'en')}
+                    fr={`/fr${getGameUrl(product, 'fr')}`}
+                />
 
                 {/* --- MOBILE OPTIMIZED LAYOUT START --- */}
 

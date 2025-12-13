@@ -9,12 +9,14 @@ import { routeMap, reverseRouteMap } from '@/lib/route-config';
 
 import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '@/context/AuthContext';
+import { useLanguageAlternate } from '@/context/LanguageAlternateContext';
 import CurrencySelector from './CurrencySelector';
 
 export default function Header({ dict, lang }: { dict: any; lang: string }) {
     const router = useRouter();
     const pathname = usePathname();
     const { user, login, logout } = useAuth();
+    const { alternates } = useLanguageAlternate();
 
     // Force Onboarding if username is missing
     useEffect(() => {
@@ -25,6 +27,10 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
 
     // ... existing locale switch logic ...
     const switchLocale = (targetLang: string) => {
+        // Priority 1: Check if dynamic page registered an alternate URL
+        if (targetLang === 'en' && alternates.en) return alternates.en;
+        if (targetLang === 'fr' && alternates.fr) return alternates.fr;
+
         if (!pathname) return '/';
         const segments = pathname.split('/').filter(Boolean);
         const currentLocale = ['en', 'fr'].includes(segments[0]) ? segments[0] : 'en';
