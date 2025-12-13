@@ -11,7 +11,7 @@ class Listing(Base):
     source = Column(String, index=True) # e.g., 'eBay', 'Rakuten'
     external_id = Column(String, index=True) # Unique ID from the source
     title = Column(String)
-    price = Column(Float)
+    price = Column(Float, index=True)
     currency = Column(String)
     condition = Column(String)
     url = Column(String)

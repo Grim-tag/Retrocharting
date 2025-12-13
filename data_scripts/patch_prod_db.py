@@ -64,3 +64,11 @@ with engine.connect() as conn:
         conn.execute(text("ALTER TABLE users ADD COLUMN is_collection_public BOOLEAN DEFAULT false"))
         conn.commit()
         print("Done.")
+
+    # Performance: Listings Index
+    try:
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_listings_price ON listings (price)"))
+        print("Index 'ix_listings_price' checked/created.")
+        conn.commit()
+    except Exception as e:
+        print(f"Index creation skipped/failed: {e}")
