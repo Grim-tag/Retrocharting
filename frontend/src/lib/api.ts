@@ -402,3 +402,43 @@ export async function bulkImport(items: ImportItem[], token: string): Promise<{ 
         throw new Error(error.response?.data?.detail || "Import failed");
     }
 }
+
+// --- Public Profile APIs ---
+
+export interface PublicUser {
+    username: string;
+    avatar_url?: string | null; // Allow null to match Python Optional
+    rank: string;
+    xp: number;
+    created_at: string; // ISO date
+    bio?: string;
+    is_collection_public: boolean;
+}
+
+export interface PublicCollectionItem {
+    product_name: string;
+    console_name: string;
+    image_url?: string | null;
+    condition: string;
+    product_id: number;
+}
+
+export async function getPublicProfile(username: string): Promise<PublicUser | null> {
+    try {
+        const response = await apiClient.get(`/users/${username}`);
+        return response.data;
+    } catch (error) {
+        console.error("Failed to fetch public profile", error);
+        return null;
+    }
+}
+
+export async function getPublicCollection(username: string): Promise<PublicCollectionItem[]> {
+    try {
+        const response = await apiClient.get(`/users/${username}/collection`);
+        return response.data;
+    } catch (error) {
+        console.error("Failed to fetch public collection", error);
+        return [];
+    }
+}
