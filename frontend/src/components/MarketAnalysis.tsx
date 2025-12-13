@@ -38,24 +38,36 @@ export default function MarketAnalysis({ product, dict, lang }: MarketAnalysisPr
     const cibPrice = product.cib_price || loosePrice * 1.5; // Fallback estimate if missing
     const newPrice = product.new_price || cibPrice * 2;
 
-    // Gap Analysis (Retro)
-    const gapRatio = cibPrice / (loosePrice || 1);
-    const gapText = gapRatio > 2.5 ? templates.gap_high : templates.gap_low;
+    // 3. Prepare Variables safely based on mode
+    let gapText = "";
+    let trendText = "";
+    let dealText = "";
+    let popularityText = "";
+    let actionText = "";
 
-    // Trend Analysis (Placeholder logic - would need real history trend)
-    // Randomly assigning stable/up/down based on ID for consistency without real trend data yet
-    const trendSeed = product.id % 3;
-    const trendText = trendSeed === 0 ? templates.trend_stable :
-        trendSeed === 1 ? templates.trend_up : templates.trend_down;
+    if (mode === 'retro') {
+        const gapRatio = cibPrice / (loosePrice || 1);
+        gapText = gapRatio > 2.5
+            ? (templates.gap_high || "")
+            : (templates.gap_low || "");
 
-    // Deal Analysis (Modern)
-    const savePercent = newPrice > 0 ? Math.round(((newPrice - loosePrice) / newPrice) * 100) : 0;
-    const dealText = savePercent > 20
-        ? templates.deal_good.replace('{{save_percent}}', savePercent.toString())
-        : templates.deal_bad;
+        const trendSeed = product.id % 3;
+        trendText = trendSeed === 0 ? (templates.trend_stable || "") :
+            trendSeed === 1 ? (templates.trend_up || "") : (templates.trend_down || "");
+    } else {
+        // Modern
+        const savePercent = newPrice > 0 ? Math.round(((newPrice - loosePrice) / newPrice) * 100) : 0;
 
-    const popularityText = trendSeed === 1 ? templates.pop_high : templates.pop_neutral;
-    const actionText = savePercent > 20 ? templates.action_buy : templates.action_wait;
+        if (templates.deal_good) {
+            dealText = savePercent > 20
+                ? templates.deal_good.replace('{{save_percent}}', savePercent.toString())
+                : (templates.deal_bad || "");
+        }
+
+        const trendSeed = product.id % 3;
+        popularityText = trendSeed === 1 ? (templates.pop_high || "") : (templates.pop_neutral || "");
+        actionText = savePercent > 20 ? (templates.action_buy || "") : (templates.action_wait || "");
+    }
 
     // 3. Generate Text
     const generateText = (template: string) => {
