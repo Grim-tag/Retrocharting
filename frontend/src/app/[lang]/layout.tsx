@@ -87,6 +87,7 @@ export default async function PublicLayout({
 
                             <Footer dict={dict} lang={lang} />
                         </AuthProvider>
+                    </LanguageAlternateProvider>
                 </CurrencyProvider>
             </body>
         </html>
