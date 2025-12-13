@@ -49,9 +49,12 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
             >
               {dict.home.hero.cta_browse}
             </Link>
-            <button className="bg-[#2a3142] text-white px-8 py-3 rounded font-bold hover:bg-[#353e54] transition-colors uppercase tracking-wide border border-[#353e54]">
+            <Link
+              href={getPath('collection')}
+              className="bg-[#2a3142] text-white px-8 py-3 rounded font-bold hover:bg-[#353e54] transition-colors uppercase tracking-wide border border-[#353e54]"
+            >
               {dict.home.hero.cta_collection}
-            </button>
+            </Link>
           </div>
         </div>
       </section>
