@@ -513,6 +513,7 @@ def get_related_products(product_id: int, db: Session = Depends(get_db)):
         ProductModel.product_name == current_product.product_name,
         ProductModel.id != product_id
     ).all()
+    return related
 @router.get("/sitemap", response_model=List[dict])
 def sitemap_products(
     limit: int = 10000, 
