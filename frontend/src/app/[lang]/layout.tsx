@@ -56,7 +56,7 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
 }
 
 import { AuthProvider } from "@/context/AuthContext";
-import { AuthProvider } from "@/context/AuthContext";
+
 import { CurrencyProvider } from "@/context/CurrencyContext";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
 
