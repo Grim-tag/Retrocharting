@@ -69,16 +69,25 @@ export async function generateMetadata({ params, searchParams }: { params: Promi
 
     const shortConsoleName = formatConsoleName(product.console_name);
 
+    const canonicalPath = getGameUrl(product, lang);
+    const canonicalUrl = `https://retrocharting.com${canonicalPath}`;
+
     if (lang === 'fr') {
         return {
             title: `${dict.product.market.suffix} ${product.product_name} ${shortConsoleName} & Argus | RetroCharting`,
             description: `Valeur actuelle et historique de prix pour ${product.product_name} sur ${product.console_name}. Suivez la cote de votre collection de jeux vidéo.`,
+            alternates: {
+                canonical: canonicalUrl,
+            }
         };
     }
 
     return {
         title: `${product.product_name} ${shortConsoleName} ${dict.product.market.suffix} | RetroCharting`,
         description: `Current market value and price history for ${product.product_name} on ${product.console_name}. Track your video game collection value.`,
+        alternates: {
+            canonical: canonicalUrl,
+        }
     };
 }
 

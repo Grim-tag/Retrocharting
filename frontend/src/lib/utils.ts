@@ -68,7 +68,8 @@ export function getGameUrl(product: { id: number; product_name: string; console_
         'fr': 'cote-prix',
         'en': 'prices'
     };
-    const suffix = suffixMap[lang] || 'prices';
+    const safeLang = lang ? lang.toLowerCase() : 'en';
+    const suffix = suffixMap[safeLang] || 'prices';
     const fullSlug = `${titleSlug}-${consoleSlug}-${suffix}-${product.id}`;
 
     // 4. Construct path (handle root for EN)

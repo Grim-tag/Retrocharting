@@ -51,11 +51,27 @@ export default function ConsoleGameCatalog({
         router.push(`/${lang}/${gamesSlug}/${systemSlug}?${params.toString()}`, { scroll: false });
     };
 
+    // Pagination State
+    const [visibleCount, setVisibleCount] = useState(50);
+    const LOAD_INCREMENT = 50;
+
+    // Reset pagination when genre changes
+    useEffect(() => {
+        setVisibleCount(LOAD_INCREMENT);
+    }, [selectedGenre]);
+
+    const handleLoadMore = () => {
+        setVisibleCount(prev => prev + LOAD_INCREMENT);
+    };
+
     // Filter products efficiently on client side
     const filteredProducts = useMemo(() => {
         if (!selectedGenre) return products;
         return products.filter(p => p.genre && p.genre.includes(selectedGenre));
     }, [products, selectedGenre]);
+
+    const displayedProducts = filteredProducts.slice(0, visibleCount);
+    const hasMore = visibleCount < filteredProducts.length;
 
     return (
         <div>
@@ -65,7 +81,7 @@ export default function ConsoleGameCatalog({
                     {selectedGenre && <span className="text-gray-500 ml-2 text-xl font-normal">/ {selectedGenre}</span>}
                 </h1>
                 <div className="text-gray-400 text-sm">
-                    Showing {filteredProducts.length} games
+                    Showing {displayedProducts.length} of {filteredProducts.length} games
                 </div>
             </div>
 
@@ -98,7 +114,7 @@ export default function ConsoleGameCatalog({
 
             {/* Game Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
-                {filteredProducts.map((product) => (
+                {displayedProducts.map((product) => (
                     <Link
                         key={product.id}
                         href={getGameUrl(product, lang)}
@@ -135,6 +151,17 @@ export default function ConsoleGameCatalog({
                     </Link>
                 ))}
             </div>
+
+            {hasMore && (
+                <div className="mt-8 flex justify-center">
+                    <button
+                        onClick={handleLoadMore}
+                        className="bg-[#2a3142] hover:bg-[#343b4d] text-white px-8 py-3 rounded-full font-bold transition-colors"
+                    >
+                        Load More ({filteredProducts.length - displayedProducts.length} remaining)
+                    </button>
+                </div>
+            )}
 
             {filteredProducts.length === 0 && (
                 <div className="text-center text-gray-400 py-12 bg-[#1f2533] rounded border border-[#2a3142]">
