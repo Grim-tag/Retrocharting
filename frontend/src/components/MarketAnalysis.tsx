@@ -24,10 +24,14 @@ export default function MarketAnalysis({ product, dict, lang }: MarketAnalysisPr
     };
 
     // 1. Determine Era (Retro vs Modern)
+    if (!product || !dict?.product?.seo) return null;
+
     // Basic logic: Check if console is in MODERN_SYSTEMS list
-    const isModern = MODERN_SYSTEMS.some(sys => product.console_name.includes(sys));
+    const isModern = MODERN_SYSTEMS.some(sys => product.console_name?.includes(sys));
     const mode = isModern ? 'modern' : 'retro';
     const templates = dict.product.seo[mode];
+
+    if (!templates) return null;
 
     // 2. Prepare Variables
     const loosePrice = product.loose_price || 0;
