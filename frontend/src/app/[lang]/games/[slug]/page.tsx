@@ -2,7 +2,6 @@ import Link from "next/link";
 import AddToWishlistButton from "@/components/AddToWishlistButton";
 import { getProductById, getProductHistory, getProductsByConsole, getGenres } from "@/lib/api";
 import ListingsTable from "@/components/ListingsTable";
-import ListingsTable from "@/components/ListingsTable";
 import MarketAnalysis from "@/components/MarketAnalysis";
 import AddToCollectionButton from "@/components/AddToCollectionButton";
 import PriceHistoryChart from "@/components/PriceHistoryChart";
