@@ -114,9 +114,7 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
                         >
                             {dict.header.actions.collection}
                         </button>
-                        <button className="text-sm font-medium text-gray-300 hover:text-white transition-colors">
-                            {dict.header.actions.wishlist}
-                        </button>
+
 
                         {/* Auth Section */}
                         {user ? (
@@ -265,13 +263,7 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
                             >
                                 {dict.header.actions.collection}
                             </Link>
-                            <Link
-                                href="#"
-                                className="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-[#2a3142] hover:text-white"
-                                onClick={() => setIsMobileMenuOpen(false)}
-                            >
-                                {dict.header.actions.wishlist}
-                            </Link>
+
                         </div>
 
                         {/* Mobile Auth */}
