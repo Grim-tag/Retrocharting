@@ -70,13 +70,16 @@ export default function MarketAnalysis({ product, dict, lang }: MarketAnalysisPr
         actionText = savePercent > 20 ? (templates.action_buy || "") : (templates.action_wait || "");
     }
 
+    const releaseYear = product.release_date ? new Date(product.release_date).getFullYear().toString() :
+        (product.first_release_date ? new Date(product.first_release_date).getFullYear().toString() : '????');
+
     // 3. Generate Text
     const generateText = (template: string) => {
         return template
             .replace(/{{name}}/g, product.product_name)
             .replace(/{{console}}/g, product.console_name)
             .replace(/{{platform}}/g, product.console_name) // Alias
-            .replace(/{{year}}/g, product.release_date ? new Date(product.release_date).getFullYear().toString() : '????')
+            .replace(/{{year}}/g, releaseYear)
             .replace(/{{loose_price}}/g, formatPrice(loosePrice))
             .replace(/{{cib_price}}/g, formatPrice(cibPrice))
             .replace(/{{new_price}}/g, formatPrice(newPrice))
@@ -90,7 +93,7 @@ export default function MarketAnalysis({ product, dict, lang }: MarketAnalysisPr
 
     return (
         <section className="bg-[#1f2533] border-y border-[#2a3142] py-8 my-8">
-            <div className="max-w-[1400px] mx-auto px-4 grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+            <div className="max-w-[1400px] mx-auto px-4 flex flex-col gap-8">
 
                 {/* Block 1: The Money Question */}
                 <div>

@@ -275,10 +275,7 @@ export default async function Page({
                         </div>
 
 
-                        {/* SEO Market Analysis (Full Width / Inserted Here) */}
-                        <div className="md:col-span-12 -mx-4 md:mx-0">
-                            <MarketAnalysis product={product} dict={dict} lang={lang} />
-                        </div>
+
 
                         {/* eBay Listings - The CORE Value */}
                         <div className="mb-8">
