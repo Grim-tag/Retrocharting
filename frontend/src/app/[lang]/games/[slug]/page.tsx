@@ -1,6 +1,6 @@
 import Link from "next/link";
 import AddToWishlistButton from "@/components/AddToWishlistButton";
-import { getProductById, getProductHistory, getProductsByConsole, getGenres } from "@/lib/api";
+import { getProductHistory, getProductsByConsole, getGenres } from "@/lib/api";
 import ListingsTable from "@/components/ListingsTable";
 import MarketAnalysis from "@/components/MarketAnalysis";
 import AddToCollectionButton from "@/components/AddToCollectionButton";
@@ -46,8 +46,6 @@ function isSystemSlug(slug: string): string | null {
 
 import { getProductById } from "@/lib/cached-api"; // Use Cached Version
 import AlternateLinksRegistrar from "@/components/AlternateLinksRegistrar";
-
-// ... imports ...
 
 export async function generateMetadata({ params, searchParams }: { params: Promise<{ slug: string; lang: string }>; searchParams: Promise<{ genre?: string }> }): Promise<Metadata> {
     const { slug, lang } = await params;

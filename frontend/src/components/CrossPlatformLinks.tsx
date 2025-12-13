@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getRelatedProducts, Product } from "@/lib/api";
+import { getGameUrl } from "@/lib/utils";
 
-export default function CrossPlatformLinks({ productId }: { productId: number }) {
+export default function CrossPlatformLinks({ productId, lang }: { productId: number; lang: string }) {
     const [related, setRelated] = useState<Product[]>([]);
 
     useEffect(() => {
@@ -28,7 +29,7 @@ export default function CrossPlatformLinks({ productId }: { productId: number })
                 {related.map((product) => (
                     <Link
                         key={product.id}
-                        href={`/games/${product.id}`}
+                        href={getGameUrl(product, lang)}
                         className="bg-[#2a3142] hover:bg-[#ff6600] text-gray-300 hover:text-white text-xs font-medium py-1.5 px-3 rounded transition-colors"
                     >
                         {product.console_name}
