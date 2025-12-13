@@ -44,6 +44,10 @@ function isSystemSlug(slug: string): string | null {
     return found || null; // Returns the proper System Name ("Nintendo 64") or null
 }
 
+import { getProductById } from "@/lib/cached-api"; // Use Cached Version
+
+// ... imports ...
+
 export async function generateMetadata({ params, searchParams }: { params: Promise<{ slug: string; lang: string }>; searchParams: Promise<{ genre?: string }> }): Promise<Metadata> {
     const { slug, lang } = await params;
     const dict = await getDictionary(lang);
@@ -59,16 +63,18 @@ export async function generateMetadata({ params, searchParams }: { params: Promi
 
     // 2. Default: Game Page
     const id = getIdFromSlug(slug);
-    const product = await getProductById(id);
+    const product = await getProductById(id); // Cached call
 
     if (!product) {
         return {
             title: "Product Not Found | RetroCharting",
         };
     }
-
+    // ...
+    // (Rest of metadata stays same, relying on product)
     const shortConsoleName = formatConsoleName(product.console_name);
 
+    // ... (rest of metadata logic) ...
     const canonicalPath = getGameUrl(product, lang);
     const canonicalUrl = `https://retrocharting.com${canonicalPath}`;
 
@@ -111,6 +117,7 @@ export default async function Page({
     const systemName = isSystemSlug(slug);
 
     if (systemName) {
+        // ... (Console logic same) ...
         // === CONSOLE CATALOG VIEW ===
         const [products, genres] = await Promise.all([
             getProductsByConsole(systemName, 2000, undefined, 'game'),
@@ -141,7 +148,12 @@ export default async function Page({
 
     // 2. DEFAULT: GAME DETAIL VIEW
     const id = getIdFromSlug(slug);
-    const product = await getProductById(id);
+
+    // Parallel Fetching for Game View
+    const [product, history] = await Promise.all([
+        getProductById(id), // Cached, so if metadata ran first, this is instant
+        getProductHistory(id)
+    ]);
 
     if (!product) {
         return (
@@ -154,7 +166,7 @@ export default async function Page({
         );
     }
 
-    const history = await getProductHistory(id);
+    // const history = await getProductHistory(id); // create parallel above
     const shortConsoleName = formatConsoleName(product.console_name);
 
     const breadcrumbItems = [

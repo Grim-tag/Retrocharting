@@ -53,3 +53,14 @@ with engine.connect() as conn:
         # Also ensuring PC ID exists just in case
         conn.commit()
         print("Done.")
+
+    # Phase 2: User Profile
+    try:
+        conn.execute(text("SELECT bio FROM users LIMIT 1"))
+        print("'bio' exists.")
+    except Exception:
+        print("Adding 'bio' and 'is_collection_public'...")
+        conn.execute(text("ALTER TABLE users ADD COLUMN bio TEXT"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN is_collection_public BOOLEAN DEFAULT false"))
+        conn.commit()
+        print("Done.")

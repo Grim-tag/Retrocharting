@@ -445,7 +445,7 @@ def get_product_listings(
     db_listings = db.query(Listing).filter(
         Listing.product_id == product_id,
         Listing.status == 'active'
-    ).all()
+    ).order_by(Listing.price.asc()).all()
     
     return db_listings
 

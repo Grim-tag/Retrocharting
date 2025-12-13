@@ -21,6 +21,10 @@ class User(Base):
     xp = Column(Integer, default=0)
     last_active = Column(DateTime, default=datetime.utcnow)
     ip_address = Column(String, nullable=True)
+    
+    # Social / Profile
+    is_collection_public = Column(Boolean, default=False)
+    bio = Column(String, nullable=True)
 
     # Relationships
     collection_items = relationship("CollectionItem", back_populates="user")

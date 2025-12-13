@@ -27,6 +27,10 @@ class UserResponse(UserBase):
     rank: str
     xp: int
     
+    # Social
+    is_collection_public: bool = False
+    bio: Optional[str] = None
+    
     class Config:
         from_attributes = True
 
@@ -34,6 +38,8 @@ class UserUpdate(BaseModel):
     username: Optional[str] = None
     full_name: Optional[str] = None
     avatar_url: Optional[str] = None
+    bio: Optional[str] = None
+    is_collection_public: Optional[bool] = None
 
 # --- Google Auth Request ---
 class GoogleAuthRequest(BaseModel):
