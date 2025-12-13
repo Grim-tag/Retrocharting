@@ -200,7 +200,7 @@ export default async function Page({
                     <div className="md:col-span-4 flex flex-col gap-4">
                         <div className="bg-[#1f2533] border border-[#2a3142] p-4 rounded flex items-center justify-center min-h-[400px]">
                             {product.image_url ? (
-                                <img src={product.image_url} alt={`${product.product_name} ${product.console_name}`} className="max-h-[500px] w-auto h-auto object-contain shadow-lg" />
+                                <img src={product.image_url} alt={`${product.product_name} ${product.console_name}`} className="h-[500px] w-auto object-contain shadow-lg" />
                             ) : (
                                 <span className="text-gray-500 font-bold text-xl">No Image</span>
                             )}
