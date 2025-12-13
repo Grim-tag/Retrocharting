@@ -148,8 +148,8 @@
             "retro": {
                 "h1": "What is the value of {{name}} ({{console}})?",
                 "h2": "Is {{name}} rare?",
-                "value_analysis": "Currently, the value of a **Complete In Box (CIB)** copy of **{{name}}** is estimated around **{{cib_price}}**. For collectors looking for a **Loose** copy, transactions usually happen around **{{loose_price}}**. The price gap suggests that {{gap_text}}.",
-                "context_analysis": "Released in **{{year}}** on **{{console}}**, this title is an interesting piece for any {{platform}} collector. {{trend_text}}",
+                "value_analysis": "Currently, the value of a Complete In Box (CIB) copy of {{name}} is estimated around {{cib_price}}. For collectors looking for a Loose copy, transactions usually happen around {{loose_price}}. The price gap suggests that {{gap_text}}.",
+                "context_analysis": "Released{{date_part}} on {{console}}, this title is an interesting piece for any {{platform}} collector. {{trend_text}}",
                 "gap_high": "the box and manual are particularly sought after and hard to find",
                 "gap_low": "the box is relatively common",
                 "trend_stable": "The game's value remains stable, making it a safe bet for your collection.",
@@ -159,8 +159,8 @@
             "modern": {
                 "h1": "Where to buy {{name}} ({{console}}) at the best price?",
                 "h2": "Should you buy {{name}} new or used?",
-                "value_analysis": "Looking for **{{name}}** at the best price? Currently, you can find it pre-owned around **{{loose_price}}**, while a brand new copy trades at **{{new_price}}**. {{deal_text}}",
-                "context_analysis": "Available on **{{console}}**, this game is {{popularity_text}}. It's a great time to {{action_text}}.",
+                "value_analysis": "Looking for {{name}} at the best price? Currently, you can find it pre-owned around {{loose_price}}, while a brand new copy trades at {{new_price}}. {{deal_text}}",
+                "context_analysis": "Available on {{console}}, this game is {{popularity_text}}. It's a great time to {{action_text}}.",
                 "deal_good": "Choosing pre-owned allows a significant saving of {{save_percent}}% compared to new.",
                 "deal_bad": "Since the price difference is minimal, we recommend opting for a brand new copy.",
                 "pop_high": "in high demand right now",

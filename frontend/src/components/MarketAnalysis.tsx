@@ -73,13 +73,18 @@ export default function MarketAnalysis({ product, dict, lang }: MarketAnalysisPr
     const releaseYear = product.release_date ? new Date(product.release_date).getFullYear().toString() :
         (product.first_release_date ? new Date(product.first_release_date).getFullYear().toString() : '????');
 
+    const datePart = releaseYear !== '????'
+        ? (lang === 'fr' ? ` en ${releaseYear}` : ` in ${releaseYear}`)
+        : '';
+
     // 3. Generate Text
     const generateText = (template: string) => {
         return template
             .replace(/{{name}}/g, product.product_name)
             .replace(/{{console}}/g, product.console_name)
             .replace(/{{platform}}/g, product.console_name) // Alias
-            .replace(/{{year}}/g, releaseYear)
+            .replace(/{{date_part}}/g, datePart)
+            // .replace(/{{year}}/g, releaseYear) -- Removed as we use date_part now for the sentence context
             .replace(/{{loose_price}}/g, formatPrice(loosePrice))
             .replace(/{{cib_price}}/g, formatPrice(cibPrice))
             .replace(/{{new_price}}/g, formatPrice(newPrice))

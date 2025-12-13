@@ -148,8 +148,8 @@
             "retro": {
                 "h1": "Quelle est la cote de {{name}} ({{console}}) ?",
                 "h2": "Est-ce que {{name}} est rare ?",
-                "value_analysis": "Actuellement, la valeur d'un exemplaire **Complet en Boite (CIB)** de **{{name}}** est estimée à environ **{{cib_price}}**. Pour les collectionneurs cherchant une copie **Loose (Cartouche seule)**, les transactions s'effectuent généralement autour de **{{loose_price}}**. L'écart de prix suggère que {{gap_text}}.",
-                "context_analysis": "Sorti en **{{year}}** sur **{{console}}**, ce titre est une pièce intéressante pour tout collectionneur de {{platform}}. {{trend_text}}",
+                "value_analysis": "Actuellement, la valeur d'un exemplaire Complet en Boite (CIB) de {{name}} est estimée à environ {{cib_price}}. Pour les collectionneurs cherchant une copie Loose (Cartouche seule), les transactions s'effectuent généralement autour de {{loose_price}}. L'écart de prix suggère que {{gap_text}}.",
+                "context_analysis": "Sorti{{date_part}} sur {{console}}, ce titre est une pièce intéressante pour tout collectionneur de {{platform}}. {{trend_text}}",
                 "gap_high": "la boite et la notice sont particulièrement recherchées et difficiles à trouver",
                 "gap_low": "la boite est relativement courante",
                 "trend_stable": "La cote du jeu reste stable, en faisant une valeur sûre pour votre collection.",
@@ -159,8 +159,8 @@
             "modern": {
                 "h1": "Où acheter {{name}} ({{console}}) au meilleur prix ?",
                 "h2": "Faut-il acheter {{name}} neuf ou d'occasion ?",
-                "value_analysis": "Vous cherchez **{{name}}** au meilleur prix ? Actuellement, vous pouvez le trouver d'occasion aux alentours de **{{loose_price}}**, tandis qu'une version neuve se négocie à **{{new_price}}**. {{deal_text}}",
-                "context_analysis": "Disponible sur **{{console}}**, ce jeu est {{popularity_text}}. C'est le moment idéal pour {{action_text}}.",
+                "value_analysis": "Vous cherchez {{name}} au meilleur prix ? Actuellement, vous pouvez le trouver d'occasion aux alentours de {{loose_price}}, tandis qu'une version neuve se négocie à {{new_price}}. {{deal_text}}",
+                "context_analysis": "Disponible sur {{console}}, ce jeu est {{popularity_text}}. C'est le moment idéal pour {{action_text}}.",
                 "deal_good": "Opter pour l'occasion permet une économie significative de {{save_percent}}% par rapport au neuf.",
                 "deal_bad": "La différence de prix étant minime, nous vous conseillons de privilégier une version neuve.",
                 "pop_high": "très demandé en ce moment",
