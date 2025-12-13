@@ -63,7 +63,7 @@ export default async function ConsoleHardwarePage({ params }: { params: Promise<
 
                                     {/* Name & Image */}
                                     <div className="col-span-6 md:col-span-5 flex items-center gap-3">
-                                        <div className="w-12 h-16 bg-[#0f121e] border border-[#2a3142] flex-shrink-0 flex items-center justify-center overflow-hidden">
+                                        <div className="w-20 h-24 bg-[#0f121e] border border-[#2a3142] flex-shrink-0 flex items-center justify-center overflow-hidden">
                                             {product.image_url ? (
                                                 <img src={product.image_url} alt={product.product_name} className="object-cover w-full h-full" />
                                             ) : (

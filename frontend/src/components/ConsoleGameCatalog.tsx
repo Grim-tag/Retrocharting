@@ -104,12 +104,12 @@ export default function ConsoleGameCatalog({
                         href={getGameUrl(product, lang)}
                         className="bg-[#1f2533] border border-[#2a3142] rounded overflow-hidden hover:border-[#ff6600] transition-all group flex flex-col"
                     >
-                        <div className="aspect-[3/4] p-4 flex items-center justify-center bg-[#151922] relative">
+                        <div className="aspect-[3/4] flex items-center justify-center bg-[#151922] relative">
                             {product.image_url ? (
                                 <img
                                     src={product.image_url}
                                     alt={product.product_name}
-                                    className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform"
+                                    className="w-full h-full object-contain group-hover:scale-105 transition-transform"
                                     loading="lazy"
                                 />
                             ) : (
