@@ -20,14 +20,14 @@ interface PriceHistoryChartProps {
 import { useCurrency } from "@/context/CurrencyContext";
 import { getCurrencySymbol } from "@/lib/currency";
 
-export default function PriceHistoryChart({ history, className, dict }: PriceHistoryChartProps & { dict: any }) {
+export default function PriceHistoryChart({ history, className, dict }: PriceHistoryChartProps & { dict?: any }) {
     const { currency } = useCurrency();
     const symbol = getCurrencySymbol(currency);
 
     if (!history || history.length === 0) {
         return (
             <div className={`bg-[#1f2533] border border-[#2a3142] rounded flex items-center justify-center text-gray-500 ${className || 'h-[300px]'}`}>
-                {dict.product.market.no_history}
+                {dict?.product?.market?.no_history || "No price history available."}
             </div>
         );
     }
