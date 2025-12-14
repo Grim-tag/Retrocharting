@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { PlayIcon, StopIcon, ArrowTopRightOnSquareIcon, FireIcon } from '@heroicons/react/24/outline';
 import { FireIcon as FireIconSolid } from '@heroicons/react/24/solid';
+import { apiClient } from '@/lib/client';
 
 export default function SniperPage({ params }: { params: { lang: string } }) {
     const { user } = useAuth();
@@ -30,8 +31,8 @@ export default function SniperPage({ params }: { params: { lang: string } }) {
 
     const fetchResults = async () => {
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/sniper/search/vinted?query=${encodeURIComponent(query)}`);
-            const data = await res.json();
+            const res = await apiClient.get(`/sniper/search/vinted?query=${encodeURIComponent(query)}`);
+            const data = res.data;
 
             if (!data.success) {
                 throw new Error(data.error || "Unknown Sniper Error");
