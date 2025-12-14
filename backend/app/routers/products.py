@@ -624,8 +624,10 @@ def get_product_listings(
 
     should_refresh = True
     if db_listings:
-        # Check if the most recent update was less than 1 hour ago
-        if db_listings[0].last_updated > datetime.utcnow() - timedelta(hours=1):
+        # Check if the most recent update was less than 15 minutes ago
+        # Use max() to get the freshest timestamp from the set
+        latest_update = max(l.last_updated for l in db_listings)
+        if latest_update > datetime.utcnow() - timedelta(minutes=15):
             should_refresh = False
         
         if should_refresh:
