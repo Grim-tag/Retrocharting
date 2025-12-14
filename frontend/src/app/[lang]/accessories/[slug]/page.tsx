@@ -105,12 +105,9 @@ export default async function Page({
     if (systemName) {
         // === ACCESSORIES CATALOG VIEW ===
         const [products, genres] = await Promise.all([
-            getProductsByConsole(systemName, 500),
+            getProductsByConsole(systemName, 500, undefined, 'accessory'),
             getGenres(systemName)
         ]);
-
-        // Filter purely for Accessories/Controllers
-        const accessoryProducts = products.filter(p => p.genre && ['Accessories', 'Controllers', 'Accessory'].includes(p.genre));
 
         const breadcrumbItems = [
             { label: dict.header.nav.accessories, href: `/${lang}/${accessoriesSlug}` },
@@ -122,11 +119,11 @@ export default async function Page({
                 <div className="max-w-[1400px] mx-auto px-4">
                     <Breadcrumbs items={breadcrumbItems} />
                     <ConsoleGameCatalog
-                        products={accessoryProducts.length > 0 ? accessoryProducts : products} // Fallback? No, strictly accessories usually.
-                        genres={['Accessories', 'Controllers']} // Force genres
+                        products={products}
+                        genres={[]}
                         systemName={systemName}
                         lang={lang}
-                        gamesSlug={accessoriesSlug} // Trick component to use accessories base path? 
+                        gamesSlug={accessoriesSlug}
                         systemSlug={slug}
                     />
                 </div>
