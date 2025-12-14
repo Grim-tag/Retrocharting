@@ -33,6 +33,6 @@ export default function robots(): MetadataRoute.Robots {
                 '/fr/user/',
             ],
         },
-        sitemap: 'https://retrocharting.com/sitemap.xml',
+        sitemap: 'https://retrocharting.com/sitemap_index.xml',
     };
 }
