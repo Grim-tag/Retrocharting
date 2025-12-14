@@ -133,8 +133,20 @@ export default async function sitemap({ id }: { id: string }): Promise<MetadataR
             });
         });
 
+        // If products are empty, return explicit "Empty" URL to debug
+        if (products.length === 0) {
+            return [{
+                url: `${BASE_URL}/debug/empty_products_chunk_${chunkIndex}`,
+                lastModified: new Date(),
+            }];
+        }
+
         return productUrls;
     }
 
-    return [];
+    // DEBUG FALLBACK if no ID matched
+    return [{
+        url: `${BASE_URL}/debug/unmatched_id_${id}`,
+        lastModified: new Date(),
+    }];
 }
