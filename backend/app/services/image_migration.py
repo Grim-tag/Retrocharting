@@ -2,6 +2,7 @@
 import cloudinary
 import cloudinary.uploader
 import time
+import re
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from app.models.product import Product
@@ -18,6 +19,28 @@ cloudinary.config(
   api_secret = settings.CLOUDINARY_API_SECRET,
   secure = True
 )
+
+def slugify(text: str) -> str:
+    """
+    Creates an SEO-friendly slug from text.
+    "Star Wars Jedi: Fallen Order" -> "star-wars-jedi-fallen-order"
+    """
+    if not text:
+        return "unknown"
+    
+    # 1. Lowercase
+    slug = text.lower()
+    
+    # 2. Replace specific chars
+    slug = slug.replace("'", "").replace(".", "")
+    
+    # 3. Replace non-alphanumeric with hyphen
+    slug = re.sub(r'[^a-z0-9]+', '-', slug)
+    
+    # 4. Trim hyphens
+    slug = slug.strip('-')
+    
+    return slug
 
 def migrate_product_images(db: Session, limit: int = 50):
     """
@@ -40,17 +63,19 @@ def migrate_product_images(db: Session, limit: int = 50):
     for product in candidates:
         original_url = product.image_url
         try:
-            # Upload to Cloudinary
-            # folder="retrocharting/products"
-            # We can use the product ID as public_id for cleaner URLs if desired, but auto is safer to avoid collisions if not careful.
+            # SEO Filename Construction
+            product_slug = slugify(product.product_name)
+            public_id = f"{product_slug}-{product.id}"
             
-            logger.info(f"Migrating image for {product.bread_name}: {original_url}")
+            logger.info(f"Migrating image for {product.product_name} -> {public_id}.webp")
             
             upload_result = cloudinary.uploader.upload(
                 original_url, 
                 folder="retrocharting/products",
-                public_id=f"product_{product.id}_{int(time.time())}", # unique ID
-                overwrite=True
+                public_id=public_id,
+                format="webp",          # Force WebP
+                overwrite=True,         # Deterministic ID allows overwrite
+                unique_filename=False   # Keep exact name (no random chars)
             )
             
             new_url = upload_result['secure_url']

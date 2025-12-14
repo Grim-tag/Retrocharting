@@ -1,7 +1,9 @@
+
 import time
 import random
 import cloudinary
 import cloudinary.uploader
+import re
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, text, and_
 from datetime import datetime
@@ -10,7 +12,6 @@ from bs4 import BeautifulSoup
 import json
 
 from app.db.session import SessionLocal
-from app.db.session import SessionLocal
 # Models imported inside functions to prevent circular imports
 from app.core.config import settings
 
@@ -18,8 +19,31 @@ from app.core.config import settings
 cloudinary.config( 
   cloud_name = settings.CLOUDINARY_CLOUD_NAME, 
   api_key = settings.CLOUDINARY_API_KEY, 
-  api_secret = settings.CLOUDINARY_API_SECRET 
+  api_secret = settings.CLOUDINARY_API_SECRET,
+  secure = True
 )
+
+def slugify(text: str) -> str:
+    """
+    Creates an SEO-friendly slug from text.
+    "Star Wars Jedi: Fallen Order" -> "star-wars-jedi-fallen-order"
+    """
+    if not text:
+        return "unknown"
+    
+    # 1. Lowercase
+    slug = text.lower()
+    
+    # 2. Replace specific chars
+    slug = slug.replace("'", "").replace(".", "")
+    
+    # 3. Replace non-alphanumeric with hyphen
+    slug = re.sub(r'[^a-z0-9]+', '-', slug)
+    
+    # 4. Trim hyphens
+    slug = slug.strip('-')
+    
+    return slug
 
 async def scrape_single_product(db: Session, product: "Product"):
     """
@@ -154,9 +178,7 @@ def scrape_missing_data(max_duration: int = 600, limit: int = 50):
             product_ids = [p.id for p in products]
             print(f"Dispatching batch of {len(product_ids)} games to workers...")
             
-            # Use ThreadPoolExecutor
             with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-                # Map product IDs to futures
                 futures = {executor.submit(process_product_id, pid): pid for pid in product_ids}
                 
                 for future in as_completed(futures):
@@ -168,14 +190,12 @@ def scrape_missing_data(max_duration: int = 600, limit: int = 50):
                         success = future.result()
                         if success:
                             processed_count += 1
-                            # Update log periodically (not every single item to reduce locking)
                             if processed_count % 5 == 0:
                                 db.query(ScraperLog).filter(ScraperLog.id == current_log_id).update({"items_processed": processed_count})
                                 db.commit()
                     except Exception as e:
                         print(f"Worker exception: {e}")
 
-            # Sleep slightly between batches to execute a 'breath' check
             if time.time() - start_time > max_duration:
                 break
                 
@@ -218,8 +238,6 @@ def _update_product_via_api(db: Session, product: "Product") -> bool:
         params["id"] = product.pricecharting_id
     else:
         # Search by name if no ID
-        # Note: API search endpoint is /api/products, product endpoint is /api/product
-        # Detailed logic: if no ID, search first.
         search_url = "https://www.pricecharting.com/api/products"
         search_params = {"t": token, "q": f"{product.console_name} {product.product_name}"}
         try:
@@ -227,8 +245,6 @@ def _update_product_via_api(db: Session, product: "Product") -> bool:
              if res.status_code == 200:
                  data = res.json()
                  if "products" in data and len(data["products"]) > 0:
-                     # Optimistic match: take first result
-                     # Ensure console matches loosely if possible
                      best_match = data["products"][0]
                      product.pricecharting_id = int(best_match["id"])
                      params["id"] = product.pricecharting_id
@@ -258,10 +274,8 @@ def _update_product_via_api(db: Session, product: "Product") -> bool:
         if "manual-only-price" in data: product.manual_only_price = float(data["manual-only-price"]) / 100.0
         
         # Add Price History Entry (Today)
-        # We add one entry for today to keep history alive
         today_date = datetime.utcnow().date()
         
-        # Helper to upsert history for today
         def upsert_history(price_val, cond):
             if price_val is None: return
             exists = db.query(PriceHistory).filter(
@@ -299,7 +313,6 @@ def _scrape_html_logic(db: Session, product: "Product") -> bool:
     Returns True if successful, False otherwise.
     """
     from app.models.price_history import PriceHistory
-    from app.models.price_history import PriceHistory
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
     }
@@ -314,7 +327,6 @@ def _scrape_html_logic(db: Session, product: "Product") -> bool:
         product_slug = product_slug.replace('--', '-')
         
     url = f"https://www.pricecharting.com/game/{console_slug}/{product_slug}"
-    # print(f"Scraping {product.product_name}...")
     
     try:
         response = requests.get(url, headers=headers, timeout=10)
@@ -327,31 +339,22 @@ def _scrape_html_logic(db: Session, product: "Product") -> bool:
                 if img and img.get('src') and "shim.gif" not in img.get('src'):
                     original_url = img.get('src')
                     try:
-                        # Upload to Cloudinary
-                        upload_result = cloudinary.uploader.upload(original_url, folder="retrocharting/products")
+                        # Upload to Cloudinary with SEO Logic
+                        p_slug = slugify(product.product_name)
+                        public_id = f"{p_slug}-{product.id}"
+                        
+                        upload_result = cloudinary.uploader.upload(
+                            original_url, 
+                            folder="retrocharting/products",
+                            public_id=public_id,
+                            format="webp",
+                            overwrite=True,
+                            unique_filename=False
+                        )
                         product.image_url = upload_result['secure_url']
                     except Exception as e:
                         print(f"  Cloudinary upload failed: {e}")
                         product.image_url = original_url
-
-            # 2. Description (Disabled in favor of IGDB API)
-            # desc_elem = soup.select_one('#product_description')
-            # if desc_elem:
-            #     product.description = desc_elem.get_text(strip=True).replace("Description:", "").strip()
-
-            # 3. Details (Disabled in favor of IGDB API)
-            # for tr in soup.select('tr'):
-            #     tds = tr.select('td')
-            #     if len(tds) >= 2:
-            #         key = tds[0].get_text(strip=True)
-            #         value = tds[1].get_text(strip=True)
-            #         
-            #         if "Genre:" in key: product.genre = value.replace("edit", "").strip()
-            #         elif "Publisher:" in key: product.publisher = value.replace("edit", "").strip()
-            #         elif "Developer:" in key: product.developer = value.replace("edit", "").strip()
-            #         elif "ESRB Rating:" in key: product.esrb_rating = value.replace("edit", "").strip()
-            #         elif "Player Count:" in key: product.players = value.replace("edit", "").strip()
-            #         elif "Description:" in key: product.description = value.strip()
 
             # 4. Prices
             price_ids = {
