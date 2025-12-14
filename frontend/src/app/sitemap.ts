@@ -32,10 +32,16 @@ export async function generateSitemaps() {
     return sitemaps;
 }
 
-export default async function sitemap({ id }: { id: string }): Promise<MetadataRoute.Sitemap> {
+type SitemapProps = {
+    id: string | Promise<string>;
+}
+
+export default async function sitemap({ id }: SitemapProps): Promise<MetadataRoute.Sitemap> {
+    // CRITICAL FIX: Next.js 15+ sometimes passes params as Promises. Await it.
+    const resolvedId = (id instanceof Promise) ? await id : id;
 
     // --- STATIC SITEMAP ---
-    if (id === 'static') {
+    if (resolvedId === 'static') {
         const staticRoutes: MetadataRoute.Sitemap = [];
         const langs = ['en', 'fr'];
         const mainPages = ['', 'login', 'register'];
@@ -114,7 +120,7 @@ export default async function sitemap({ id }: { id: string }): Promise<MetadataR
     }
 
     // --- PRODUCT SITEMAPS (Chunked) ---
-    const chunkIndex = parseInt(id);
+    const chunkIndex = parseInt(resolvedId);
     if (!isNaN(chunkIndex)) {
         const skip = chunkIndex * CHUNK_SIZE;
         const products = await getSitemapProducts(CHUNK_SIZE, skip);
@@ -136,7 +142,7 @@ export default async function sitemap({ id }: { id: string }): Promise<MetadataR
         // If products are empty, return explicit "Empty" URL to debug
         if (products.length === 0) {
             return [{
-                url: `${BASE_URL}/debug/empty_products_chunk_${chunkIndex}`,
+                url: `${BASE_URL}/debug/empty_products_chunk_${chunkIndex}_skip_${skip}`,
                 lastModified: new Date(),
             }];
         }
@@ -146,7 +152,7 @@ export default async function sitemap({ id }: { id: string }): Promise<MetadataR
 
     // DEBUG FALLBACK if no ID matched
     return [{
-        url: `${BASE_URL}/debug/unmatched_id_${id}`,
+        url: `${BASE_URL}/debug/unmatched_id_${resolvedId}`,
         lastModified: new Date(),
     }];
 }
