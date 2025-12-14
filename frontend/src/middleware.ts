@@ -1,3 +1,4 @@
+
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { reverseRouteMap } from "@/lib/route-config";
@@ -10,11 +11,14 @@ export function middleware(request: NextRequest) {
     const pathname = request.nextUrl.pathname;
 
     // 1. Skip paths that should not be localized
+    // CRITICAL FIX: Explicitly ignore sitemap.xml and robot.txt
     if (
         pathname.startsWith("/api") || // API routes
         pathname.startsWith("/_next") || // Next.js internals
         pathname.includes(".") || // Static files (images, favicon, etc.)
-        pathname.startsWith("/admin") // Admin panel
+        pathname.startsWith("/admin") || // Admin panel
+        pathname.includes("sitemap") ||   // EXCLUDE SITEMAP (Index & Children)
+        pathname.includes("robots.txt")   // EXCLUDE ROBOTS
     ) {
         return NextResponse.next();
     }
