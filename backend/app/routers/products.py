@@ -233,7 +233,48 @@ def update_listings_background(product_id: int):
                     # Amazon is sensitive to extra words like "PAL", "JP"
                     # Create a cleaner query for Amazon
                     clean_query = query.replace("PAL", "").replace("JP", "").replace("NTSC", "").replace("  ", " ").strip()
-                    return amazon_client.search_items(clean_query, limit=10)
+                    raw_results = amazon_client.search_items(clean_query, limit=10)
+                    
+                    # RELEVANCE FILTERING
+                    # Amazon Search is "fuzzy", so we must filter out junk (Lexibook, Generic, etc.)
+                    filtered = []
+                    
+                    # Key terms from Console Name (e.g. "Nintendo 64" -> ["nintendo", "64"])
+                    # We require at least one specific console term to be present
+                    console_terms = [t.lower() for t in product.console_name.split() if len(t) > 2]
+                    
+                    # Also product name terms
+                    prod_terms = [t.lower() for t in product.product_name.split() if len(t) > 3]
+
+                    for item in raw_results:
+                        title_lower = item['title'].lower()
+                        
+                        # 1. Check Console Match (Critical)
+                        # If the product is for "Nintendo 64", the result MUST mention "64" or "Nintendo"
+                        # For NES ("Nintendo NES"), must mention "NES" or "Nintendo"
+                        # But Lexibook doesn't mention either properly usually.
+                        
+                        # Exception: "Lexibook" is explicitly junk for us?
+                        if "lexibook" in title_lower:
+                            continue
+                            
+                        # Strict check: Does it contain the console name?
+                        # "Vampire ... PS5" vs "Playstation 5". 
+                        # This is hard to generalize perfectly but:
+                        
+                        # Simple Check: Overlap Score
+                        # Count how many console terms are in the title
+                        match_count = sum(1 for term in console_terms if term in title_lower)
+                        if match_count == 0 and len(console_terms) > 0:
+                            # Verify if maybe it uses an Acronym? (PS5 vs Playstation 5)
+                            # For now, let's just trust console_terms.
+                            # If product is NES, terms=["nintendo", "nes"] -> Result Lexibook (0 matches) -> Drop.
+                            continue
+
+                        filtered.append(item)
+                        
+                    return filtered
+
                 except Exception as e:
                     print(f"Amazon Fetch Error: {e}")
                     return []
