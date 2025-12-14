@@ -20,8 +20,12 @@ class AmazonClient:
             "engine": "google_shopping", # Using Google Shopping as it's often cheaper/cleaner API-wise or actually Amazon?
             # User asked for Amazon. SerpApi "Amazon" engine exists.
             # Let's use "amazon" engine.
+            # ERROR FIX: Amazon engine uses 'k' or 'q'? 
+            # Error said: Missing query `k` or `node`. So it wants `k`.
             "engine": "amazon",
-            "q": query,
+            "q": query, # Keep q as fallback? No, replace with k if strict.
+            # Actually, let's pass both to be safe or just k?
+            "k": query, # Amazon search query
             "api_key": self.api_key,
             "type": "search",
             "amazon_domain": "amazon.fr", # Target French Amazon since locale is FR often
