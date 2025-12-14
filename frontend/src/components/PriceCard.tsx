@@ -17,8 +17,18 @@ export default function PriceCard({ label, price, color = "text-white", definiti
     const hasPrice = price !== null && price !== undefined && price > 0;
     const { currency } = useCurrency();
 
+    // Helper for dynamic font size
+    const formattedPrice = hasPrice ? formatPrice(price, currency) : "--";
+    const isLongPrice = formattedPrice.length > 8; // e.g. €1,234.56 is 9 chars
+    const isVeryLongPrice = formattedPrice.length > 10; // e.g. €10,234.56
+
+    // Dynamic classes
+    let fontSizeClass = "text-xl sm:text-3xl";
+    if (isVeryLongPrice) fontSizeClass = "text-lg sm:text-xl";
+    else if (isLongPrice) fontSizeClass = "text-lg sm:text-2xl";
+
     return (
-        <div className={`bg-[#1f2533] border ${bestValue ? 'border-[#007bff] shadow-[0_0_15px_rgba(0,123,255,0.2)]' : 'border-[#2a3142]'} p-3 sm:p-6 rounded text-center relative group transition-transform hover:-translate-y-1 h-full flex flex-col justify-center`}>
+        <div className={`bg-[#1f2533] border ${bestValue ? 'border-[#007bff] shadow-[0_0_15px_rgba(0,123,255,0.2)]' : 'border-[#2a3142]'} p-3 sm:p-6 rounded text-center relative group transition-transform hover:-translate-y-1 h-full flex flex-col justify-center overflow-hidden`}>
             {bestValue && (
                 <div className="absolute top-0 right-0 bg-[#007bff] text-white text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 sm:px-2 sm:py-1 uppercase tracking-wider rounded-bl">
                     Best
@@ -39,9 +49,9 @@ export default function PriceCard({ label, price, color = "text-white", definiti
             </div>
 
             {/* Price Display */}
-            <div className={`text-xl sm:text-3xl font-bold ${hasPrice ? color : 'text-gray-600'}`}>
+            <div className={`font-bold ${hasPrice ? color : 'text-gray-600'} ${fontSizeClass} transition-all duration-200`}>
                 {hasPrice ? (
-                    formatPrice(price, currency)
+                    formattedPrice
                 ) : (
                     <span className="flex flex-col items-center">
                         <span className="text-base sm:text-lg">--</span>
