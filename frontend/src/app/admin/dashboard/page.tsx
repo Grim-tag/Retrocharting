@@ -9,6 +9,7 @@ type AdminStats = {
     scraped_products: number;
     scraped_percentage: number;
     total_value: number;
+    pending_image_migration?: number;
 };
 
 type AdminUser = {
@@ -84,7 +85,7 @@ export default function AdminDashboard() {
                 <div className="mt-6 pt-6 border-t border-[#2a3142]">
                     <h3 className="text-lg font-bold mb-4 text-white">Maintenance Tools</h3>
                     <div className="flex gap-4">
-                        <MigrationButton />
+                        <MigrationButton pendingCount={stats?.pending_image_migration} />
                     </div>
                 </div>
             </div>
@@ -170,7 +171,7 @@ function StatCard({ label, value, subtext, highlight, status }: { label: string;
     );
 }
 
-function MigrationButton() {
+function MigrationButton({ pendingCount }: { pendingCount?: number }) {
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
 
@@ -203,6 +204,9 @@ function MigrationButton() {
             >
                 {loading ? "Starting..." : "Migrate 50 Images (Cloudinary)"}
             </button>
+            <span className="text-xs text-gray-400">
+                Remaining to migrate: <strong>{pendingCount?.toLocaleString() ?? "Unknown"}</strong>
+            </span>
             {message && (
                 <span className={`text-xs ${message.includes("Failed") ? "text-red-400" : "text-green-400"}`}>
                     {message}

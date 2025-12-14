@@ -70,13 +70,21 @@ def get_admin_stats(db: Session = Depends(get_db)):
             )
         ).count()
 
+        # Pending Image Migration
+        pending_image_migration_count = db.query(Product).filter(
+            Product.image_url.isnot(None),
+            Product.image_url != "",
+            ~Product.image_url.contains("cloudinary.com")
+        ).count()
+        
         return {
             "total_products": total_products,
             "scraped_products": scraped_products,
             "scraped_percentage": round(scraped_percentage, 1),
             "total_value": round(total_value, 2),
             "missing_description_count": missing_description_count,
-            "missing_details_count": missing_details_count
+            "missing_details_count": missing_details_count,
+            "pending_image_migration": pending_image_migration_count
         }
     except Exception as e:
         print(f"Error producing admin stats: {e}")
