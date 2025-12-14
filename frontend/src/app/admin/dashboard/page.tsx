@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { apiClient } from "@/lib/client";
 
@@ -30,23 +30,24 @@ export default function AdminDashboard() {
     const [users, setUsers] = useState<AdminUser[]>([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        async function loadData() {
-            if (!token) return;
-            setLoading(true);
-            try {
-                const [statsRes, usersRes] = await Promise.all([
-                    apiClient.get('/admin/stats'),
-                    apiClient.get('/admin/users')
-                ]);
-                setStats(statsRes.data);
-                setUsers(usersRes.data);
-            } catch (error) {
-                console.error("Failed to load admin data", error);
-            } finally {
-                setLoading(false);
-            }
+    const loadData = async () => {
+        if (!token) return;
+        // setLoading(true); // Don't block UI on refresh
+        try {
+            const [statsRes, usersRes] = await Promise.all([
+                apiClient.get('/admin/stats'),
+                apiClient.get('/admin/users')
+            ]);
+            setStats(statsRes.data);
+            setUsers(usersRes.data);
+        } catch (error) {
+            console.error("Failed to load admin data", error);
+        } finally {
+            setLoading(false);
         }
+    };
+
+    useEffect(() => {
         loadData();
     }, [token]);
 
@@ -70,10 +71,12 @@ export default function AdminDashboard() {
                 value={stats ? `${stats.total_value.toLocaleString()}` : "-"}
                 highlight
             />
+            {/* Pending Migration Stat Card */}
             <StatCard
-                label="System Status"
-                value={stats ? "Online" : "Offline"}
-                status={stats ? "green" : "red"}
+                label="Images to Migrate"
+                value={stats?.pending_image_migration ? stats.pending_image_migration.toLocaleString() : "0"}
+                highlight={!!stats?.pending_image_migration && stats.pending_image_migration > 0}
+                status={stats?.pending_image_migration && stats.pending_image_migration > 0 ? "red" : "green"}
             />
 
             <div className="col-span-full mt-8 p-6 bg-[#1f2533] border border-[#2a3142] rounded">
@@ -85,7 +88,10 @@ export default function AdminDashboard() {
                 <div className="mt-6 pt-6 border-t border-[#2a3142]">
                     <h3 className="text-lg font-bold mb-4 text-white">Maintenance Tools</h3>
                     <div className="flex gap-4">
-                        <MigrationButton pendingCount={stats?.pending_image_migration} />
+                        <AutoMigrationControl
+                            pendingCount={stats?.pending_image_migration}
+                            onRefreshStats={loadData}
+                        />
                     </div>
                 </div>
             </div>
@@ -171,47 +177,102 @@ function StatCard({ label, value, subtext, highlight, status }: { label: string;
     );
 }
 
-function MigrationButton({ pendingCount }: { pendingCount?: number }) {
-    const [loading, setLoading] = useState(false);
-    const [message, setMessage] = useState<string | null>(null);
+function AutoMigrationControl({ pendingCount, onRefreshStats }: { pendingCount?: number, onRefreshStats: () => void }) {
+    const [active, setActive] = useState(false);
+    const [processedSession, setProcessedSession] = useState(0);
+    const [status, setStatus] = useState<string>("Ready");
+    const activeRef = useRef(false);
 
-    const handleMigration = async () => {
-        if (!confirm("Start image migration for 50 items? This runs in background.")) return;
+    // Toggle Handler
+    const toggleMigration = () => {
+        if (active) {
+            // STOP
+            setActive(false);
+            activeRef.current = false;
+            setStatus("Stopping...");
+        } else {
+            // START
+            if (!confirm(`Start auto-migration? This will process batches of 50 until complete or stopped.`)) return;
+            setActive(true);
+            activeRef.current = true;
+            runLoop();
+        }
+    };
 
-        setLoading(true);
-        setMessage(null);
-        try {
-            // No need for explicit key if user is admin (Backend checks is_admin)
-            const res = await apiClient.post('/admin/images/migrate?limit=50');
-            setMessage(res.data.message || "Migration started.");
-        } catch (error: any) {
-            console.error("Migration failed", error);
-            setMessage(error.response?.data?.detail || "Failed to start migration.");
-        } finally {
-            setLoading(false);
+    const runLoop = async () => {
+        setStatus("Initializing...");
+        let total = 0;
+
+        while (activeRef.current) {
+            try {
+                setStatus(`Migrating batch... (Session total: ${total})`);
+
+                const res = await apiClient.post('/admin/images/migrate?limit=50');
+                const migrated = res.data.migrated || 0;
+                total += migrated;
+                setProcessedSession(total);
+
+                // Update global stats periodically
+                onRefreshStats();
+
+                if (migrated === 0 && res.data.status === "completed") {
+                    setStatus("All images migrated! 🎉");
+                    setActive(false);
+                    activeRef.current = false;
+                    break;
+                }
+
+                // Wait 1.5s to be gentle
+                setStatus(`Waiting cooldown... (Session total: ${total})`);
+                await new Promise(r => setTimeout(r, 1500));
+
+            } catch (error: any) {
+                console.error("Migration loop error", error);
+                setStatus("Error in batch. Retrying in 5s...");
+                await new Promise(r => setTimeout(r, 5000));
+            }
+        }
+
+        if (!activeRef.current && status !== "All images migrated! 🎉") {
+            setStatus("Stopped by user.");
         }
     };
 
     return (
-        <div className="flex flex-col items-start gap-2">
-            <button
-                onClick={handleMigration}
-                disabled={loading}
-                className={`px-4 py-2 rounded text-white font-medium transition-colors ${loading
-                        ? "bg-gray-600 cursor-not-allowed"
-                        : "bg-blue-600 hover:bg-blue-700"
-                    }`}
-            >
-                {loading ? "Starting..." : "Migrate 50 Images (Cloudinary)"}
-            </button>
-            <span className="text-xs text-gray-400">
-                Remaining to migrate: <strong>{pendingCount?.toLocaleString() ?? "Unknown"}</strong>
-            </span>
-            {message && (
-                <span className={`text-xs ${message.includes("Failed") ? "text-red-400" : "text-green-400"}`}>
-                    {message}
-                </span>
-            )}
+        <div className="flex flex-col items-start gap-3 bg-[#2a3142]/50 p-4 rounded border border-[#2a3142]">
+            <div className="flex items-center gap-4">
+                <button
+                    onClick={toggleMigration}
+                    className={`px-6 py-2 rounded font-bold transition-colors ${active
+                            ? "bg-red-600 hover:bg-red-700 text-white animate-pulse"
+                            : "bg-green-600 hover:bg-green-700 text-white"
+                        }`}
+                >
+                    {active ? "STOP MIGRATION" : "START AUTO-MIGRATION"}
+                </button>
+
+                <div className="flex flex-col">
+                    <span className="text-sm text-gray-300 font-mono">
+                        {status}
+                    </span>
+                    {active && (
+                        <span className="text-xs text-gray-500">Do not close this tab.</span>
+                    )}
+                </div>
+            </div>
+
+            <div className="w-full bg-gray-700 h-2 rounded-full overflow-hidden">
+                {/* Progress bar could go here, but total is unknown initially beyond pendingCount */}
+                <div
+                    className="h-full bg-blue-500 transition-all duration-500"
+                    style={{ width: pendingCount && pendingCount > 0 ? `${Math.min(100, (processedSession / (processedSession + pendingCount)) * 100)}%` : '0%' }}
+                ></div>
+            </div>
+
+            <div className="text-xs text-gray-400 flex gap-4">
+                <span>Remaining: <strong className="text-white">{pendingCount?.toLocaleString() ?? 0}</strong></span>
+                <span>Session Processed: <strong className="text-green-400">{processedSession.toLocaleString()}</strong></span>
+            </div>
         </div>
     );
 }
