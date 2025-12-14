@@ -336,13 +336,80 @@ def update_listings_background(product_id: int):
             prices_manual = []
             prices_loose = []
             
+            # --- HELPER: Relevance Filter ---
+            def is_valid_listing_title(title: str, product: ProductModel) -> bool:
+                """
+                Returns True if the listing title seems relevant to the product.
+                Returns False if it contains junk terms or mismatches.
+                """
+                title_lower = title.lower()
+                
+                # 1. SPECIAL JUNK (Generic/Spam)
+                if "lexibook" in title_lower:
+                    return False
+                    
+                # 2. SYSTEM FILTERING
+                if product.genre == 'Systems':
+                    # Blacklist for Consoles/Systems to remove accessories/parts
+                    bad_terms = [
+                        "cable", "câble", "adaptateur", "adapter", "case", "housse", "sacoche", 
+                        "fan", "ventilateur", "sticker", "skin", "controller", "manette", "pad", 
+                        "chargeur", "charger", "alim", "power", "supply", "part", "pièce", "button", "bouton",
+                        "pile", "battery", "batterie", "contact", "rubber", "caoutchouc",
+                        "fourreau", "sleeve", "rallonge", "extender", "extension", "cordon", "cord",
+                        "kit", "tool", "tournevis", "screwdriver", "condensateur", "capacitor",
+                        "repair", "réparation", "restauration", "protection", "box only", "boite vide",
+                        "carte mere", "motherboard", "poly", "cale", "notice", "manuel", "rf switch",
+                        "console de poche", "handheld console"
+                    ]
+                    if any(bad in title_lower for bad in bad_terms):
+                        return False
+
+                    # Anti-Mini / Classic Edition logic
+                    if "mini" not in product.product_name.lower():
+                        if "mini" in title_lower or "classic edition" in title_lower:
+                            return False
+
+                    # Anti-Cross-Platform (Wii/Switch accessories for NES)
+                    if "wii" in title_lower and "wii" not in product.console_name.lower():
+                        return False
+                    if "switch" in title_lower and "switch" not in product.console_name.lower():
+                        return False
+                        
+                    # 3. CONSOLE NAME PRESENCE (Strict Mode)
+                    # The title MUST contain at least one significant part of the console name.
+                    # e.g. "Nintendo NES" -> must have "nes" or "nintendo"
+                    console_terms = [t.lower() for t in product.console_name.split() if len(t) > 2]
+                    if console_terms:
+                         match_count = sum(1 for term in console_terms if term in title_lower)
+                         if match_count == 0:
+                             return False
+
+                return True
+
             # --- PROCESS EBAY ---
             for item in ebay_results:
+                # Apply Filter to eBay too!
+                if not is_valid_listing_title(item['title'], product):
+                    continue
+                    
                 # Check if exists
                 existing = db.query(Listing).filter(
                     Listing.product_id == product_id,
                     Listing.source == 'eBay',
                     Listing.external_id == item['itemId']
+                ).first()
+
+            # --- PROCESS AMAZON ---
+            for item in amazon_results:
+                # Apply Filter to Amazon (Strict)
+                if not is_valid_listing_title(item['title'], product):
+                    continue
+
+                existing = db.query(Listing).filter(
+                    Listing.product_id == product_id,
+                    Listing.source == 'Amazon',
+                    Listing.external_id == item['asin']
                 ).first()
                 
                 price_val = 0.0
