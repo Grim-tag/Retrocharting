@@ -15,6 +15,7 @@ from app.models.user import User
 from app.routers.auth import get_current_admin_user
 from app.routers.admin import get_admin_access
 from app.services.igdb import igdb_service
+from app.services.amazon_client import amazon_client
 from datetime import datetime
 
 router = APIRouter()
@@ -218,15 +219,42 @@ def update_listings_background(product_id: int):
             return default_cond
 
         try:
-            # Fetch listings from eBay
-            ebay_results = ebay_client.search_items(query, limit=20, category_ids=category_id)
+            # Parallel Fetching (eBay + Amazon)
+            from concurrent.futures import ThreadPoolExecutor
             
+            ebay_results = []
+            amazon_results = []
+            
+            def fetch_ebay():
+                return ebay_client.search_items(query, limit=20, category_ids=category_id)
+                
+            def fetch_amazon():
+                try:
+                    return amazon_client.search_items(query, limit=10)
+                except Exception as e:
+                    print(f"Amazon Fetch Error: {e}")
+                    return []
+
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                future_ebay = executor.submit(fetch_ebay)
+                future_amazon = executor.submit(fetch_amazon)
+                
+                try:
+                    ebay_results = future_ebay.result(timeout=10)
+                except Exception as e:
+                    print(f"eBay Future Error: {e}")
+                    
+                try:
+                    amazon_results = future_amazon.result(timeout=10)
+                except Exception as e:
+                    print(f"Amazon Future Error: {e}")
+
             # Accumulators for average calculation
             prices_box = []
             prices_manual = []
             prices_loose = []
             
-            # Process and save to DB
+            # --- PROCESS EBAY ---
             for item in ebay_results:
                 # Check if exists
                 existing = db.query(Listing).filter(
@@ -248,23 +276,21 @@ def update_listings_background(product_id: int):
                 # Good Deal Logic
                 is_good_deal = False
                 if condition_code == 'MANUAL_ONLY' and product.manual_only_price and price_val > 0:
-                    # Good deal if < 80% of manual price (manuals vary a lot, 70% might be too strict?)
                     if price_val < (product.manual_only_price * 0.8):
                         is_good_deal = True
                 elif condition_code == 'BOX_ONLY' and product.box_only_price and price_val > 0:
                      if price_val < (product.box_only_price * 0.8):
                         is_good_deal = True
                 elif condition_code not in ['PARTS', 'BOX_ONLY', 'MANUAL_ONLY']:
-                     # Game Good Deal
                      if product.loose_price and price_val > 0:
                         if price_val < (product.loose_price * 0.7):
                             is_good_deal = True
                 
-                # Collect prices for averaging
+                # Collect prices
                 if price_val > 0:
                     if condition_code == 'BOX_ONLY': prices_box.append(price_val)
                     elif condition_code == 'MANUAL_ONLY': prices_manual.append(price_val)
-                    elif condition_code not in ['PARTS']: prices_loose.append(price_val) # Rough proxy for now
+                    elif condition_code not in ['PARTS']: prices_loose.append(price_val)
 
                 image_url = None
                 if 'thumbnailImages' in item and item['thumbnailImages']:
@@ -273,7 +299,7 @@ def update_listings_background(product_id: int):
                 if existing:
                     existing.price = price_val
                     existing.title = item['title']
-                    existing.condition = condition_code # Update condition
+                    existing.condition = condition_code 
                     existing.is_good_deal = is_good_deal
                     existing.last_updated = datetime.utcnow()
                     existing.status = 'active'
@@ -294,6 +320,46 @@ def update_listings_background(product_id: int):
                         last_updated=datetime.utcnow()
                     )
                     db.add(new_listing)
+
+            # --- PROCESS AMAZON ---
+            for item in amazon_results:
+                existing = db.query(Listing).filter(
+                    Listing.product_id == product_id,
+                    Listing.source == 'Amazon',
+                    Listing.external_id == item['asin']
+                ).first()
+                
+                is_good_deal = False
+                # Simple deal logic for Amazon: lower than avg loose?
+                if product.loose_price and item['price'] > 0:
+                    if item['price'] < (product.loose_price * 0.8):
+                        is_good_deal = True
+
+                if existing:
+                    existing.price = item['price']
+                    existing.title = item['title']
+                    existing.last_updated = datetime.utcnow()
+                    existing.status = 'active'
+                    existing.image_url = item['image']
+                    existing.is_good_deal = is_good_deal
+                else:
+                    new_listing = Listing(
+                        product_id=product_id,
+                        source='Amazon',
+                        external_id=item['asin'],
+                        title=item['title'],
+                        price=item['price'],
+                        currency=item['currency'],
+                        condition=item['condition'], # 'New' usually
+                        url=item['link'],
+                        image_url=item['image'],
+                        seller_name='Amazon',
+                        status='active',
+                        is_good_deal=is_good_deal,
+                        last_updated=datetime.utcnow()
+                    )
+                    db.add(new_listing)
+
             
             # Update Product averages for Box/Manual if we found new data
             if prices_box:
@@ -304,7 +370,7 @@ def update_listings_background(product_id: int):
                 product.manual_only_price = avg_man
                 
             db.commit()
-            print(f"Background update completed for product {product_id}. Box Avg: {product.box_only_price}")
+            print(f"Background update completed for product {product_id}. Listings refreshed.")
             
         except Exception as e:
             print(f"Error in background eBay update: {e}")

@@ -132,7 +132,21 @@ export default function ListingsTable({ productId, dict }: { productId: number; 
                                         </div>
                                     </td>
                                     <td className="px-4 py-3 text-gray-300">
-                                        {item.seller_name || item.source}
+                                        <div className="flex flex-col">
+                                            {item.source === 'Amazon' ? (
+                                                <span className="text-[#FF9900] font-bold flex items-center gap-1">
+                                                    <span className="text-white bg-[#FF9900] px-1 rounded text-[10px]">a</span>
+                                                    Amazon
+                                                </span>
+                                            ) : item.source === 'eBay' ? (
+                                                <span className="text-[#e53238] font-bold">eBay</span>
+                                            ) : (
+                                                item.source
+                                            )}
+                                            {item.seller_name && item.seller_name !== item.source && (
+                                                <span className="text-[10px] text-gray-500 truncate max-w-[100px]">{item.seller_name}</span>
+                                            )}
+                                        </div>
                                     </td>
                                     <td className="px-4 py-3">
                                         {item.condition === 'MANUAL_ONLY' ? <span className="text-yellow-500">{dict.product.listings.table.manual_only}</span> :
