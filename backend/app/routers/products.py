@@ -50,8 +50,11 @@ def read_products(
     products = query.offset(skip).limit(limit).all()
     return products
 
-    products = query.offset(skip).limit(limit).all()
-    return products
+
+@router.get("/count", response_model=int)
+def get_products_count(db: Session = Depends(get_db)):
+    return db.query(ProductModel).count()
+
 
 @router.get("/genres", response_model=List[str])
 def get_genres(
