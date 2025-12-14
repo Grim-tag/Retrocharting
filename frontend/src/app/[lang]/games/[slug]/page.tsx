@@ -11,7 +11,7 @@ import { Metadata } from "next";
 import { formatConsoleName, getGameUrl } from "@/lib/utils";
 import CrossPlatformLinks from "@/components/CrossPlatformLinks";
 import Breadcrumbs from "@/components/seo/Breadcrumbs";
-import JsonLd, { generateProductSchema } from "@/components/seo/JsonLd";
+import JsonLd, { generateVideoGameSchema } from "@/components/seo/JsonLd";
 import { getDictionary } from "@/lib/get-dictionary";
 import { routeMap } from "@/lib/route-config";
 import { groupedSystems } from "@/data/systems";
@@ -175,7 +175,7 @@ export default async function Page({
         { label: product.product_name, href: getGameUrl(product, lang) }
     ];
 
-    const schema = generateProductSchema(product, `https://retrocharting.com${getGameUrl(product, lang)}`);
+    const schema = generateVideoGameSchema(product, `https://retrocharting.com${getGameUrl(product, lang)}`);
 
     return (
         <main className="flex-grow bg-[#0f121e] py-8">

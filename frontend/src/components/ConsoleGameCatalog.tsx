@@ -16,6 +16,8 @@ interface ConsoleGameCatalogProps {
     systemSlug: string;
 }
 
+import JsonLd, { generateItemListSchema } from '@/components/seo/JsonLd';
+
 export default function ConsoleGameCatalog({
     products,
     genres,
@@ -73,9 +75,22 @@ export default function ConsoleGameCatalog({
     const displayedProducts = filteredProducts.slice(0, visibleCount);
     const hasMore = visibleCount < filteredProducts.length;
 
+    // SCHEMA.ORG: ItemList
+    const itemListSchema = generateItemListSchema(
+        `${systemName} Games Catalog`,
+        displayedProducts.map((p, idx) => ({
+            name: p.product_name,
+            url: getGameUrl(p, lang),
+            image: p.image_url,
+            position: idx + 1
+        }))
+    );
+
     return (
         <div>
+            <JsonLd data={itemListSchema} />
             <div className="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4">
+
                 <h1 className="text-3xl font-bold text-white">
                     {systemName} Games
                     {selectedGenre && <span className="text-gray-500 ml-2 text-xl font-normal">/ {selectedGenre}</span>}

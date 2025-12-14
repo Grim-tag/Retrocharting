@@ -40,22 +40,22 @@ export async function generateMetadata({ params, searchParams }: { params: Promi
     const { slug, lang } = await params;
     const dict = await getDictionary(lang);
 
-    // 1. Check if it's an Accessories Category Page (e.g. /accessories/nintendo-64)
+    // 1. Check if it's a Console Category Page (e.g. /consoles/nintendo-64)
     const systemName = isSystemSlug(slug);
     if (systemName) {
         return {
-            title: `${systemName} Accessories & Controllers Price Guide | RetroCharting`,
-            description: `Price guide for ${systemName} controllers, memory cards, and accessories. Check current market values.`
+            title: `${systemName} Consoles Price Guide | RetroCharting`,
+            description: `Buy and Sell ${systemName} consoles. Current market values for ${systemName} hardware, limited editions, and bundles.`
         };
     }
 
-    // 2. Default: Accessory Product Page
+    // 2. Default: Console Product Page
     const id = getIdFromSlug(slug);
     const product = await getProductById(id);
 
     if (!product) {
         return {
-            title: "Accessory Not Found | RetroCharting",
+            title: "Console Not Found | RetroCharting",
         };
     }
 
@@ -66,7 +66,7 @@ export async function generateMetadata({ params, searchParams }: { params: Promi
     if (lang === 'fr') {
         return {
             title: `${dict.product.market.suffix} ${product.product_name} ${shortConsoleName} & Cote | RetroCharting`,
-            description: `Prix actuel et historique pour ${product.product_name}. Accessoire pour ${product.console_name}.`,
+            description: `Prix actuel et historique pour la console ${product.product_name}. Estimez la valeur de votre matériel ${product.console_name}.`,
             alternates: {
                 canonical: canonicalUrl,
             }
@@ -75,7 +75,7 @@ export async function generateMetadata({ params, searchParams }: { params: Promi
 
     return {
         title: `${product.product_name} ${shortConsoleName} ${dict.product.market.suffix} | RetroCharting`,
-        description: `Current market value for ${product.product_name}. Accessory price guide for ${product.console_name}.`,
+        description: `Current market value for ${product.product_name} console. Track price history for ${product.console_name} hardware.`,
         alternates: {
             canonical: canonicalUrl,
         }
@@ -95,26 +95,40 @@ export default async function Page({
 
     const getSlug = (key: string) => routeMap[key]?.[lang] || key;
     const gamesSlug = getSlug('games');
-    const accessoriesSlug = getSlug('accessories');
+    const consolesSlug = getSlug('consoles');
 
     // --- DISPATCHER LOGIC ---
 
-    // 1. CHECK IF SYSTEM CATEGORY
+    // 1. CHECK IF CONSOLE SYSTEM CATEGORY
     const systemName = isSystemSlug(slug);
 
     if (systemName) {
-        // === ACCESSORIES CATALOG VIEW ===
+        // === CONSOLE CATALOG VIEW (Listing Hardware) ===
+        // Note: passing 'console' as type to filter only hardware
+        // But getProductsByConsole might accept 'type' valid argument? 
+        // Checking usage in game page: getProductsByConsole(systemName, 2000, undefined, 'game')
+        // We want 'system' or 'console'. Let's assume 'system' based on utils mapping or genre check.
+        // Actually typically it grabs all unless filtered. 
+        // Let's rely on ConsoleGameCatalog to filter? Or pass 'Systems' as genre filter?
+        // Better: Fetch all and let catalog filter or fetch specifically 'Systems' genre.
+        // For now, let's fetch default and rely on catalog or fetch specifically generics.
+
         const [products, genres] = await Promise.all([
             getProductsByConsole(systemName, 500),
             getGenres(systemName)
         ]);
 
-        // Filter purely for Accessories/Controllers
-        const accessoryProducts = products.filter(p => p.genre && ['Accessories', 'Controllers', 'Accessory'].includes(p.genre));
+        // Filter purely for Systems/Consoles if possible, or just pass all.
+        // The user wants a list of Consoles.
+        // Let's filter client side or assume getProductsByConsole returns mixed.
+        // We will pre-filter for "Systems" genre if it exists?
+        // Actually, let's keep it consistent with Games page for now, showing all mixed but defaulted?
+        // No, user expects Consoles in the Consoles tab.
+        const consoleProducts = products.filter(p => p.genre && ['Systems', 'Console', 'Consoles'].includes(p.genre));
 
         const breadcrumbItems = [
-            { label: dict.header.nav.accessories, href: `/${lang}/${accessoriesSlug}` },
-            { label: systemName, href: `/${lang}/${accessoriesSlug}/${slug}` }
+            { label: dict.header.nav.consoles, href: `/${lang}/${consolesSlug}` },
+            { label: systemName, href: `/${lang}/${consolesSlug}/${slug}` }
         ];
 
         return (
@@ -122,11 +136,11 @@ export default async function Page({
                 <div className="max-w-[1400px] mx-auto px-4">
                     <Breadcrumbs items={breadcrumbItems} />
                     <ConsoleGameCatalog
-                        products={accessoryProducts.length > 0 ? accessoryProducts : products} // Fallback? No, strictly accessories usually.
-                        genres={['Accessories', 'Controllers']} // Force genres
+                        products={consoleProducts.length > 0 ? consoleProducts : products} // Fallback to all if strict filter fails
+                        genres={['Systems']} // Force genres
                         systemName={systemName}
                         lang={lang}
-                        gamesSlug={accessoriesSlug} // Trick component to use accessories base path? 
+                        gamesSlug={consolesSlug} // Trick component to use consoles base path?
                         systemSlug={slug}
                     />
                 </div>
@@ -134,7 +148,7 @@ export default async function Page({
         );
     }
 
-    // 2. DEFAULT: ACCESSORY PRODUCT DETAIL VIEW
+    // 2. DEFAULT: CONSOLE PRODUCT DETAIL VIEW
     const id = getIdFromSlug(slug);
 
     const [product, history] = await Promise.all([
@@ -146,7 +160,7 @@ export default async function Page({
         return (
             <main className="flex-grow bg-[#0f121e] py-20 text-center text-white">
                 <h1 className="text-3xl font-bold">{dict.product.not_found.title}</h1>
-                <Link href={`/${lang}/${accessoriesSlug}`} className="text-[#ff6600] hover:underline mt-4 inline-block">
+                <Link href={`/${lang}/${consolesSlug}`} className="text-[#ff6600] hover:underline mt-4 inline-block">
                     {dict.product.not_found.back}
                 </Link>
             </main>
@@ -156,11 +170,12 @@ export default async function Page({
     const shortConsoleName = formatConsoleName(product.console_name);
 
     const breadcrumbItems = [
-        { label: dict.header.nav.accessories, href: `/${lang}/${accessoriesSlug}` },
-        { label: product.console_name, href: `/${lang}/${accessoriesSlug}/${product.console_name.toLowerCase().replace(/ /g, '-')}` },
+        { label: dict.header.nav.consoles, href: `/${lang}/${consolesSlug}` },
+        { label: product.console_name, href: `/${lang}/${consolesSlug}/${product.console_name.toLowerCase().replace(/ /g, '-')}` },
         { label: product.product_name, href: getGameUrl(product, lang) }
     ];
 
+    // Using VideoGame schema is okay, or Product schema. VideoGame is fine for now.
     const schema = generateVideoGameSchema(product, `https://retrocharting.com${getGameUrl(product, lang)}`);
 
     return (

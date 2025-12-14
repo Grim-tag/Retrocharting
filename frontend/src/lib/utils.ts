@@ -45,10 +45,12 @@ import { routeMap } from "./route-config";
 // Example EN: /games/metal-gear-solid-ps1-4402
 // Example FR: /fr/jeux-video/metal-gear-solid-ps1-4402
 export function getGameUrl(product: { id: number; product_name: string; console_name: string; genre?: string }, lang: string = 'en') {
-    // 1. Determine base key (games vs accessories)
+    // 1. Determine base key (games vs accessories vs consoles)
     let baseKey = 'games';
     if (product.genre && ['Accessories', 'Controllers'].includes(product.genre)) {
         baseKey = 'accessories';
+    } else if (product.genre && ['Systems', 'Console', 'Consoles'].includes(product.genre)) {
+        baseKey = 'consoles';
     }
 
     const baseSlug = routeMap[baseKey]?.[lang] || baseKey;

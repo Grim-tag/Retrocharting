@@ -2,7 +2,7 @@ import Link from "next/link";
 import { groupedSystems } from "@/data/systems";
 import { getRegion } from "@/lib/utils";
 import Breadcrumbs from "@/components/seo/Breadcrumbs";
-import JsonLd, { generateCollectionSchema } from "@/components/seo/JsonLd";
+import JsonLd, { generateItemListSchema } from "@/components/seo/JsonLd";
 import { getDictionary } from "@/lib/get-dictionary";
 import { routeMap } from "@/lib/route-config";
 import { Metadata } from "next";
@@ -34,10 +34,15 @@ export default async function GamesPage({ params }: { params: Promise<{ lang: st
         { label: dict.header.nav.video_games, href: `/${lang}/${gamesSlug}` }
     ];
 
-    const schema = generateCollectionSchema(
+    // Flatten systems for Schema
+    const allSystems = Object.values(groupedSystems).flat();
+    const itemListSchema = generateItemListSchema(
         dict.home.categories.items.video_games.title,
-        dict.home.categories.items.video_games.desc,
-        `https://retrocharting.com/${lang}/${gamesSlug}`
+        allSystems.map((system, idx) => ({
+            name: system,
+            url: `/${lang}/${gamesSlug}/${system.toLowerCase().replace(/ /g, '-')}`,
+            position: idx + 1
+        }))
     );
 
     return (
@@ -45,7 +50,7 @@ export default async function GamesPage({ params }: { params: Promise<{ lang: st
 
             <div className="max-w-[1400px] mx-auto px-4">
 
-                <JsonLd data={schema} />
+                <JsonLd data={itemListSchema} />
                 <Breadcrumbs items={breadcrumbItems} />
 
                 <h1 className="text-3xl font-bold mb-4 text-white">{dict.home.categories.items.video_games.title}</h1>
