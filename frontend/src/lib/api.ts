@@ -126,7 +126,9 @@ export async function searchProductsGrouped(query: string): Promise<GroupedProdu
 
 export async function getListings(id: number): Promise<{ data: any[], isStale: boolean }> {
     try {
-        const response = await apiClient.get(`/products/${id}/listings`);
+        const response = await apiClient.get(`/products/${id}/listings`, {
+            params: { _t: new Date().getTime() } // Cache buster
+        });
         const isStale = response.headers['x-is-stale'] === 'true';
         return { data: response.data, isStale };
     } catch (error) {
