@@ -25,13 +25,14 @@ export async function generateSitemaps() {
     ];
 
     for (let i = 0; i < numChunks; i++) {
-        sitemaps.push({ id: i });
+        // ID must be string for Next.js consistency
+        sitemaps.push({ id: i.toString() });
     }
 
     return sitemaps;
 }
 
-export default async function sitemap({ id }: { id: string | number }): Promise<MetadataRoute.Sitemap> {
+export default async function sitemap({ id }: { id: string }): Promise<MetadataRoute.Sitemap> {
 
     // --- STATIC SITEMAP ---
     if (id === 'static') {
@@ -113,8 +114,9 @@ export default async function sitemap({ id }: { id: string | number }): Promise<
     }
 
     // --- PRODUCT SITEMAPS (Chunked) ---
-    if (typeof id === 'number') {
-        const skip = id * CHUNK_SIZE;
+    const chunkIndex = parseInt(id);
+    if (!isNaN(chunkIndex)) {
+        const skip = chunkIndex * CHUNK_SIZE;
         const products = await getSitemapProducts(CHUNK_SIZE, skip);
 
         const productUrls: MetadataRoute.Sitemap = [];
