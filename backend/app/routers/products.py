@@ -270,14 +270,35 @@ def update_listings_background(product_id: int):
                             
                         # SYSTEM FILTERING: Remove accessories masquerading as consoles
                         # (Only applies if we are looking for a System/Console)
+                        # SYSTEM FILTERING: Remove accessories masquerading as consoles
+                        # (Only applies if we are looking for a System/Console)
                         if product.genre == 'Systems':
                             bad_terms = [
                                 "cable", "câble", "adaptateur", "adapter", "case", "housse", "sacoche", 
                                 "fan", "ventilateur", "sticker", "skin", "controller", "manette", "pad", 
-                                "chargeur", "charger", "alim", "power", "supply", "part", "pièce", "button", "bouton"
+                                "chargeur", "charger", "alim", "power", "supply", "part", "pièce", "button", "bouton",
+                                "pile", "battery", "batterie", "contact", "rubber", "caoutchouc",
+                                "fourreau", "sleeve", "rallonge", "extender", "extension", "cordon", "cord",
+                                "kit", "tool", "tournevis", "screwdriver", "condensateur", "capacitor",
+                                "repair", "réparation", "restauration", "protection", "box only", "boite vide"
                             ]
                             if any(bad in title_lower for bad in bad_terms):
                                 continue
+
+                            # Special Filter for "Mini" / "Classic" replicas
+                            # If the genuine product is NOT a Mini, reject "Mini" results
+                            if "mini" not in product.product_name.lower():
+                                if "mini" in title_lower or "classic edition" in title_lower:
+                                    continue
+                                    
+                            # Reject "Wii" / "Switch" cross-contamination if not looking for them
+                            # e.g. "Controller for NES/Wii"
+                            if "wii" in title_lower and "wii" not in product.console_name.lower():
+                                continue
+                            if "switch" in title_lower and "switch" not in product.console_name.lower():
+                                continue
+
+                        # Simple Check: Overlap Score
 
                         # Simple Check: Overlap Score
                         # Count how many console terms are in the title
