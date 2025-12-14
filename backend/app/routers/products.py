@@ -230,7 +230,10 @@ def update_listings_background(product_id: int):
                 
             def fetch_amazon():
                 try:
-                    return amazon_client.search_items(query, limit=10)
+                    # Amazon is sensitive to extra words like "PAL", "JP"
+                    # Create a cleaner query for Amazon
+                    clean_query = query.replace("PAL", "").replace("JP", "").replace("NTSC", "").replace("  ", " ").strip()
+                    return amazon_client.search_items(clean_query, limit=10)
                 except Exception as e:
                     print(f"Amazon Fetch Error: {e}")
                     return []
