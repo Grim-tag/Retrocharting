@@ -80,6 +80,13 @@ export default function AdminDashboard() {
                 <p className="text-gray-400">
                     Your database is currently tracking <strong>{stats?.total_products.toLocaleString() ?? 0}</strong> products.
                 </p>
+
+                <div className="mt-6 pt-6 border-t border-[#2a3142]">
+                    <h3 className="text-lg font-bold mb-4 text-white">Maintenance Tools</h3>
+                    <div className="flex gap-4">
+                        <MigrationButton />
+                    </div>
+                </div>
             </div>
 
             <UserList users={users} />
@@ -159,6 +166,48 @@ function StatCard({ label, value, subtext, highlight, status }: { label: string;
             </div>
             <div className={`text-3xl font-bold ${highlight ? "text-[#ff6600]" : "text-white"}`}>{value}</div>
             {subtext && <div className="text-xs text-gray-500 mt-1">{subtext}</div>}
+        </div>
+    );
+}
+
+function MigrationButton() {
+    const [loading, setLoading] = useState(false);
+    const [message, setMessage] = useState<string | null>(null);
+
+    const handleMigration = async () => {
+        if (!confirm("Start image migration for 50 items? This runs in background.")) return;
+
+        setLoading(true);
+        setMessage(null);
+        try {
+            // No need for explicit key if user is admin (Backend checks is_admin)
+            const res = await apiClient.post('/admin/images/migrate?limit=50');
+            setMessage(res.data.message || "Migration started.");
+        } catch (error: any) {
+            console.error("Migration failed", error);
+            setMessage(error.response?.data?.detail || "Failed to start migration.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="flex flex-col items-start gap-2">
+            <button
+                onClick={handleMigration}
+                disabled={loading}
+                className={`px-4 py-2 rounded text-white font-medium transition-colors ${loading
+                        ? "bg-gray-600 cursor-not-allowed"
+                        : "bg-blue-600 hover:bg-blue-700"
+                    }`}
+            >
+                {loading ? "Starting..." : "Migrate 50 Images (Cloudinary)"}
+            </button>
+            {message && (
+                <span className={`text-xs ${message.includes("Failed") ? "text-red-400" : "text-green-400"}`}>
+                    {message}
+                </span>
+            )}
         </div>
     );
 }
