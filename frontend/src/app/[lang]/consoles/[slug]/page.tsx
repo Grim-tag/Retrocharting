@@ -114,17 +114,9 @@ export default async function Page({
         // For now, let's fetch default and rely on catalog or fetch specifically generics.
 
         const [products, genres] = await Promise.all([
-            getProductsByConsole(systemName, 500),
+            getProductsByConsole(systemName, 500, undefined, 'console'),
             getGenres(systemName)
         ]);
-
-        // Filter purely for Systems/Consoles if possible, or just pass all.
-        // The user wants a list of Consoles.
-        // Let's filter client side or assume getProductsByConsole returns mixed.
-        // We will pre-filter for "Systems" genre if it exists?
-        // Actually, let's keep it consistent with Games page for now, showing all mixed but defaulted?
-        // No, user expects Consoles in the Consoles tab.
-        const consoleProducts = products.filter(p => p.genre && ['Systems', 'Console', 'Consoles'].includes(p.genre));
 
         const breadcrumbItems = [
             { label: dict.header.nav.consoles, href: `/${lang}/${consolesSlug}` },
@@ -136,11 +128,11 @@ export default async function Page({
                 <div className="max-w-[1400px] mx-auto px-4">
                     <Breadcrumbs items={breadcrumbItems} />
                     <ConsoleGameCatalog
-                        products={consoleProducts.length > 0 ? consoleProducts : products} // Fallback to all if strict filter fails
-                        genres={['Systems']} // Force genres
+                        products={products}
+                        genres={[]}
                         systemName={systemName}
                         lang={lang}
-                        gamesSlug={consolesSlug} // Trick component to use consoles base path?
+                        gamesSlug={consolesSlug}
                         systemSlug={slug}
                     />
                 </div>
