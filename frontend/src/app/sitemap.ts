@@ -60,7 +60,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     // 3. Generate Console/Category Sub-Pages
     const categoryUrls: MetadataRoute.Sitemap = [];
-    const systemSlugs = systems.map(s => s.toLowerCase().replace(/ /g, '-'));
+
+    // Fix for "Game & Watch" and other special chars causing XML errors
+    // We encode '&' to '%26' to ensure valid URL and XML, which Next.js will decode back to '&'
+    const systemSlugs = systems.map(s => s.toLowerCase().replace(/ /g, '-').replace(/&/g, '%26'));
 
     systemSlugs.forEach(systemSlug => {
         langs.forEach(lang => {
