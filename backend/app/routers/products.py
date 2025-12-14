@@ -189,8 +189,18 @@ def update_listings_background(product_id: int):
         
         if product.genre == 'Systems':
             category_id = "139971"
+            # For Amazon/eBay systems, simpler is better: "Nintendo 64 Console"
+            # Avoids "Action Set", "Pack", "Edition" which kill results on Amazon
+            if product.console_name in product.product_name:
+                 # If product is "Nintendo NES Action Set", query -> "Nintendo NES Console"
+                 query = f"{product.console_name} Console"
+            else:
+                 query = f"{product.console_name} Console" # Default fallback
         elif product.genre in ['Accessories', 'Controllers']:
             category_id = "54968"
+            query = f"{product.product_name} {product.console_name}" # Keep specific
+        else:
+             query = f"{product.product_name} {product.console_name}" # Games need specificity
             
         # Helper for Classification
         def classify_item(title: str, default_cond: str) -> str:
@@ -258,10 +268,17 @@ def update_listings_background(product_id: int):
                         if "lexibook" in title_lower:
                             continue
                             
-                        # Strict check: Does it contain the console name?
-                        # "Vampire ... PS5" vs "Playstation 5". 
-                        # This is hard to generalize perfectly but:
-                        
+                        # SYSTEM FILTERING: Remove accessories masquerading as consoles
+                        # (Only applies if we are looking for a System/Console)
+                        if product.genre == 'Systems':
+                            bad_terms = [
+                                "cable", "câble", "adaptateur", "adapter", "case", "housse", "sacoche", 
+                                "fan", "ventilateur", "sticker", "skin", "controller", "manette", "pad", 
+                                "chargeur", "charger", "alim", "power", "supply", "part", "pièce", "button", "bouton"
+                            ]
+                            if any(bad in title_lower for bad in bad_terms):
+                                continue
+
                         # Simple Check: Overlap Score
                         # Count how many console terms are in the title
                         match_count = sum(1 for term in console_terms if term in title_lower)
