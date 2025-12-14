@@ -517,6 +517,7 @@ def get_related_products(product_id: int, db: Session = Depends(get_db)):
 @router.get("/sitemap", response_model=List[dict])
 def sitemap_products(
     limit: int = 10000, 
+    skip: int = 0,
     db: Session = Depends(get_db)
 ):
     """
@@ -526,6 +527,7 @@ def sitemap_products(
     # Prefer products with images or prices as they are 'high quality' pages
     products = db.query(ProductModel.id, ProductModel.product_name, ProductModel.console_name, ProductModel.genre, ProductModel.loose_price)\
         .order_by(ProductModel.loose_price.desc().nullslast())\
+        .offset(skip)\
         .limit(limit)\
         .all()
     

@@ -7,7 +7,6 @@ import { systems } from '@/data/systems';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const baseUrl = 'https://retrocharting.com';
-    const limit = 40000; // Large limit to catch most products
 
     // 1. Static Routes & Main Categories
     const staticRoutes: MetadataRoute.Sitemap = [];
@@ -42,21 +41,51 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     });
 
     // 2. Fetch Dynamic Data (Products)
-    const products = await getSitemapProducts(limit);
-
+    // Pagination to avoid timeouts
+    const limit = 2000; # Safe chunk size
     const productUrls: MetadataRoute.Sitemap = [];
 
-    products.forEach((product) => {
-        ['en', 'fr'].forEach(lang => {
-            const path = getGameUrl(product, lang);
-            productUrls.push({
-                url: `${baseUrl}${path}`,
-                lastModified: new Date(product.updated_at || new Date()),
-                changeFrequency: 'weekly',
-                priority: 0.8,
-            });
-        });
-    });
+    let skip = 0;
+    let hasMore = true;
+
+    // Safety Loop limit to prevent infinite build loops if API is weird
+    const MAX_LOOPS = 50; // Covers 100,000 products @ 2000 per chunk
+    let loopCount = 0;
+
+    while (hasMore && loopCount < MAX_LOOPS) {
+        try {
+            const products = await getSitemapProducts(limit, skip);
+
+            if (!products || products.length === 0) {
+                hasMore = false;
+            } else {
+                // Process chunk
+                products.forEach((product) => {
+                    ['en', 'fr'].forEach(lang => {
+                        const path = getGameUrl(product, lang);
+                        productUrls.push({
+                            url: `${baseUrl}${path}`,
+                            lastModified: new Date(product.updated_at || new Date()),
+                            changeFrequency: 'weekly',
+                            priority: 0.8,
+                        });
+                    });
+                });
+
+                // Prepare next chunk
+                skip += limit;
+                loopCount++;
+
+                // If we got fewer than limit, we are done
+                if (products.length < limit) {
+                    hasMore = false;
+                }
+            }
+        } catch (e) {
+            console.error("Sitemap Pagination broken at skip " + skip, e);
+            hasMore = false;
+        }
+    }
 
     // 3. Generate Console/Category Sub-Pages
     const categoryUrls: MetadataRoute.Sitemap = [];

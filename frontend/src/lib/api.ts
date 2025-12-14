@@ -171,9 +171,9 @@ export async function saveTranslation(locale: string, key: string, value: string
     }
 }
 
-export async function getSitemapProducts(limit: number = 10000): Promise<any[]> {
+export async function getSitemapProducts(limit: number = 10000, skip: number = 0): Promise<any[]> {
     try {
-        const response = await apiClient.get(`/products/sitemap?limit=${limit}`);
+        const response = await apiClient.get(`/products/sitemap?limit=${limit}&skip=${skip}`);
         return response.data;
     } catch (error) {
         console.error("Error fetching sitemap products:", error);
