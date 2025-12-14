@@ -127,3 +127,20 @@ def trigger_listing_fix(background_tasks: BackgroundTasks):
     from app.services.listing_fixer import fix_listings_job
     background_tasks.add_task(fix_listings_job)
     return {"message": "Listing classification fix started in background."}
+
+@router.post("/images/migrate", dependencies=[Depends(get_admin_access)])
+def trigger_image_migration(
+    limit: int = 50,
+    background_tasks: BackgroundTasks = None, 
+    db: Session = Depends(get_db)
+):
+    from app.services.image_migration import migrate_product_images
+    
+    # Run in background to avoid timeout
+    if background_tasks:
+         background_tasks.add_task(migrate_product_images, db, limit)
+         return {"message": f"Image migration started for {limit} items."}
+    else:
+         # Fallback if no BG tasks (should not happen in FastAPI)
+         result = migrate_product_images(db, limit)
+         return result
