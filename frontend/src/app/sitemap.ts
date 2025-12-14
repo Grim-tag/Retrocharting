@@ -5,7 +5,7 @@ import { getGameUrl } from '@/lib/utils';
 import { routeMap } from '@/lib/route-config';
 import { systems } from '@/data/systems';
 
-export const revalidate = 86400; // Revalidate daily (24h)
+export const dynamic = 'force-dynamic';
 
 const BASE_URL = 'https://retrocharting.com';
 const CHUNK_SIZE = 4000; // 4000 products per sitemap (safe size)
