@@ -1,0 +1,146 @@
+
+import re
+
+class ListingClassifier:
+    """
+    Advanced text analysis for Video Game listings.
+    Detects: Region (PAL, NTSC-U, JAP), Condition (Box Only, Manual Only, CIB, Loose), and Junk.
+    """
+
+    # --- REGION DEFINITIONS ---
+    # PAL: Europe, Australia
+    KEYWORDS_PAL = [
+        r'\bpal\b', r'\beur\b', r'\bukv\b', r'\bfah\b', r'\bfra\b', r'\bfr\b', 
+        r'\besp\b', r'\bita\b', r'\bger\b', r'\bnoe\b', r'\beurope\b', r'\beuropean\b',
+        r'\baus\b', r'\baustralian\b'
+    ]
+    
+    # NTSC-U: USA, Canada, North America
+    KEYWORDS_NTSC_U = [
+        r'\bntsc\b', # Often implies US if not followed by J
+        r'\bntsc-u\b', r'\bntsc-us\b', r'\busa\b', r'\bus\b', r'\bamerican\b', r'\bnorth america\b',
+        r'\bgenesis\b' # genesis is US name for megadrive
+    ]
+    
+    # JAP: Japan
+    KEYWORDS_JAP = [
+        r'\bntsc-j\b', r'\bjap\b', r'\bjapan\b', r'\bjapanese\b', r'\bjp\b', 
+        r'\bfamicom\b', r'\bsuper famicom\b', r'\bpc engine\b' # Specific JP consoles
+    ]
+
+    # --- CONDITION DEFINITIONS ---
+    KEYWORDS_BOX_ONLY = [
+        r'\bbox only\b', r'\bboite seule\b', r'\bboîte seule\b', r'\bempty box\b', 
+        r'\bcase only\b', r'\bboitier seul\b', r'\bboîte vide\b', r'\bboite vide\b',
+        r'\bcaja vacia\b', r'\bscatola vuota\b', r'\bleerschachtel\b'
+    ]
+    
+    KEYWORDS_MANUAL_ONLY = [
+        r'\bmanual only\b', r'\bnotice seule\b', r'\bbooklet only\b', r'\binsert only\b', 
+        r'\bnotice only\b', r'\bmanuel seul\b', r'\bsans jeu\b', r'\bno game\b',
+        r'\banleitung\b', r'\bhandleiding\b'
+    ]
+    
+    KEYWORDS_CIB = [
+        r'\bcib\b', r'\bcomplete\b', r'\bcomplet\b', r'\bboxed\b', r'\ben boite\b', r'\ben boîte\b',
+        r'\bavec notice\b', r'\bwith manual\b', r'\bkomplett\b'
+    ]
+
+    @staticmethod
+    def detect_region(title: str, default_console_region: str = None) -> str | None:
+        """
+        Detects the region from the listing title.
+        Returns: 'PAL', 'NTSC-U', 'JAP', or None (Unknown/Loose).
+        """
+        t = title.lower()
+
+        # 1. Check Specific JP terms first (Strong signals)
+        if any(re.search(p, t) for p in ListingClassifier.KEYWORDS_JAP):
+            return 'JAP'
+            
+        # 2. Check PAL terms
+        if any(re.search(p, t) for p in ListingClassifier.KEYWORDS_PAL):
+            return 'PAL'
+            
+        # 3. Check NTSC-U terms
+        # ambiguous "NTSC" usually means US in generic context, but check strict patterns first
+        if any(re.search(p, t) for p in ListingClassifier.KEYWORDS_NTSC_U):
+            # Special case: "NTSC-J" is Japanese, already caught above?
+            # If regex was strict \bntsc\b, it wouldn't match ntsc-j provided boundaries work.
+            if "ntsc-j" in t: 
+                return 'JAP' 
+            return 'NTSC-U'
+
+        # Default fallback? No, return None to indicate uncertainty.
+        return None
+
+    @staticmethod
+    def detect_condition(title: str) -> str:
+        """
+        Determines if item is BOX_ONLY, MANUAL_ONLY, or Standard (Game).
+        """
+        t = title.lower()
+        
+        # Priority 1: Box Only (Empty Box)
+        if any(re.search(p, t) for p in ListingClassifier.KEYWORDS_BOX_ONLY):
+            # Exception: "Box Only" matches, but title says "Complete"? 
+            # Rare. Usually "Complete" wins if it overrides "Box Only"? 
+            # No, "Box Only - Complete" makes no sense. "Box Only" is destructive.
+            return 'BOX_ONLY'
+
+        # Priority 2: Manual Only
+        if any(re.search(p, t) for p in ListingClassifier.KEYWORDS_MANUAL_ONLY):
+            return 'MANUAL_ONLY'
+            
+        # Priority 3: Implicit "Note" or "Box" starts
+        # User example: "NOTICE Super Mario 64" -> Manual Only
+        # but "Super Mario 64 avec NOTICE" -> Game
+        # Logic: If 'notice' is in title, check if terms like 'jeu', 'game', 'cartouche' are ABSENT?
+        # Risky. "Vends Jeu Super Mario (sans notice)"
+        
+        # User Specific: "Boite NES / Box : Super Mario Bros. [FAH]" -> This is BOX ONLY?
+        # User says: "Boite Vide - Super Mario Bros"
+        
+        return 'Used' # Default to Game
+
+    @staticmethod
+    def is_region_compatible(item_region: str | None, console_region: str) -> bool:
+        """
+        Strict matching logic.
+        Ref: PAL Console -> Accepts PAL or None (Loose). Rejects JAP/NTSC-U.
+        """
+        if not item_region:
+            return True # Loose games often have no region in title, safely include.
+            
+        if console_region == 'PAL':
+            return item_region == 'PAL'
+        elif console_region == 'JAP':
+            return item_region == 'JAP'
+        elif console_region == 'NTSC-U':
+            return item_region == 'NTSC-U'
+            
+        # If console region is unknown (e.g. "GameBoy" is region free-ish?), default Accept?
+        return True
+
+    @staticmethod
+    def clean_query(product_name: str, console_name: str) -> str:
+        """
+        Creates a 'Broad Search' query.
+        Removes [Tags] and Region words from the query components.
+        """
+        # Remove [STUFF], (STUFF)
+        p_clean = re.sub(r'\[.*?\]', '', product_name)
+        p_clean = re.sub(r'\(.*?\)', '', p_clean)
+        
+        # Remove region keywords
+        bad_words = ['pal', 'ntsc', 'ntsc-u', 'ntsc-j', 'jap', 'japan', 'import', 'fah', 'fra', 'eur']
+        tokens = p_clean.split()
+        p_clean = " ".join([t for t in tokens if t.lower() not in bad_words])
+        
+        c_clean = re.sub(r'\[.*?\]', '', console_name)
+        c_clean = re.sub(r'\(.*?\)', '', c_clean)
+        tokens_c = c_clean.split()
+        c_clean = " ".join([t for t in tokens_c if t.lower() not in bad_words])
+
+        return f"{p_clean} {c_clean}".strip()
+

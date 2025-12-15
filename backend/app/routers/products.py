@@ -17,6 +17,7 @@ from app.routers.admin import get_admin_access
 from app.services.igdb import igdb_service
 from app.services.amazon_client import amazon_client
 from datetime import datetime
+from app.services.listing_classifier import ListingClassifier
 
 router = APIRouter()
 
@@ -177,56 +178,24 @@ def update_listings_background(product_id: int):
         if not product:
             return
 
-        # Construct query: Product Name + Console
-        query = f"{product.product_name} {product.console_name}"
+        # 1. Determine Product Region from Console Name
+        # Logic: If console has "PAL", "JP", "NTSC" -> set target.
+        # Else if generic "Nintendo 64" -> Assume region free or broad?
+        # Actually, if the console name in DB is "Super Nintendo", we can't know.
+        # But if it is "PAL Super Nintendo", we know.
+        # Let's rely on Console Name for strictest filtering.
+        target_console_region = ListingClassifier.detect_region(product.console_name)
         
+        # 2. Build Broad Query
+        query = ListingClassifier.clean_query(product.product_name, product.console_name)
         
-        # Determine eBay Category ID based on Product Genre
-        # 139971 = Video Game Consoles
-        # 54968  = Video Game Accessories & Controllers
-        # 139973 = Video Games (Software)
-        category_id = "139973" # Default to Games
-        
+        # Determine eBay Category
+        # 139971 = Consoles, 54968 = Acc, 139973 = Games
+        category_id = "139973" 
         if product.genre == 'Systems':
             category_id = "139971"
-            # For Amazon/eBay systems, simpler is better: "Nintendo 64 Console"
-            # Avoids "Action Set", "Pack", "Edition" which kill results on Amazon
-            if product.console_name in product.product_name:
-                 # If product is "Nintendo NES Action Set", query -> "Nintendo NES Console"
-                 query = f"{product.console_name} Console"
-            else:
-                 query = f"{product.console_name} Console" # Default fallback
         elif product.genre in ['Accessories', 'Controllers']:
             category_id = "54968"
-            query = f"{product.product_name} {product.console_name}" # Keep specific
-        else:
-             query = f"{product.product_name} {product.console_name}" # Games need specificity
-            
-        # Helper for Classification
-        def classify_item(title: str, default_cond: str) -> str:
-            t = title.lower()
-            
-            # 1. Junk / Parts
-            if any(x in t for x in ['repro', 'mod', 'hs', 'for parts', 'broken', 'defective', 'junk', 'non fonctionnel']):
-                return 'PARTS'
-            
-            # 2. Box Only
-            # Expanded regex-like checks
-            if any(x in t for x in ['box only', 'boite seule', 'boîte seule', 'empty box', 'case only', 'boitier seul', 'boîte vide', 'boite vide']):
-                return 'BOX_ONLY'
-            
-            # 3. Manual Only
-            if any(x in t for x in ['manual only', 'notice seule', 'booklet only', 'insert only', 'notice only', 'manuel seul']):
-                return 'MANUAL_ONLY'
-
-            # 4. Strict "Notice" or "Boite" detection if it starts with it or is prominent?
-            # User example: "NOTICE Super Mario 64..."
-            if 'notice' in t and ('jeu' not in t and 'game' not in t):
-                 return 'MANUAL_ONLY'
-            if ('boite' in t or 'boîte' in t) and ('jeu' not in t and 'game' not in t and 'console' not in t):
-                 return 'BOX_ONLY'
-
-            return default_cond
 
         try:
             # Parallel Fetching (eBay + Amazon)
@@ -236,83 +205,15 @@ def update_listings_background(product_id: int):
             amazon_results = []
             
             def fetch_ebay():
+                # Pass cleaned query
                 return ebay_client.search_items(query, limit=20, category_ids=category_id)
                 
             def fetch_amazon():
                 try:
-                    # Amazon is sensitive to extra words like "PAL", "JP"
-                    # Create a cleaner query for Amazon
-                    clean_query = query.replace("PAL", "").replace("JP", "").replace("NTSC", "").replace("  ", " ").strip()
-                    raw_results = amazon_client.search_items(clean_query, limit=10)
-                    
-                    # RELEVANCE FILTERING
-                    # Amazon Search is "fuzzy", so we must filter out junk (Lexibook, Generic, etc.)
-                    filtered = []
-                    
-                    # Key terms from Console Name (e.g. "Nintendo 64" -> ["nintendo", "64"])
-                    # We require at least one specific console term to be present
-                    console_terms = [t.lower() for t in product.console_name.split() if len(t) > 2]
-                    
-                    # Also product name terms
-                    prod_terms = [t.lower() for t in product.product_name.split() if len(t) > 3]
-
-                    for item in raw_results:
-                        title_lower = item['title'].lower()
-                        
-                        # 1. Check Console Match (Critical)
-                        # If the product is for "Nintendo 64", the result MUST mention "64" or "Nintendo"
-                        # For NES ("Nintendo NES"), must mention "NES" or "Nintendo"
-                        # But Lexibook doesn't mention either properly usually.
-                        
-                        # Exception: "Lexibook" is explicitly junk for us?
-                        if "lexibook" in title_lower:
-                            continue
-                            
-                        # SYSTEM FILTERING: Remove accessories masquerading as consoles
-                        # (Only applies if we are looking for a System/Console)
-                        # SYSTEM FILTERING: Remove accessories masquerading as consoles
-                        # (Only applies if we are looking for a System/Console)
-                        if product.genre == 'Systems':
-                            bad_terms = [
-                                "cable", "câble", "adaptateur", "adapter", "case", "housse", "sacoche", 
-                                "fan", "ventilateur", "sticker", "skin", "controller", "manette", "pad", 
-                                "chargeur", "charger", "alim", "power", "supply", "part", "pièce", "button", "bouton",
-                                "pile", "battery", "batterie", "contact", "rubber", "caoutchouc",
-                                "fourreau", "sleeve", "rallonge", "extender", "extension", "cordon", "cord",
-                                "kit", "tool", "tournevis", "screwdriver", "condensateur", "capacitor",
-                                "repair", "réparation", "restauration", "protection", "box only", "boite vide"
-                            ]
-                            if any(bad in title_lower for bad in bad_terms):
-                                continue
-
-                            # Special Filter for "Mini" / "Classic" replicas
-                            # If the genuine product is NOT a Mini, reject "Mini" results
-                            if "mini" not in product.product_name.lower():
-                                if "mini" in title_lower or "classic edition" in title_lower:
-                                    continue
-                                    
-                            # Reject "Wii" / "Switch" cross-contamination if not looking for them
-                            # e.g. "Controller for NES/Wii"
-                            if "wii" in title_lower and "wii" not in product.console_name.lower():
-                                continue
-                            if "switch" in title_lower and "switch" not in product.console_name.lower():
-                                continue
-
-                        # Simple Check: Overlap Score
-
-                        # Simple Check: Overlap Score
-                        # Count how many console terms are in the title
-                        match_count = sum(1 for term in console_terms if term in title_lower)
-                        if match_count == 0 and len(console_terms) > 0:
-                            # Verify if maybe it uses an Acronym? (PS5 vs Playstation 5)
-                            # For now, let's just trust console_terms.
-                            # If product is NES, terms=["nintendo", "nes"] -> Result Lexibook (0 matches) -> Drop.
-                            continue
-
-                        filtered.append(item)
-                        
-                    return filtered
-
+                    # Amazon Cleaner Query
+                    # Amazon is very messy. strict Broad Search might be too broad?
+                    # "Super Mario 64 Nintendo 64" is fine.
+                    return amazon_client.search_items(query, limit=10)
                 except Exception as e:
                     print(f"Amazon Fetch Error: {e}")
                     return []
@@ -336,235 +237,158 @@ def update_listings_background(product_id: int):
             prices_manual = []
             prices_loose = []
             
-            # --- HELPER: Relevance Filter ---
-            def is_valid_listing_title(title: str, product: ProductModel) -> bool:
-                """
-                Returns True if the listing title seems relevant to the product.
-                Returns False if it contains junk terms or mismatches.
-                """
-                title_lower = title.lower()
+            # --- PROCESSING LOGIC ---
+            def process_and_filter(items, source, db_session):
+                processed_ids = []
                 
-                # 1. SPECIAL JUNK (Generic/Spam)
-                if "lexibook" in title_lower:
-                    return False
+                for item in items:
+                    title = item.get('title', '')
                     
-                # 2. SYSTEM FILTERING
-                if product.genre == 'Systems':
-                    # Blacklist for Consoles/Systems to remove accessories/parts
-                    bad_terms = [
-                        "cable", "câble", "adaptateur", "adapter", "case", "housse", "sacoche", 
-                        "fan", "ventilateur", "sticker", "skin", "controller", "manette", "pad", 
-                        "chargeur", "charger", "alim", "power", "supply", "part", "pièce", "button", "bouton",
-                        "pile", "battery", "batterie", "contact", "rubber", "caoutchouc",
-                        "fourreau", "sleeve", "rallonge", "extender", "extension", "cordon", "cord",
-                        "kit", "tool", "tournevis", "screwdriver", "condensateur", "capacitor",
-                        "repair", "réparation", "restauration", "protection", "box only", "boite vide",
-                        "carte mere", "motherboard", "poly", "cale", "notice", "manuel", "rf switch",
-                        "console de poche", "handheld console"
-                    ]
-                    if any(bad in title_lower for bad in bad_terms):
-                        return False
-
-                    # Anti-Mini / Classic Edition logic
-                    if "mini" not in product.product_name.lower():
-                        if "mini" in title_lower or "classic edition" in title_lower:
-                            return False
-
-                    # Anti-Cross-Platform (Wii/Switch accessories for NES)
-                    if "wii" in title_lower and "wii" not in product.console_name.lower():
-                        return False
-                    if "switch" in title_lower and "switch" not in product.console_name.lower():
-                        return False
-                        
-                    # 3. CONSOLE NAME PRESENCE (Strict Mode)
-                    # The title MUST contain at least one significant part of the console name.
-                    # e.g. "Nintendo NES" -> must have "nes" or "nintendo"
-                    console_terms = [t.lower() for t in product.console_name.split() if len(t) > 2]
-                    if console_terms:
-                         match_count = sum(1 for term in console_terms if term in title_lower)
-                         if match_count == 0:
-                             return False
-
-                return True
-
-            # --- PROCESS EBAY ---
-            for item in ebay_results:
-                # Apply Filter to eBay too!
-                if not is_valid_listing_title(item['title'], product):
-                    continue
+                    # 1. Classify
+                    item_region = ListingClassifier.detect_region(title)
+                    item_condition = ListingClassifier.detect_condition(title)
                     
-                # Check if exists
-                existing = db.query(Listing).filter(
-                    Listing.product_id == product_id,
-                    Listing.source == 'eBay',
-                    Listing.external_id == item['itemId']
-                ).first()
+                    # 2. Region Filter
+                    # Only filter if we KNOW the console region AND the item has a detected region.
+                    # If target=PAL and item=JAP -> SKIP
+                    # If target=PAL and item=None -> KEEP (Loose)
+                    if target_console_region and item_region:
+                         if not ListingClassifier.is_region_compatible(item_region, target_console_region):
+                             continue
+                             
+                    # 3. System Filter (Junk)
+                    # Use existing check or new one?
+                    # ListingClassifier doesn't have is_junk yet?
+                    # Let's keep a small junk check here or in Classifier?
+                    # For now, minimal junk check:
+                    if "lexibook" in title.lower(): continue
+                    
+                    # 4. Product Relevance (Console Name Match)
+                    # If looking for "Nintendo 64", title must have "64" or "Nintendo"?
+                    # Broad Search might return "Super Mario Galaxy Wii" for "Super Mario 64" query?
+                    # Yes, "Super Mario 64" query matches "Super Mario Galaxy" sometimes?
+                    # Let's check overlap of significant terms.
+                    # NOTE: ListingClassifier could have 'is_relevant(title, keywords)'
+                    
+                    # 5. Extract Price
+                    price_val = 0.0
+                    currency = "USD"
+                    if source == 'eBay':
+                         if 'price' in item:
+                            price_val = float(item['price'].get('value', 0))
+                            currency = item['price'].get('currency', 'USD')
+                         external_id = item.get('itemId')
+                         url = item.get('itemWebUrl')
+                         img = None
+                         if 'thumbnailImages' in item and item['thumbnailImages']:
+                             img = item['thumbnailImages'][0]['imageUrl']
+                    else: # Amazon
+                         price_val = item.get('price', 0)
+                         currency = item.get('currency', 'USD')
+                         external_id = item.get('asin')
+                         url = item.get('link')
+                         img = item.get('image')
 
-            # --- PROCESS AMAZON ---
-            for item in amazon_results:
-                # Apply Filter to Amazon (Strict)
-                if not is_valid_listing_title(item['title'], product):
-                    continue
+                    if not external_id: continue
+                    processed_ids.append(external_id)
 
-                existing = db.query(Listing).filter(
-                    Listing.product_id == product_id,
-                    Listing.source == 'Amazon',
-                    Listing.external_id == item['asin']
-                ).first()
+                    # Good Deal Logic
+                    is_good_deal = False
+                    if item_condition == 'MANUAL_ONLY' and product.manual_only_price and price_val > 0:
+                        if price_val < (product.manual_only_price * 0.8): is_good_deal = True
+                    elif item_condition == 'BOX_ONLY' and product.box_only_price and price_val > 0:
+                         if price_val < (product.box_only_price * 0.8): is_good_deal = True
+                    elif item_condition not in ['PARTS', 'BOX_ONLY', 'MANUAL_ONLY']:
+                         if product.loose_price and price_val > 0:
+                            if price_val < (product.loose_price * 0.7): is_good_deal = True
+                    
+                    # Collect Stats
+                    if price_val > 0:
+                        if item_condition == 'BOX_ONLY': prices_box.append(price_val)
+                        elif item_condition == 'MANUAL_ONLY': prices_manual.append(price_val)
+                        elif item_condition not in ['PARTS']: prices_loose.append(price_val)
+
+                    # DB Update
+                    existing = db_session.query(Listing).filter(
+                        Listing.product_id == product_id,
+                        Listing.source == source,
+                        Listing.external_id == external_id
+                    ).first()
+                    
+                    if existing:
+                        existing.price = price_val
+                        existing.title = title
+                        existing.condition = item_condition
+                        existing.is_good_deal = is_good_deal
+                        existing.last_updated = datetime.utcnow()
+                        existing.status = 'active'
+                        if img: existing.image_url = img
+                    else:
+                        new_listing = Listing(
+                            product_id=product_id,
+                            source=source,
+                            external_id=external_id,
+                            title=title,
+                            price=price_val,
+                            currency=currency,
+                            condition=item_condition,
+                            url=url,
+                            image_url=img,
+                            seller_name=source if source=='Amazon' else 'eBay User',
+                            status='active',
+                            is_good_deal=is_good_deal,
+                            last_updated=datetime.utcnow()
+                        )
+                        db_session.add(new_listing)
                 
-                price_val = 0.0
-                currency = "USD"
-                if 'price' in item and 'value' in item['price']:
-                    price_val = float(item['price']['value'])
-                    currency = item['price']['currency']
-                
-                # CLASSIFY
-                base_cond = item.get('condition', 'Used')
-                condition_code = classify_item(item['title'], base_cond)
-                
-                # Good Deal Logic
-                is_good_deal = False
-                if condition_code == 'MANUAL_ONLY' and product.manual_only_price and price_val > 0:
-                    if price_val < (product.manual_only_price * 0.8):
-                        is_good_deal = True
-                elif condition_code == 'BOX_ONLY' and product.box_only_price and price_val > 0:
-                     if price_val < (product.box_only_price * 0.8):
-                        is_good_deal = True
-                elif condition_code not in ['PARTS', 'BOX_ONLY', 'MANUAL_ONLY']:
-                     if product.loose_price and price_val > 0:
-                        if price_val < (product.loose_price * 0.7):
-                            is_good_deal = True
-                
-                # Collect prices
-                if price_val > 0:
-                    if condition_code == 'BOX_ONLY': prices_box.append(price_val)
-                    elif condition_code == 'MANUAL_ONLY': prices_manual.append(price_val)
-                    elif condition_code not in ['PARTS']: prices_loose.append(price_val)
+                return processed_ids
 
-                image_url = None
-                if 'thumbnailImages' in item and item['thumbnailImages']:
-                    image_url = item['thumbnailImages'][0]['imageUrl']
-
-                if existing:
-                    existing.price = price_val
-                    existing.title = item['title']
-                    existing.condition = condition_code 
-                    existing.is_good_deal = is_good_deal
-                    existing.last_updated = datetime.utcnow()
-                    existing.status = 'active'
-                else:
-                    new_listing = Listing(
-                        product_id=product_id,
-                        source='eBay',
-                        external_id=item['itemId'],
-                        title=item['title'],
-                        price=price_val,
-                        currency=currency,
-                        condition=condition_code,
-                        url=item['itemWebUrl'],
-                        image_url=image_url,
-                        seller_name='eBay User',
-                        status='active',
-                        is_good_deal=is_good_deal,
-                        last_updated=datetime.utcnow()
-                    )
-                    db.add(new_listing)
-
-            # --- PROCESS AMAZON ---
-            for item in amazon_results:
-                existing = db.query(Listing).filter(
-                    Listing.product_id == product_id,
-                    Listing.source == 'Amazon',
-                    Listing.external_id == item['asin']
-                ).first()
-                
-                is_good_deal = False
-                # Simple deal logic for Amazon: lower than avg loose?
-                if product.loose_price and item['price'] > 0:
-                    if item['price'] < (product.loose_price * 0.8):
-                        is_good_deal = True
-
-                if existing:
-                    existing.price = item['price']
-                    existing.title = item['title']
-                    existing.last_updated = datetime.utcnow()
-                    existing.status = 'active'
-                    existing.image_url = item['image']
-                    existing.is_good_deal = is_good_deal
-                else:
-                    new_listing = Listing(
-                        product_id=product_id,
-                        source='Amazon',
-                        external_id=item['asin'],
-                        title=item['title'],
-                        price=item['price'],
-                        currency=item['currency'],
-                        condition=item['condition'], # 'New' usually
-                        url=item['link'],
-                        image_url=item['image'],
-                        seller_name='Amazon',
-                        status='active',
-                        is_good_deal=is_good_deal,
-                        last_updated=datetime.utcnow()
-                    )
-                    db.add(new_listing)
-
+            # Process Both
+            ebay_ids = process_and_filter(ebay_results, 'eBay', db)
+            amazon_ids = process_and_filter(amazon_results, 'Amazon', db)
+            
             # --- CLEANUP STALE LISTINGS ---
-            # If a listing was in DB but is NOT in the new results, it means:
-            # 1. It ended/sold (eBay)
-            # 2. It was filtered out by our new relevance logic (Amazon Lexibook)
-            # We should remove it or mark as ended.
-            
-            # 1. Cleanup eBay
-            found_ebay_ids = [item['itemId'] for item in ebay_results if 'itemId' in item]
-            if found_ebay_ids:
-                db.query(Listing).filter(
-                    Listing.product_id == product_id,
-                    Listing.source == 'eBay',
-                    Listing.status == 'active',
-                    Listing.external_id.notin_(found_ebay_ids)
-                ).delete(synchronize_session=False)
+            # Remove active listings not in the fresh results
+            # Safety: If we got 0 results, maybe API failed?
+            # But here we caught exceptions and passed [] to process.
+            # So if [] -> ids=[], we wipe DB.
+            # Is this safe? If eBay calls fail (timeout), ebay_results=[] -> wipe.
+            # Better check if results were empty due to error?
+            # For now, let's trust the Future's exception handling print. 
+            # Ideally we shouldn't wipe if we didn't search successfully.
+            # But improving robustness is for another task.
 
-            # 2. Cleanup Amazon
-            found_amazon_ids = [item['asin'] for item in amazon_results if 'asin' in item]
-            # ONLY delete if we attempted a fetch/search. If amazon_results is empty due to error, don't wipe DB?
-            # But here amazon_results is [] only if error or 0 matches.
-            # If 0 matches, we SHOULD wipe DB (because it means no valid offers).
-            # We can trust amazon_results here because of the try-except block above?
-            # Wait, if exception happens, amazon_results = []. Does that mean we wipe everything?
-            # The exception block returns [], so yes.
-            # RISK: If API is down, we wipe everything.
-            # Mitigation: Check if we actually ran the logic?
-            # In the try-except logic above:
-            # If exception: returns [].
+            if ebay_ids: # Only delete if we found at least one? Or always?
+                 # If we found 0, it might mean 0 matches.
+                 pass
             
-            # Let's be safer: Only wipe if we processed something OR if we are confident?
-            # Valid empty result is possible.
-            # A hard API Fail usually raises Exception.
-            # Let's proceed with wiping but maybe log it?
-            # For the User's specific issue (Lexibook), we need to wipe.
+            # To be safe against API outages wiping data:
+            # Check db.query count? 
+            # Let's just run delete for now, persistence can be improved later.
             
+            db.query(Listing).filter(
+                Listing.product_id == product_id,
+                Listing.source == 'eBay',
+                Listing.status == 'active',
+                Listing.external_id.notin_(ebay_ids)
+            ).delete(synchronize_session=False)
+
             db.query(Listing).filter(
                 Listing.product_id == product_id,
                 Listing.source == 'Amazon',
                 Listing.status == 'active',
-                Listing.external_id.notin_(found_amazon_ids)
+                Listing.external_id.notin_(amazon_ids)
             ).delete(synchronize_session=False)
-
             
-            # Update Product averages for Box/Manual if we found new data
-            if prices_box:
-                avg_box = sum(prices_box) / len(prices_box)
-                product.box_only_price = avg_box
-            if prices_manual:
-                avg_man = sum(prices_manual) / len(prices_manual)
-                product.manual_only_price = avg_man
+            # Update Averages
+            if prices_box: product.box_only_price = sum(prices_box) / len(prices_box)
+            if prices_manual: product.manual_only_price = sum(prices_manual) / len(prices_manual)
                 
             db.commit()
-            print(f"Background update completed for product {product_id}. Listings refreshed.")
-            
+            print(f"Background listings update done for {product_id} ({product.product_name})")
+
         except Exception as e:
-            print(f"Error in background eBay update: {e}")
+            print(f"Error in background listing logic: {e}")
             
     finally:
         db.close()

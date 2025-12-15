@@ -104,66 +104,6 @@ class EbayClient:
             # Apply strict filtering
             clean_items = self._filter_results(raw_items)
             
-            # Apply Classification (Box/Manual detection)
-            for item in clean_items:
-                title = item.get('title', '').upper()
-                
-                # Default checking
-                is_box = False
-                is_manual = False
-                
-                # Keywords (Multi-language: FR, EN, DE, ES, IT, PT, NL)
-                box_terms = [
-                    'BOITE', 'BOX', 'CASE', 'EMPTY BOX', 'VIDE', 
-                    'OVP', 'SCHACHTEL', 'HÜLLE', 
-                    'CAJA', 'ESTUCHE', 
-                    'SCATOLA', 'CUSTODIA', 
-                    'CAIXA', 
-                    'DOOS'
-                ]
-                manual_terms = [
-                    'NOTICE', 'MANUAL', 'INSTRUCTION', 'BOOKLET', 'LIVRET', 
-                    'ANLEITUNG', 'HANDBUCH', 
-                    'MANUALE', 'LIBRETTO', 
-                    'HANDLEIDING'
-                ]
-                no_game_terms = [
-                    'PAS DE JEU', 'NO GAME', 'EMPTY', 'VIDE', 'BOITE SEULE', 'NOTICE SEULE', 'MANUAL ONLY', 'BOX ONLY',
-                    'KEIN SPIEL', 'NUR', 'OHNE SPIEL',
-                    'SIN JUEGO', 'SOLO',
-                    'SENZA GIOCO',
-                    'SEM JOGO',
-                    'GEEN SPEL', 'ZONDER SPEL'
-                ]
-                
-                # Logic: 
-                # If title contains explicit "No Game" markers -> Check if Box or Manual
-                # OR if title explicitly says "Notice Seule" or "Boite Seule"
-                
-                has_no_game = any(t in title for t in no_game_terms)
-                has_box = any(t in title for t in box_terms)
-                has_manual = any(t in title for t in manual_terms)
-                
-                # Exclusion: "CIB", "COMPLETE", "+ JEU", "+ GAME" -> Likely full game even if it says "Box"
-                is_complete = any(t in title for t in ['CIB', 'COMPLETE', 'COMPLET', 'AVEC JEU', 'WITH GAME', '+ JEU', '+ GAME'])
-                
-                if not is_complete:
-                    if has_no_game or (has_manual and "SEULE" in title) or (has_box and "SEULE" in title):
-                        if has_manual and not has_box:
-                             item['condition'] = 'MANUAL_ONLY'
-                        elif has_box and not has_manual:
-                             item['condition'] = 'BOX_ONLY'
-                        elif has_box and has_manual:
-                             item['condition'] = 'BOX_ONLY' # or 'BOX_MANUAL' if we supported it, but frontend handles these two. 
-                             # Let's defaults to BOX_ONLY for combo for now, or MANUAL? 
-                             # Frontend only splits by those two tags.
-                             # If "Boite + Notice", it's effectively "Extras".
-                             pass
-                        elif has_manual: # Default if ambiguous but mentions notice + no game
-                             item['condition'] = 'MANUAL_ONLY'
-                        elif has_box:
-                             item['condition'] = 'BOX_ONLY'
-
             return clean_items
             
         except requests.exceptions.RequestException as e:
