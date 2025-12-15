@@ -1,5 +1,5 @@
 from fastapi import FastAPI, BackgroundTasks
-from fastapi.staticfiles import StaticFiles
+from fastapi.staticfiles import StaticFiles # Trigger Reload
 from fastapi.middleware.cors import CORSMiddleware
 import os
 from app.db.session import engine, Base
@@ -104,6 +104,13 @@ app.include_router(import_collection.router, prefix="/api/v1/import", tags=["imp
 
 @app.on_event("startup")
 def startup_event():
+    # AUTO-MIGRATE: Ensure DB schema matches code (Adds missing columns like 'asin')
+    try:
+        from app.db.migrations import run_auto_migrations
+        run_auto_migrations(engine)
+    except Exception as e:
+        print(f"Startup Migration Error: {e}")
+
     # Initialize Scheduler for automated scraping
     try:
         from apscheduler.schedulers.background import BackgroundScheduler
