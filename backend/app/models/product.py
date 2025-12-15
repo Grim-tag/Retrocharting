@@ -23,8 +23,9 @@ class Product(Base):
     publisher = Column(String, nullable=True)
     developer = Column(String, nullable=True)
     esrb_rating = Column(String, nullable=True)
-    # ean = Column(String, nullable=True)
-    # gtin = Column(String, nullable=True)
+    ean = Column(String, nullable=True) # Used for UPC/EAN
+    gtin = Column(String, nullable=True) # Generic
+    asin = Column(String, nullable=True) # Amazon ID
     players = Column(String, nullable=True)
 
     price_history = relationship("PriceHistory", back_populates="product", cascade="all, delete-orphan")

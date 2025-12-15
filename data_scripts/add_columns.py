@@ -14,7 +14,10 @@ def add_columns():
         ("publisher", "TEXT"),
         ("developer", "TEXT"),
         ("esrb_rating", "TEXT"),
-        ("players", "TEXT")
+        ("players", "TEXT"),
+        ("asin", "TEXT"),
+        ("ean", "TEXT"),
+        ("gtin", "TEXT")
     ]
 
     for col_name, col_type in columns:

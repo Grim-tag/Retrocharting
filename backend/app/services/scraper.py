@@ -394,6 +394,11 @@ def _update_product_via_api(db: Session, product: "Product") -> bool:
         if "box-only-price" in data: product.box_only_price = float(data["box-only-price"]) / 100.0
         if "manual-only-price" in data: product.manual_only_price = float(data["manual-only-price"]) / 100.0
         
+        # New: ASIN and UPC/EAN
+        if "asin" in data and data["asin"]: product.asin = data["asin"]
+        if "upc" in data and data["upc"]: product.ean = data["upc"] # Map UPC to EAN field (or use raw upc field if schema changed)
+        if "ean" in data and data["ean"]: product.ean = data["ean"] # Prefer EAN if explicit
+        
         # Add Price History Entry (Today)
         today_date = datetime.utcnow().date()
         
