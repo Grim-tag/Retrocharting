@@ -85,10 +85,21 @@ class ListingClassifier:
         if any(re.search(p, t) for p in ListingClassifier.KEYWORDS_BOX_ONLY):
             return 'BOX_ONLY'
 
-        # Priority 2: Manual Only definitions (Explicit "Only")
         if any(re.search(p, t) for p in ListingClassifier.KEYWORDS_MANUAL_ONLY):
             return 'MANUAL_ONLY'
             
+        # Priority 2b: Explicit "NO GAME" phrasing (Strongest signal)
+        if "pas de jeu" in t or "no game" in t or "sans jeu" in t:
+             # If it says "No Game", it is definitely NOT a game.
+             # Could be Manual Only or Box Only.
+             # If contains "Notice" -> Manual. If "Boite" -> Box.
+             if "notice" in t or "manuel" in t or "manual" in t:
+                 return 'MANUAL_ONLY'
+             if "boite" in t or "box" in t:
+                 return 'BOX_ONLY'
+             # Default to Manual if ambiguous but "No Game"? Or Parts?
+             return 'MANUAL_ONLY' 
+
         # Priority 3: Implicit "Note" or "Box" starts
         # If title STARTS with "Notice" or "Manuel" or "Boite" and doesn't mention "Jeu"/"Game" explicitly later
         # Regex: ^\s*(notice|manuel|manual|boite|box)\b
@@ -121,7 +132,7 @@ class ListingClassifier:
                      return 'MANUAL_ONLY'
 
         return 'Used' # Default to Game
-
+        
     @staticmethod
     def is_junk(title: str, product_name: str, console_name: str, genre: str) -> bool:
         """
@@ -133,7 +144,14 @@ class ListingClassifier:
         # 1. Universal Junk
         junk_terms = [
             'repro', 'mod', 'hs', 'for parts', 'broken', 'defective', 'junk', 'non fonctionnel',
-            'fan made', 'custom', 'telecopie', 'pirate', 'hack'
+            'fan made', 'custom', 'telecopie', 'pirate', 'hack',
+            # New Junk Terms
+            'coaster', 'sous-verre', 'mug', 'tasse', 'keychain', 'porte-clés',
+            'guide', 'strategy guide', 'walkthrough', 'book', 'livre', 'artbook',
+            'soundtrack', 'ost', 'vinyl', 'cd audio', 'music',
+            'lego', 'building set', 'construction', 'toy', 'jouet', 'plush', 'peluche',
+            'earphone', 'écouteur', 'headset', 'casque', 'audio',
+            'shirt', 't-shirt', 'hoodie', 'apparel', 'vêtement'
         ]
         if any(x in t for x in junk_terms): return True
         
@@ -143,9 +161,6 @@ class ListingClassifier:
              if 'amiibo' in t: return True
              
         if 'protector' in t or 'protection' in t or 'film' in t or 'ecran' in t or 'acrylic' in t or 'stand' in t:
-             # "Screen Protector", "Box Protector"
-             # Careful: "Protection" could be in game title? Unlikely for retro games.
-             # "Mission Impossible: Nuclear Protection" -> Rare.
              return True
 
         # 3. System Parts (if querying System)
@@ -158,7 +173,6 @@ class ListingClassifier:
                 "fourreau", "sleeve", "rallonge", "extender", "extension", "cordon", "cord",
                 "kit", "tool", "tournevis", "screwdriver", "condensateur", "capacitor",
                 "repair", "réparation", "restauration", "notice", "manuel", "rf switch" 
-                # Notice for system is junk? Yes usually we want console hardware.
             ]
             if any(bad in t for bad in bad_sys_terms): return True
             
@@ -169,9 +183,43 @@ class ListingClassifier:
         # 4. Cross-Platform Contamination
         # e.g. "Wii" results when looking for "NES"
         c_name = console_name.lower()
-        if "wii" in t and "wii" not in c_name: return True
-        if "switch" in t and "switch" not in c_name: return True
-        # "DS" on "3DS" is valid? "3DS" on "DS" is bad. 
+        
+        # List of major keywords to exclude if NOT in target console name
+        # If target IS "Game Boy Advance", don't exclude "Advance".
+        exclusions = {
+            "wii": ["wii"],
+            "switch": ["switch"],
+            "ds": ["ds", "3ds", "2ds"],
+            "gameboy": ["gameboy", "gba", "advance", "gb", "gbc"], # careful: "GB" is short
+            "ps1": ["ps1", "playstation 1", "psx"],
+            "ps2": ["ps2", "playstation 2"],
+            "ps3": ["ps3", "playstation 3"],
+            "ps4": ["ps4", "playstation 4"],
+            "xbox": ["xbox"],
+            "nes": ["nes", "famicom"],    # Don't exclude NES if on NES
+            "snes": ["snes", "super nintendo"]
+        }
+        
+        # Iterate over all known exclusion groups
+        for key, terms in exclusions.items():
+            # If the TARGET console matches this group, SKIP excluding them.
+            # e.g. if c_name="nintendo ds", key="ds" -> Match (via term check).
+            # e.g. if c_name="nes", key="gameboy" -> No match. Check terms.
+            
+            # Is the target console part of this group?
+            is_target_group = False
+            for term in terms:
+                if term in c_name: is_target_group = True
+                
+            if is_target_group: continue
+            
+            # If not target group, check if Title contains these foreign terms
+            for term in terms:
+                # Use word boundary for short terms like "ds", "gb"
+                if len(term) <= 3:
+                    if re.search(rf'\b{term}\b', t): return True
+                else:
+                    if term in t: return True
         
         return False
 
