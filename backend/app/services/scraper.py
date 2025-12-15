@@ -176,6 +176,75 @@ def process_product_id(product_id: int) -> bool:
     finally:
         db.close()
 
+def refresh_prices_job(limit: int = 100):
+    """
+    Dedicated job to refresh prices for existing products.
+    Targets products with pricecharting_id (fast API update).
+    """
+    from app.models.product import Product
+    from app.models.scraper_log import ScraperLog
+    
+    db: Session = SessionLocal()
+    start_time = datetime.utcnow()
+    
+    # Create Log
+    log = ScraperLog(status="running", source="price_refresh", start_time=start_time, items_processed=0)
+    db.add(log)
+    db.commit()
+    db.refresh(log)
+    
+    try:
+        # Find products sorted by last_scraped (Oldest first)
+        # MUST have pricecharting_id to be efficient
+        products = db.query(Product).filter(
+            Product.pricecharting_id != None
+        ).order_by(Product.last_scraped.asc().nullsfirst()).limit(limit).all()
+        
+        if not products:
+            print("No products to refresh.")
+            db.query(ScraperLog).filter(ScraperLog.id == log.id).update({"status": "completed", "end_time": datetime.utcnow()})
+            db.commit()
+            return
+            
+        print(f"Refreshing prices for {len(products)} items...")
+        count = 0
+        
+        for p in products:
+            try:
+                # Use internal API updater
+                # verify if it updates timestamp?
+                # _update_product_via_api does NOT commit or update timestamp inside itself?
+                # Let's check _update_product_via_api implementation. 
+                # It updates product fields. Does NOT commit.
+                
+                success = _update_product_via_api(db, p)
+                if success:
+                    p.last_scraped = datetime.utcnow()
+                    db.commit() # Commit per item to be safe? Or batch?
+                    count += 1
+                else:
+                    # Even if failed, bump timestamp so we don't retry immediately
+                    p.last_scraped = datetime.utcnow()
+                    db.commit()
+                    
+            except Exception as e:
+                print(f"Price refresh error {p.id}: {e}")
+                
+        # Finish
+        db.query(ScraperLog).filter(ScraperLog.id == log.id).update({
+            "status": "completed", 
+            "items_processed": count,
+            "end_time": datetime.utcnow()
+        })
+        db.commit()
+        
+    except Exception as e:
+        print(f"Price refresh global error: {e}")
+        db.query(ScraperLog).filter(ScraperLog.id == log.id).update({"status": "error", "error_message": str(e)})
+        db.commit()
+    finally:
+        db.close()
+
 def scrape_missing_data(max_duration: int = 600, limit: int = 50):
     """
     Scrapes data using a thread pool for concurrency.
