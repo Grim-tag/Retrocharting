@@ -25,6 +25,11 @@ class Settings(BaseSettings):
              
              db_path = os.path.join(root_dir, "collector.db")
              return f"sqlite:///{db_path}"
+        
+        # FIX: SQLAlchemy requires 'postgresql://', but Render often gives 'postgres://'
+        if self.DATABASE_URL and self.DATABASE_URL.startswith("postgres://"):
+             return self.DATABASE_URL.replace("postgres://", "postgresql://", 1)
+             
         return self.DATABASE_URL
 
     PRICECHARTING_API_TOKEN: str
