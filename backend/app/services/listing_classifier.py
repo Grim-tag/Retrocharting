@@ -83,28 +83,97 @@ class ListingClassifier:
         
         # Priority 1: Box Only (Empty Box)
         if any(re.search(p, t) for p in ListingClassifier.KEYWORDS_BOX_ONLY):
-            # Exception: "Box Only" matches, but title says "Complete"? 
-            # Rare. Usually "Complete" wins if it overrides "Box Only"? 
-            # No, "Box Only - Complete" makes no sense. "Box Only" is destructive.
             return 'BOX_ONLY'
 
-        # Priority 2: Manual Only
+        # Priority 2: Manual Only definitions (Explicit "Only")
         if any(re.search(p, t) for p in ListingClassifier.KEYWORDS_MANUAL_ONLY):
             return 'MANUAL_ONLY'
             
         # Priority 3: Implicit "Note" or "Box" starts
-        # User example: "NOTICE Super Mario 64" -> Manual Only
-        # but "Super Mario 64 avec NOTICE" -> Game
-        # Logic: If 'notice' is in title, check if terms like 'jeu', 'game', 'cartouche' are ABSENT?
-        # Risky. "Vends Jeu Super Mario (sans notice)"
+        # If title STARTS with "Notice" or "Manuel" or "Boite" and doesn't mention "Jeu"/"Game" explicitly later
+        # Regex: ^\s*(notice|manuel|manual|boite|box)\b
         
-        # User Specific: "Boite NES / Box : Super Mario Bros. [FAH]" -> This is BOX ONLY?
-        # User says: "Boite Vide - Super Mario Bros"
+        # Check strict start for Manual
+        if re.search(r'^\s*(notice|manuel|manual|livret|booklet)\b', t):
+            # It starts with "Notice", assume Manual Only unless "Jeu" implies "Notice du Jeu"? 
+            # "Notice du Jeu Super Mario" -> Still Manual Only usually.
+            # "Notice + Jeu" -> Game.
+            # "Notice et Jeu" -> Game.
+            if 'jeu' not in t and 'game' not in t and 'cartouche' not in t and 'cartridge' not in t:
+                 return 'MANUAL_ONLY'
+            # Check for "+ Jeu" connector
+            if not any(x in t for x in ['+ jeu', '+ game', 'avec jeu', 'with game', 'jeu compris']):
+                 return 'MANUAL_ONLY'
+
+        # Check strict start for Box
+        if re.search(r'^\s*(boite|box|boîte)\b', t):
+            if 'jeu' not in t and 'game' not in t and 'cartouche' not in t:
+                 return 'BOX_ONLY'
         
+        # Priority 4: Implicit (Contains "Notice" but no "Game" or connectors)
+        # e.g. "Super Mario Bros Notice" -> Manual
+        # e.g. "Super Mario Bros avec Notice" -> Game (Connectors: avec, with, +, incl, compris)
+        if any(re.search(p, t) for p in [r'\bnotice\b', r'\bmanuel\b', r'\bmanual\b']):
+             # Must NOT have game terms
+             if not any(x in t for x in ['jeu', 'game', 'cartouche', 'cartridge', 'console']):
+                 # Must NOT have connectors (avec, with, +, incl) which imply Game + Manual
+                 if not any(x in t for x in ['avec', 'with', 'incl', 'compris', r'\+', 'und']):
+                     return 'MANUAL_ONLY'
+
         return 'Used' # Default to Game
 
     @staticmethod
-    def is_region_compatible(item_region: str | None, console_region: str) -> bool:
+    def is_junk(title: str, product_name: str, console_name: str, genre: str) -> bool:
+        """
+        Returns True if the item is irrelevant (Amiibo, Protector, Mod, etc.)
+        """
+        t = title.lower()
+        p_name = product_name.lower()
+        
+        # 1. Universal Junk
+        junk_terms = [
+            'repro', 'mod', 'hs', 'for parts', 'broken', 'defective', 'junk', 'non fonctionnel',
+            'fan made', 'custom', 'telecopie', 'pirate', 'hack'
+        ]
+        if any(x in t for x in junk_terms): return True
+        
+        # 2. Accessories masking as Games (Amiibo, Protectors)
+        # Apply this generally unless the product IS an Amiibo/Accessory
+        if genre != 'Accessories' and 'amiibo' not in p_name:
+             if 'amiibo' in t: return True
+             
+        if 'protector' in t or 'protection' in t or 'film' in t or 'ecran' in t or 'acrylic' in t or 'stand' in t:
+             # "Screen Protector", "Box Protector"
+             # Careful: "Protection" could be in game title? Unlikely for retro games.
+             # "Mission Impossible: Nuclear Protection" -> Rare.
+             return True
+
+        # 3. System Parts (if querying System)
+        if genre == 'Systems':
+            bad_sys_terms = [
+                "cable", "câble", "adaptateur", "adapter", "case", "housse", "sacoche", 
+                "fan", "ventilateur", "sticker", "skin", "controller", "manette", "pad", 
+                "chargeur", "charger", "alim", "power", "supply", "part", "pièce", "button", "bouton",
+                "pile", "battery", "batterie", "contact", "rubber", "caoutchouc",
+                "fourreau", "sleeve", "rallonge", "extender", "extension", "cordon", "cord",
+                "kit", "tool", "tournevis", "screwdriver", "condensateur", "capacitor",
+                "repair", "réparation", "restauration", "notice", "manuel", "rf switch" 
+                # Notice for system is junk? Yes usually we want console hardware.
+            ]
+            if any(bad in t for bad in bad_sys_terms): return True
+            
+            # Anti-Mini checks
+            if "mini" not in p_name and ("mini" in t or "classic edition" in t):
+                return True
+                
+        # 4. Cross-Platform Contamination
+        # e.g. "Wii" results when looking for "NES"
+        c_name = console_name.lower()
+        if "wii" in t and "wii" not in c_name: return True
+        if "switch" in t and "switch" not in c_name: return True
+        # "DS" on "3DS" is valid? "3DS" on "DS" is bad. 
+        
+        return False
         """
         Strict matching logic.
         Ref: PAL Console -> Accepts PAL or None (Loose). Rejects JAP/NTSC-U.
