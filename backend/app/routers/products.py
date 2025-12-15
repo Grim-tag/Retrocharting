@@ -246,6 +246,14 @@ def update_listings_background(product_id: int):
                     
                     # 1. Classify
                     item_region = ListingClassifier.detect_region(title)
+                    
+                    # Implicit Region Detection (Source-Based)
+                    # Use Source to infer region if not explicitly stated in title.
+                    # Assumption: Amazon.fr / eBay.fr listings are PAL by default unless marked otherwise.
+                    if not item_region:
+                         if source in ['amazon', 'ebay']:
+                             item_region = 'PAL'
+                    
                     item_condition = ListingClassifier.detect_condition(title)
                     
                     # 2. Region Filter
