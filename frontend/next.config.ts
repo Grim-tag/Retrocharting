@@ -10,9 +10,17 @@ const nextConfig: NextConfig = {
         destination: process.env.NEXT_PUBLIC_API_URL
           ? `${process.env.NEXT_PUBLIC_API_URL}/api/:path*`
           : (process.env.NODE_ENV === 'production'
-            ? 'https://retrocharting-backend.onrender.com/api/:path*'
+            ? 'https://retrocharting.onrender.com/api/:path*'
             : 'http://127.0.0.1:8000/api/:path*'),
       },
+      {
+        source: '/static/:path*',
+        destination: process.env.NEXT_PUBLIC_API_URL
+          ? `${process.env.NEXT_PUBLIC_API_URL}/static/:path*`
+          : (process.env.NODE_ENV === 'production'
+            ? 'https://retrocharting.onrender.com/static/:path*'
+            : 'http://127.0.0.1:8000/static/:path*'),
+      }
     ]
   },
 };
