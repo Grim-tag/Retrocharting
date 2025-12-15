@@ -57,7 +57,8 @@ async def scrape_single_product(db: Session, product: "Product"):
     needs_metadata = (
         not product.description or 
         not product.image_url or 
-        "cloudinary" not in (product.image_url or "") or
+        "cloudinary" in (product.image_url or "") or # Migrate Cloudinary -> Local
+        "/static/" not in (product.image_url or "") or # Ensure Local
         not product.publisher
     )
 
@@ -97,7 +98,8 @@ def process_product_id(product_id: int) -> bool:
         needs_metadata = (
             not product.description or 
             not product.image_url or 
-            "cloudinary" not in (product.image_url or "") or
+            "cloudinary" in (product.image_url or "") or
+            "/static/" not in (product.image_url or "") or
             not product.publisher
         )
 
@@ -167,6 +169,7 @@ def scrape_missing_data(max_duration: int = 600, limit: int = 50):
                     Product.description == "",
                     Product.publisher == None,
                     Product.publisher == "",
+                    Product.image_url.contains("cloudinary"), # Target Cloudinary for migration
                     PriceHistory.id == None
                 ),
                 Product.console_name != None,
@@ -336,7 +339,9 @@ def _scrape_html_logic(db: Session, product: "Product") -> bool:
             soup = BeautifulSoup(response.content, 'html.parser')
             
             # 1. Image
-            if not product.image_url or "cloudinary" not in product.image_url:
+            # condition: If missing, OR if using Cloudinary (migration), OR if not local yet
+            is_local = product.image_url and "/static/images/products" in product.image_url
+            if not product.image_url or "cloudinary" in product.image_url or not is_local:
                 img = soup.select_one('#product_images img') or soup.select_one('.cover img')
                 if img and img.get('src') and "shim.gif" not in img.get('src'):
                     original_url = img.get('src')
