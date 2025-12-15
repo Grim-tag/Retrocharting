@@ -304,6 +304,8 @@ class ListingClassifier:
             # 3 terms: needs 2. (66%) -> OK.
             # 4 terms: needs 3. (75%) -> OK.
             return match_count >= (len(terms) - 1)
+    @staticmethod
+    def is_region_compatible(item_region: str, console_region: str) -> bool:
         """
         Strict matching logic.
         Ref: PAL Console -> Accepts PAL or None (Loose). Rejects JAP/NTSC-U.
