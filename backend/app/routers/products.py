@@ -199,7 +199,10 @@ def update_listings_background(product_id: int):
         # Let's default to NTSC-U only if NOT loose/hardware? No.
         # Let's try enforcing NTSC-U default for 'Systems' and 'Games'.
         if not target_console_region:
-             target_console_region = 'NTSC-U'
+             # Exclude Accessories from this strict default.
+             # Accessories are often generic/region-free.
+             if product.genre != 'Accessories':
+                 target_console_region = 'NTSC-U'
         
         # 2. Build Broad Query
         query = ListingClassifier.clean_query(product.product_name, product.console_name)
