@@ -112,7 +112,8 @@ def startup_event():
 
         scheduler = BackgroundScheduler()
         # SAFE SCRAPING: Run every 5 minutes, 10 items per batch (to avoid OOM/Zombie)
-        scheduler.add_job(scrape_missing_data, 'interval', minutes=5, args=[300, 10], id='auto_scrape', replace_existing=True)
+        # TURBO MIGRATION: 200 items every 2 mins. (Safe for Cloudinary download)
+        scheduler.add_job(scrape_missing_data, 'interval', minutes=2, args=[110, 200], id='auto_scrape', replace_existing=True)
         
         # IGDB ENRICHMENT: Run every 15 minutes, 500 items per batch (Turbo Mode)
         # 500 items * ~0.4s = ~200s (3.3 mins) processing time. plenty of buffer in 15 mins.

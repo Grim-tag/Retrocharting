@@ -47,6 +47,48 @@ def slugify(text: str) -> str:
     
     return slug
 
+def _migrate_cloudinary_image(db: Session, product: "Product") -> bool:
+    """
+    Downloads existing Cloudinary image and saves locally.
+    Avoids scraping PriceCharting HTML.
+    """
+    try:
+        if not product.image_url or "cloudinary" not in product.image_url:
+            return False
+            
+        original_url = product.image_url
+        p_slug = slugify(product.product_name)
+        filename = f"{p_slug}-{product.id}.jpg"
+        
+        # Paths
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        backend_dir = os.path.dirname(os.path.dirname(current_dir))
+        static_img_dir = os.path.join(backend_dir, "static", "images", "products")
+        
+        if not os.path.exists(static_img_dir):
+            os.makedirs(static_img_dir)
+            
+        local_path = os.path.join(static_img_dir, filename)
+        
+        # Download
+        # Cloudinary URLs are robust, usually no need for special headers
+        img_resp = requests.get(original_url, stream=True, timeout=15)
+        if img_resp.status_code == 200:
+            with open(local_path, 'wb') as f:
+                img_resp.raw.decode_content = True
+                shutil.copyfileobj(img_resp.raw, f)
+            
+            # Update DB with Local URL
+            product.image_url = f"{settings.API_BASE_URL}/static/images/products/{filename}"
+            return True
+        else:
+             print(f"Cloudinary download failed: {img_resp.status_code}")
+             return False
+
+    except Exception as e:
+        print(f"Migration error: {e}")
+        return False
+
 async def scrape_single_product(db: Session, product: "Product"):
     """
     Smart Scraper:
@@ -104,7 +146,12 @@ def process_product_id(product_id: int) -> bool:
         )
 
         if needs_metadata:
-            success = _scrape_html_logic(db, product)
+            # Special fast path for Cloudinary Migration
+            if product.image_url and "cloudinary" in product.image_url:
+                success = _migrate_cloudinary_image(db, product)
+            else:
+                success = _scrape_html_logic(db, product)
+            
             if success: time.sleep(0.1)
         elif settings.PRICECHARTING_API_TOKEN:
             success = _update_product_via_api(db, product)
