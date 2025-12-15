@@ -256,19 +256,49 @@ def update_listings_background(product_id: int):
                          if not ListingClassifier.is_region_compatible(item_region, target_console_region):
                              continue
                              
-                    # 3. System Filter (Junk)
-                    # Use existing check or new one?
-                    # ListingClassifier doesn't have is_junk yet?
-                    # Let's keep a small junk check here or in Classifier?
-                    # For now, minimal junk check:
-                    if "lexibook" in title.lower(): continue
+                    # 3. System Filter (Junk) & Product Relevance
+                    # Check Global Junk (Amiibo, Protectors, Parts)
+                    if ListingClassifier.is_junk(title, product.product_name, product.console_name, product.genre):
+                        continue
+                        
+                    # Check Product Relevance
+                    # Ensure the title actually mentions the game we are looking for.
+                    # This filters out "Mandragora" when looking for "Spy Hunter"
+                    if not ListingClassifier.is_relevant(title, product.product_name):
+                        continue
+                        
+                    # Check Console Relevance (Strict for Systems, flexible for games but heavily suggested)
+                    # If looking for "Nintendo 64" game, title should probably not say "PS1".
+                    # But ListingClassifier.is_relevant only checks product name.
+                    # Let's check Console Name presence too?
+                    # For "Spy Hunter", title must contain "Spy Hunter" (checked above).
+                    # Should it contain "NES"? 
+                    # If Amazon result is "Spy Hunter [C64]", we want to reject if console is NES.
+                    # But broad search `query` included console name.
+                    # Let's perform a console name check too.
+                    if not ListingClassifier.is_relevant(title, product.console_name):
+                         # Exception: Loose games sometimes omit console name? "Spy Hunter cartridge"
+                         # But usually sellers list "Spy Hunter NES".
+                         # If we enforce this, we might lose "Spy Hunter" (Generic).
+                         # But we gain safety against "Spy Hunter (Xbox)".
+                         # Let's enforce it for now to squash the Amazon bug.
+                         # EXCEPT if detected region matches target region? 
+                         # "Spy Hunter [PAL]" implied NES if we are on NES? No.
+                         pass
                     
-                    # 4. Product Relevance (Console Name Match)
-                    # If looking for "Nintendo 64", title must have "64" or "Nintendo"?
-                    # Broad Search might return "Super Mario Galaxy Wii" for "Super Mario 64" query?
-                    # Yes, "Super Mario 64" query matches "Super Mario Galaxy" sometimes?
-                    # Let's check overlap of significant terms.
-                    # NOTE: ListingClassifier could have 'is_relevant(title, keywords)'
+                    # Combined Check: "Spy Hunter" + "NES" (or "Nintendo")
+                    # products.console_name = "Nintendo NES" -> terms: "Nintendo", "NES"
+                    # If title has "NES", good.
+                    
+                    c_terms = [t.lower() for t in product.console_name.split() if len(t) > 2]
+                    if c_terms:
+                         # Require at least one console term?
+                         if not any(ct in title.lower() for ct in c_terms):
+                             # Special case: If Title has "Spy Hunter", but no "NES". 
+                             # Amazon result "Mandragora Switch" has neither.
+                             # Amazon result "Spy Hunter" (Generic) -> might be C64.
+                             # Safer to skip if no console name.
+                             continue
                     
                     # 5. Extract Price
                     price_val = 0.0

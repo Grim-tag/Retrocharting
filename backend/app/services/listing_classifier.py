@@ -174,6 +174,51 @@ class ListingClassifier:
         # "DS" on "3DS" is valid? "3DS" on "DS" is bad. 
         
         return False
+
+    @staticmethod
+    def is_relevant(title: str, product_name: str, strict: bool = False) -> bool:
+        """
+        Check if the title contains significant parts of the product name.
+        """
+        t = title.lower()
+        # Clean product name of bracketed stuff
+        p_clean = re.sub(r'\[.*?\]', '', product_name)
+        p_clean = re.sub(r'\(.*?\)', '', p_clean)
+        p_clean = p_clean.lower()
+        
+        # Tokenize (remove stopwords?)
+        # For now, split by space.
+        # terms = [x for x in p_clean.split() if len(x) > 2] # Skip 'of', 'the', 'ii'
+        
+        # Better: Check for the full sequence? 
+        # "Spy Hunter" in "Spy Hunter NES"? Yes.
+        # "Super Mario Bros" in "Super Mario Bros. 3"? Yes. (Wait, that's bad if we want SMB1).
+        # But we rely on Broad Search.
+        # For now, let's just ensure significant overlap.
+        
+        terms = [x for x in p_clean.split() if len(x) >= 3]
+        if not terms: return True # Short name like "Go", we can't filter safely.
+        
+        # Check if ALL significant terms are present?
+        # "Spy Hunter" -> "Spy" AND "Hunter".
+        # "Legend of Zelda" -> "Legend", "Zelda". ("of" skipped).
+        
+        match_count = 0
+        for term in terms:
+            if term in t:
+                match_count += 1
+                
+        # If strict, require 100% match of significant terms?
+        # If not strict, require 50%?
+        # For "Spy Hunter", we need both. "Hunter" is generic. "Spy" is generic. Together = Game.
+        
+        if len(terms) <= 2:
+            return match_count == len(terms)
+        else:
+            # "The Legend of Zelda: Ocarina of Time" -> "Legend", "Zelda", "Ocarina", "Time" (4)
+            # Title: "Zelda Ocarina of Time" -> "Legend" missing? 
+            # Allow 1 miss?
+            return match_count >= (len(terms) - 1)
         """
         Strict matching logic.
         Ref: PAL Console -> Accepts PAL or None (Loose). Rejects JAP/NTSC-U.
