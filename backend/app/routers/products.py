@@ -184,7 +184,22 @@ def update_listings_background(product_id: int):
         # Actually, if the console name in DB is "Super Nintendo", we can't know.
         # But if it is "PAL Super Nintendo", we know.
         # Let's rely on Console Name for strictest filtering.
+        # 1. Determine Product Region from Console Name OR Product Name
+        # Logic: If console has "PAL", "JP", "NTSC" -> set target.
+        # Check Product Name too: "Sword Art Online [PAL]" -> PAL.
         target_console_region = ListingClassifier.detect_region(product.console_name)
+        if not target_console_region:
+            target_console_region = ListingClassifier.detect_region(product.product_name)
+            
+        # Default to NTSC-U if generic?
+        # User wants strict separation. "Generic" usually implies US in PriceCharting.
+        # If we leave it None, it accepts ALL regions (Loose, PAL, JP).
+        # To prevent PAL pollution on Generic page, we must default to NTSC-U?
+        # But handle Region Free?
+        # Let's default to NTSC-U only if NOT loose/hardware? No.
+        # Let's try enforcing NTSC-U default for 'Systems' and 'Games'.
+        if not target_console_region:
+             target_console_region = 'NTSC-U'
         
         # 2. Build Broad Query
         query = ListingClassifier.clean_query(product.product_name, product.console_name)
