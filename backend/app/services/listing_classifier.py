@@ -179,45 +179,82 @@ class ListingClassifier:
     def is_relevant(title: str, product_name: str, strict: bool = False) -> bool:
         """
         Check if the title contains significant parts of the product name.
+        Handles synonyms (N64=Nintendo 64) and partial matches.
         """
         t = title.lower()
-        # Clean product name of bracketed stuff
+        
+        # 0. Clean & Synonyms
         p_clean = re.sub(r'\[.*?\]', '', product_name)
         p_clean = re.sub(r'\(.*?\)', '', p_clean)
-        p_clean = p_clean.lower()
+        p_clean = p_clean.lower() # e.g. "nintendo 64 controller"
+
+        # Apply common synonyms to product name tokens? 
+        # Or better: Normalize title?
+        # If product="Nintendo 64", listing="N64".
+        # Let's synonymize the SEARCH TERMS.
         
-        # Tokenize (remove stopwords?)
-        # For now, split by space.
-        # terms = [x for x in p_clean.split() if len(x) > 2] # Skip 'of', 'the', 'ii'
-        
-        # Better: Check for the full sequence? 
-        # "Spy Hunter" in "Spy Hunter NES"? Yes.
-        # "Super Mario Bros" in "Super Mario Bros. 3"? Yes. (Wait, that's bad if we want SMB1).
-        # But we rely on Broad Search.
-        # For now, let's just ensure significant overlap.
-        
-        terms = [x for x in p_clean.split() if len(x) >= 3]
-        if not terms: return True # Short name like "Go", we can't filter safely.
-        
-        # Check if ALL significant terms are present?
-        # "Spy Hunter" -> "Spy" AND "Hunter".
-        # "Legend of Zelda" -> "Legend", "Zelda". ("of" skipped).
+        # Manually fix specific console names in p_clean and title
+        # 1. Console Synonyms
+        replacements = {
+            "nintendo 64": "n64",
+            "super nintendo": "snes",
+            "super nes": "snes",
+            "famicom": "nes", # careful with japanese
+            "entertainment system": "nes"
+        }
+        for k, v in replacements.items():
+            p_clean = p_clean.replace(k, v)
+            t = t.replace(k, v)
+            
+        # 2. Accessory Synonyms (Normalize to English)
+        acc_replacements = {
+            "manette": "controller",
+            "pad": "controller",
+            "joypad": "controller",
+            "joystick": "controller",
+            "remote": "controller",
+            "télécommande": "controller",
+            "carte mémoire": "memory card",
+            "memory card": "memory card", # keep
+            "transfer pak": "transfer pak",
+            "expansion pak": "expansion pak",
+            "rumble pak": "rumble pak",
+            "vibration": "rumble",
+            "console": "console", # keep
+            "system": "console"
+        }
+        for k, v in acc_replacements.items():
+            if k in p_clean: p_clean = p_clean.replace(k, v)
+            if k in t: t = t.replace(k, v)
+            
+        # Tokenize (allow >= 2 chars, e.g. "go")
+        terms = [x for x in p_clean.split() if len(x) >= 2]
+        if not terms: return True
         
         match_count = 0
+        missed_terms = []
+        
         for term in terms:
             if term in t:
                 match_count += 1
+            else:
+                missed_terms.append(term)
                 
-        # If strict, require 100% match of significant terms?
-        # If not strict, require 50%?
-        # For "Spy Hunter", we need both. "Hunter" is generic. "Spy" is generic. Together = Game.
+        # Logic: 
+        # If short name (<= 2 terms), require ALL.
+        # If long name (> 2 terms), allow 1 miss (often "The", "Edition", "Controller" vs "Manette").
         
         if len(terms) <= 2:
             return match_count == len(terms)
         else:
-            # "The Legend of Zelda: Ocarina of Time" -> "Legend", "Zelda", "Ocarina", "Time" (4)
-            # Title: "Zelda Ocarina of Time" -> "Legend" missing? 
-            # Allow 1 miss?
+            # Allow 1 miss.
+            # But if the missed term is KEY? e.g. "Zelda" in "Legend of Zelda"?
+            # "Legend", "of", "Zelda". "of" skipped by regex? No, len("of")=2.
+            # "Legend", "Zelda". If "Zelda" missing -> Bad.
+            
+            # Refinement: If > 50% match?
+            # 3 terms: needs 2. (66%) -> OK.
+            # 4 terms: needs 3. (75%) -> OK.
             return match_count >= (len(terms) - 1)
         """
         Strict matching logic.
