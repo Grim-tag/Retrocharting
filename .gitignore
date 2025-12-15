@@ -7,7 +7,7 @@ venv/
 .DS_Store
 
 # Database
-*.db
+# *.db (Handled by LFS)
 *.sqlite3
 
 # IDE
