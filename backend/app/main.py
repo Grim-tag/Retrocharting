@@ -102,6 +102,54 @@ app.include_router(comments.router, prefix="/api/v1/comments", tags=["comments"]
 from app.routers import import_collection
 app.include_router(import_collection.router, prefix="/api/v1/import", tags=["import"])
 
+@app.get("/api/v1/health-debug")
+def health_debug():
+    """
+    Diagnostic endpoint to check DB connection in Production
+    """
+    status = {
+        "database_url_type": "Unknown",
+        "product_count": 0,
+        "error": None,
+        "env_vars": {
+            "HAS_DB_URL": bool(os.getenv("DATABASE_URL")),
+            "DB_URL_PREFIX": os.getenv("DATABASE_URL", "")[:15] if os.getenv("DATABASE_URL") else "None"
+        }
+    }
+    
+    try:
+        # Check Config
+        from app.core.config import settings
+        status["database_url_type"] = "SQLite" if "sqlite" in settings.SQLALCHEMY_DATABASE_URI else "Postgres/Other"
+        status["configured_uri"] = settings.SQLALCHEMY_DATABASE_URI.split("@")[-1] # Safe mask
+        
+        # Check DB
+        from app.db.session import SessionLocal
+        from app.models.product import Product
+        from sqlalchemy import text
+        
+        db = SessionLocal()
+        try:
+            # Try Raw Count
+            count = db.query(Product).count()
+            status["product_count"] = count
+            
+            # Try Fetch One
+            first = db.query(Product).first()
+            if first:
+                status["sample_product"] = first.product_name
+                status["sample_id"] = first.id
+            
+        except Exception as e:
+            status["error"] = f"DB Query Error: {str(e)}"
+        finally:
+            db.close()
+            
+    except Exception as e:
+        status["error"] = f"System Error: {str(e)}"
+        
+    return status
+
 @app.on_event("startup")
 def startup_event():
     # AUTO-MIGRATE: Ensure DB schema matches code (Adds missing columns like 'asin')
