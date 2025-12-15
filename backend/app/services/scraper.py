@@ -10,6 +10,8 @@ from datetime import datetime
 import requests
 from bs4 import BeautifulSoup
 import json
+import os
+import shutil
 
 from app.db.session import SessionLocal
 # Models imported inside functions to prevent circular imports
@@ -338,23 +340,43 @@ def _scrape_html_logic(db: Session, product: "Product") -> bool:
                 img = soup.select_one('#product_images img') or soup.select_one('.cover img')
                 if img and img.get('src') and "shim.gif" not in img.get('src'):
                     original_url = img.get('src')
-                    try:
-                        # Upload to Cloudinary with SEO Logic
-                        p_slug = slugify(product.product_name)
-                        public_id = f"{p_slug}-{product.id}"
-                        
-                        upload_result = cloudinary.uploader.upload(
-                            original_url, 
-                            folder="retrocharting/products",
-                            public_id=public_id,
-                            format="webp",
-                            overwrite=True,
-                            unique_filename=False
-                        )
-                        product.image_url = upload_result['secure_url']
-                    except Exception as e:
-                        print(f"  Cloudinary upload failed: {e}")
-                        product.image_url = original_url
+                    if img and img.get('src') and "shim.gif" not in img.get('src'):
+                        original_url = img.get('src')
+                        try:
+                            # LOCAL STORAGE LOGIC (Replaces Cloudinary)
+                            p_slug = slugify(product.product_name)
+                            filename = f"{p_slug}-{product.id}.jpg" # Simple JPG extension
+                            
+                            # Ensure directories exist
+                            # backend/app/services/scraper.py -> ../../../static/images/products
+                            # Use absolute path based on settings or relative calculation
+                            current_dir = os.path.dirname(os.path.abspath(__file__))
+                            backend_dir = os.path.dirname(os.path.dirname(current_dir)) # backend/
+                            static_img_dir = os.path.join(backend_dir, "static", "images", "products")
+                            
+                            if not os.path.exists(static_img_dir):
+                                os.makedirs(static_img_dir)
+                                
+                            local_path = os.path.join(static_img_dir, filename)
+                            
+                            # Download and Save
+                            # Use a separate request to fetch image
+                            img_resp = requests.get(original_url, stream=True, timeout=10)
+                            if img_resp.status_code == 200:
+                                with open(local_path, 'wb') as f:
+                                    img_resp.raw.decode_content = True
+                                    shutil.copyfileobj(img_resp.raw, f)
+                                
+                                # Set URL to local static path
+                                # e.g. https://api.retrocharting.com/static/images/products/foo.jpg
+                                product.image_url = f"{settings.API_BASE_URL}/static/images/products/{filename}"
+                            else:
+                                print(f"  Image donwload failed: {img_resp.status_code}")
+                                product.image_url = original_url # Fallback
+
+                        except Exception as e:
+                            print(f"  Local image save failed: {e}")
+                            product.image_url = original_url
 
             # 4. Prices
             price_ids = {

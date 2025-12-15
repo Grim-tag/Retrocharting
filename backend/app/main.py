@@ -1,5 +1,7 @@
 from fastapi import FastAPI, BackgroundTasks
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+import os
 from app.db.session import engine, Base
 # Import ALL models so Base.metadata.create_all sees them
 from app.models.sales_transaction import SalesTransaction
@@ -34,6 +36,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount Static Files
+base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) # backend/
+static_dir = os.path.join(base_dir, "static")
+if not os.path.exists(static_dir):
+    os.makedirs(static_dir)
+
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 # Global Exception Handler
 from fastapi import Request

@@ -3,6 +3,7 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     PROJECT_NAME: str = "RetroCharting"
     API_V1_STR: str = "/api/v1"
+    API_BASE_URL: str = "http://localhost:8000" 
     DATABASE_URL: str
     
     # Fix for Database Divergence: Force usage of root collector.db
