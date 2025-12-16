@@ -80,4 +80,20 @@ class ListingClassifier:
         
         return f"{clean_prod.strip()} {clean_console.strip()}"
 
+    @staticmethod
+    def detect_condition(title: str) -> str:
+        """
+        Refined condition detection for Listings.
+        Returns: 'LOOSE', 'CIB', 'NEW', 'BOX_ONLY', 'MANUAL_ONLY'
+        """
+        t = title.upper()
+        if 'BOX' in t and 'ONLY' in t: return 'BOX_ONLY'
+        if 'MANUAL' in t and 'ONLY' in t: return 'MANUAL_ONLY'
+        if 'Notice Seule' in title or 'Boite Vide' in title: return 'MANUAL_ONLY' # FR keywords
+        
+        if 'SEALED' in t or 'NEW' in t or 'NEUF' in t: return 'NEW'
+        if 'CIB' in t or 'COMPLETE' in t or 'COMPLET' in t: return 'CIB'
+        
+        return 'LOOSE'
+
 classifier = ListingClassifier()
