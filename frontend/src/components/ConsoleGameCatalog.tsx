@@ -12,6 +12,7 @@ import {
     ListBulletIcon,
     ArrowsUpDownIcon
 } from '@heroicons/react/24/outline';
+import TableActions from '@/components/ui/TableActions';
 
 interface ConsoleGameCatalogProps {
     products: Product[];
@@ -117,7 +118,7 @@ export default function ConsoleGameCatalog({
     const hasMore = visibleCount < filteredProducts.length;
 
     // Helper for table Sort Headers
-    const SortHeader = ({ label, fieldKey }: { label: string, fieldKey: 'title' | 'loose' | 'cib' | 'new' }) => {
+    const SortHeader = ({ label, fieldKey, alignRight = false }: { label: string, fieldKey: 'title' | 'loose' | 'cib' | 'new', alignRight?: boolean }) => {
         const isAsc = sortBy === `${fieldKey}_asc`;
         const isDesc = sortBy === `${fieldKey}_desc`;
 
@@ -128,10 +129,10 @@ export default function ConsoleGameCatalog({
 
         return (
             <th
-                className="py-3 px-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider cursor-pointer hover:text-white transition-colors group select-none"
+                className={`py-3 px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider cursor-pointer hover:text-white transition-colors group select-none ${alignRight ? 'text-right' : 'text-left'}`}
                 onClick={toggleSort}
             >
-                <div className="flex items-center gap-1">
+                <div className={`flex items-center gap-1 ${alignRight ? 'justify-end' : 'justify-start'}`}>
                     {label}
                     <ArrowsUpDownIcon className={`w-4 h-4 ${isAsc || isDesc ? 'text-[#ff6600]' : 'text-gray-600 group-hover:text-gray-400'}`} />
                 </div>
@@ -152,6 +153,22 @@ export default function ConsoleGameCatalog({
 
     return (
         <div>
+            <style jsx>{`
+                .custom-scrollbar::-webkit-scrollbar {
+                    height: 8px;
+                    width: 8px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-track {
+                    background: #151922;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb {
+                    background-color: #2a3142;
+                    border-radius: 4px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+                    background-color: #3f485e;
+                }
+            `}</style>
             <JsonLd data={itemListSchema} />
 
             {/* Header Area */}
@@ -213,12 +230,14 @@ export default function ConsoleGameCatalog({
                         <option value="loose_desc">Price Loose (High)</option>
                         <option value="cib_asc">Price CIB (Low)</option>
                         <option value="cib_desc">Price CIB (High)</option>
+                        <option value="new_asc">Price New (Low)</option>
+                        <option value="new_desc">Price New (High)</option>
                     </select>
                 </div>
             </div>
 
             {/* Filter Chips (Genres) */}
-            <div className="mb-6 overflow-x-auto pb-2">
+            <div className="mb-6 overflow-x-auto pb-2 custom-scrollbar">
                 <div className="flex gap-2 min-w-max">
                     <button
                         onClick={() => handleGenreClick('')}
@@ -247,16 +266,17 @@ export default function ConsoleGameCatalog({
             {/* PRODUCT LIST VIEW */}
             {viewMode === 'list' && (
                 <div className="bg-[#1f2533] rounded-lg border border-[#2a3142] overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full min-w-[600px]">
+                    <div className="overflow-x-auto custom-scrollbar">
+                        <table className="w-full min-w-[800px]">
                             <thead className="bg-[#151922] border-b border-[#2a3142]">
                                 <tr>
                                     <th className="py-3 px-4 w-16"></th>
                                     <SortHeader label="Title" fieldKey="title" />
-                                    <th className="py-3 px-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Genre</th>
-                                    <SortHeader label="Loose" fieldKey="loose" />
-                                    <SortHeader label="CIB" fieldKey="cib" />
-                                    <SortHeader label="New" fieldKey="new" />
+                                    <th className="py-3 px-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider hidden lg:table-cell">Genre</th>
+                                    <SortHeader label="Loose" fieldKey="loose" alignRight />
+                                    <SortHeader label="CIB" fieldKey="cib" alignRight />
+                                    <SortHeader label="New" fieldKey="new" alignRight />
+                                    <th className="py-3 px-4 w-24"></th> {/* Actions Column */}
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-[#2a3142]">
@@ -270,21 +290,32 @@ export default function ConsoleGameCatalog({
                                             </div>
                                         </td>
                                         <td className="py-2 px-4">
-                                            <Link href={getGameUrl(product, lang)} className="font-bold text-white hover:text-[#ff6600] transition-colors block">
+                                            <Link href={getGameUrl(product, lang)} className="font-bold text-white hover:text-[#ff6600] transition-colors block text-sm sm:text-base">
                                                 {product.product_name}
                                             </Link>
                                         </td>
-                                        <td className="py-2 px-4 text-sm text-gray-400">
+                                        <td className="py-2 px-4 text-sm text-gray-400 hidden lg:table-cell">
                                             {product.genre || '-'}
                                         </td>
-                                        <td className="py-2 px-4 text-sm font-mono text-[#ff6600]">
+
+                                        {/* Loose Price */}
+                                        <td className="py-2 px-4 text-right text-sm font-mono text-gray-300">
                                             {product.loose_price ? `$${product.loose_price.toFixed(2)}` : '-'}
                                         </td>
-                                        <td className="py-2 px-4 text-sm font-mono text-[#ff6600]">
+
+                                        {/* CIB Price (Blue) */}
+                                        <td className="py-2 px-4 text-right text-sm font-mono text-[#007bff] font-bold">
                                             {product.cib_price ? `$${product.cib_price.toFixed(2)}` : '-'}
                                         </td>
-                                        <td className="py-2 px-4 text-sm font-mono text-[#ff6600]">
+
+                                        {/* New Price (Green) */}
+                                        <td className="py-2 px-4 text-right text-sm font-mono text-[#00ff00] font-bold">
                                             {product.new_price ? `$${product.new_price.toFixed(2)}` : '-'}
+                                        </td>
+
+                                        {/* Actions */}
+                                        <td className="py-2 px-4 text-right">
+                                            <TableActions productId={product.id} productName={product.product_name} />
                                         </td>
                                     </tr>
                                 ))}
