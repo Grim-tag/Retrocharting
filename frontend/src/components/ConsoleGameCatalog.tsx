@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Product, getProductsByConsole } from '@/lib/api';
 import { getGameUrl } from '@/lib/utils';
 import JsonLd, { generateItemListSchema } from '@/components/seo/JsonLd';
+import { generateConsoleSeo } from '@/lib/seo-utils';
 import {
     MagnifyingGlassIcon,
     Squares2X2Icon,
@@ -36,8 +37,8 @@ export default function ConsoleGameCatalog({
     lang,
     gamesSlug,
     systemSlug,
-    h1Title,
-    introText
+    h1Title: initialH1,
+    introText: initialIntro
 }: ConsoleGameCatalogProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -198,6 +199,22 @@ export default function ConsoleGameCatalog({
         );
     };
 
+    // -- DYNAMIC SEO (Client-Side) --
+    // Recalculate H1 and Intro based on current filters (Instant Feedback)
+    const dynamicSeo = useMemo(() => {
+        // We need the count of items that match the filters (but ignoring sort)
+        // Note: filteredProducts includes sort, but sort doesn't affect count.
+        // To be perfectly accurate (and avoid circular dependency if we moved things), we trust filteredProducts.length.
+
+        return generateConsoleSeo(
+            systemName,
+            selectedGenre || undefined,
+            sortBy || undefined,
+            filteredProducts.length,
+            lang
+        );
+    }, [systemName, selectedGenre, sortBy, filteredProducts.length, lang]);
+
     // Schema.org
     const itemListSchema = generateItemListSchema(
         `${systemName} Games Catalog`,
@@ -223,14 +240,13 @@ export default function ConsoleGameCatalog({
             {/* Header Area */}
             <div className="mb-6">
                 <div className="mt-4">
+                    {/* Dynamic H1 based on Client-Side Filters */}
                     <h1 className="text-3xl font-bold text-white mb-2">
-                        {h1Title || `${systemName} Games`}
+                        {dynamicSeo.h1}
                     </h1>
+                    {/* Dynamic Intro */}
                     <p className="text-gray-400 text-sm max-w-3xl">
-                        {introText || (lang === 'fr'
-                            ? `Retrouvez la liste complète des jeux ${systemName} avec leur cote actualisée.`
-                            : `Complete list of ${systemName} games with current market prices.`
-                        )}
+                        {dynamicSeo.intro}
                     </p>
                 </div>
             </div>
