@@ -63,30 +63,78 @@ export default function ConsoleGameCatalog({
         setAllProducts(products);
     }, [products]);
 
-    // -- HYDRATION: Fetch Full Catalog on Mount --
-    useEffect(() => {
-        const fetchFullCatalog = async () => {
-            // If we already have a large list from props (e.g. dev mode), skip.
-            if (products.length > 100) {
-                setIsLoadingFull(false);
-                return;
-            }
+    // -- HYDRATION: Progressive Loading (Chunking) --
+    // Strategy:
+    // 1. Server provides 40 items (Instant).
+    // 2. Client fetches next 200 items (Fast, <0.5s) -> Unblocks "Load More" & Basic Search.
+    // 3. Client fetches rest (Batch 500) -> Completes the catalog in background.
 
+    useEffect(() => {
+        // If we already have a large list from props (e.g. dev mode or previous nav), skip.
+        if (products.length > 100) return;
+
+        let isMounted = true;
+
+        const fetchProgressively = async () => {
             try {
-                // Fetch up to 2000 items to enable instant client-side filtering
-                const fullCatalog = await getProductsByConsole(systemName, 2000, undefined, 'game', undefined, 0, undefined);
-                if (fullCatalog && fullCatalog.length > 0) {
-                    setAllProducts(fullCatalog);
+                // Step 1: Fast Chunk (Next 200 items)
+                // Offset starts at 40 (since we have 40 from server)
+                // NOTE: We fetch 200 items.
+                setIsLoadingFull(true);
+                const fastChunk = await getProductsByConsole(systemName, 200, undefined, 'game', undefined, 40, undefined);
+
+                if (!isMounted) return;
+
+                if (fastChunk && fastChunk.length > 0) {
+                    setAllProducts(prev => {
+                        // deduplicate just in case
+                        const existingIds = new Set(prev.map(p => p.id));
+                        const newItems = fastChunk.filter(p => !existingIds.has(p.id));
+                        return [...prev, ...newItems];
+                    });
                 }
+
+                // Step 2: Background Chunks (Recursively fetch the rest until empty)
+                // We fetched 40 (Server) + 200 (Fast) = 240. Next offset = 240.
+                // We assume max 2500 games total for now to allow full fetch.
+                let currentOffset = 240;
+                const BATCH_SIZE = 500;
+                let hasNextBatch = true;
+
+                while (hasNextBatch && isMounted) {
+                    const batch = await getProductsByConsole(systemName, BATCH_SIZE, undefined, 'game', undefined, currentOffset, undefined);
+
+                    if (!isMounted) break;
+
+                    if (batch && batch.length > 0) {
+                        setAllProducts(prev => {
+                            const existingIds = new Set(prev.map(p => p.id));
+                            const newItems = batch.filter(p => !existingIds.has(p.id));
+                            return [...prev, ...newItems];
+                        });
+                        currentOffset += BATCH_SIZE;
+                        // Safety break if batch was smaller than requested (end of list)
+                        if (batch.length < BATCH_SIZE) hasNextBatch = false;
+                    } else {
+                        hasNextBatch = false;
+                    }
+
+                    // Small breathing room for UI thread
+                    await new Promise(r => setTimeout(r, 100));
+                }
+
             } catch (err) {
-                console.error("Failed to hydrate full catalog", err);
+                console.error("Failed to hydrate catalog progressively", err);
             } finally {
-                setIsLoadingFull(false);
+                if (isMounted) setIsLoadingFull(false);
             }
         };
 
-        fetchFullCatalog();
+        fetchProgressively();
+
+        return () => { isMounted = false; };
     }, [systemName, products.length]);
+
 
     // -- URL Synchronization Helper --
     const updateUrl = (search: string, genre: string, sort: string) => {
