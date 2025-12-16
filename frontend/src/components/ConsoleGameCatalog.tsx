@@ -142,8 +142,8 @@ export default function ConsoleGameCatalog({
         const isDesc = sortBy === `${fieldKey}_desc`;
 
         const toggleSort = () => {
-            if (isAsc) setSortBy(`${fieldKey}_desc` as SortOption);
-            else setSortBy(`${fieldKey}_asc` as SortOption);
+            if (isAsc) handleSortChange(`${fieldKey}_desc` as SortOption);
+            else handleSortChange(`${fieldKey}_asc` as SortOption);
         };
 
         return (
@@ -197,14 +197,6 @@ export default function ConsoleGameCatalog({
 
             {/* Header Area */}
             <div className="mb-6">
-                <Breadcrumbs
-                    items={[
-                        { label: lang === 'fr' ? 'Accueil' : 'Home', href: lang === 'en' ? '/' : '/fr' },
-                        { label: lang === 'fr' ? 'Jeux Vidéo' : 'Video Games', href: lang === 'en' ? '/games' : '/fr/jeux-video' },
-                        { label: systemName, href: '#' } // Current page
-                    ]}
-                    lang={lang}
-                />
 
                 <div className="mt-4">
                     <h1 className="text-3xl font-bold text-white mb-2">
@@ -256,7 +248,7 @@ export default function ConsoleGameCatalog({
                     {/* Sort Dropdown (Mobile friendly) */}
                     <select
                         value={sortBy}
-                        onChange={(e) => setSortBy(e.target.value as SortOption)}
+                        onChange={(e) => handleSortChange(e.target.value as SortOption)}
                         className="bg-[#151922] border border-[#2a3142] text-white py-2 px-3 rounded focus:outline-none focus:border-[#ff6600] text-sm md:hidden"
                     >
                         <option value="title_asc">Title (A-Z)</option>
