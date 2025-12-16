@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { apiClient } from '@/lib/client'; // Use direct client for error capturing
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600; // Cache for 1 hour
 
 export async function GET() {
   const baseUrl = 'https://retrocharting.com';
@@ -11,8 +11,8 @@ export async function GET() {
   let debugError = "";
 
   try {
-    // Call directly to catch error details
-    const response = await apiClient.get('/products/count');
+    // Call with timeout to prevent 502 from Vercel/Node
+    const response = await apiClient.get('/products/count', { timeout: 8000 });
     total = response.data;
   } catch (e: any) {
     console.error("Failed to fetch product count for sitemap index", e);
@@ -21,6 +21,9 @@ export async function GET() {
     if (e.response) {
       debugError += ` (Status: ${e.response.status})`;
     }
+    // FALLBACK: Assume 50k products so we generate chunks anyway. 
+    // Better to have empty chunks than a broken sitemap index.
+    total = 50000;
   }
 
   const numChunks = Math.ceil(total / CHUNK_SIZE);
@@ -56,9 +59,7 @@ export async function GET() {
   return new NextResponse(xml, {
     headers: {
       'Content-Type': 'application/xml',
-      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0',
+      'Cache-Control': 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400',
     },
   });
 }

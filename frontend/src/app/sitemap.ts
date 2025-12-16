@@ -5,15 +5,21 @@ import { getGameUrl } from '@/lib/utils';
 import { routeMap } from '@/lib/route-config';
 import { systems } from '@/data/systems';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600; // Cache for 1 hour
 
 const BASE_URL = 'https://retrocharting.com';
 const CHUNK_SIZE = 4000; // 4000 products per sitemap (safe size)
 
 export async function generateSitemaps() {
     // 1. Fetch total count from backend
-    // If backend fails, we might just return the static sitemap.
-    const total = await getProductsCount();
+    let total = 0;
+    try {
+        // If backend fails, we return a safe estimate to generate chunks anyway
+        total = await getProductsCount();
+    } catch (error) {
+        console.error("Failed to fetch products count for sitemap generation", error);
+        total = 50000; // Fallback
+    }
 
     // 2. Calculate number of chunks
     // If total is 40000 and chunk is 4000 -> 10 chunks (0 to 9)
@@ -123,7 +129,14 @@ export default async function sitemap({ id }: SitemapProps): Promise<MetadataRou
     const chunkIndex = parseInt(resolvedId);
     if (!isNaN(chunkIndex)) {
         const skip = chunkIndex * CHUNK_SIZE;
-        const products = await getSitemapProducts(CHUNK_SIZE, skip);
+        let products = [];
+        try {
+            products = await getSitemapProducts(CHUNK_SIZE, skip);
+        } catch (e) {
+            console.error(`Failed to fetch sitemap chunk ${chunkIndex}`, e);
+            // Return empty list so we don't 500
+            products = [];
+        }
 
         const productUrls: MetadataRoute.Sitemap = [];
 
