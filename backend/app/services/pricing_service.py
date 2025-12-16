@@ -1,0 +1,221 @@
+from app.db.session import SessionLocal
+from app.models.product import Product as ProductModel
+from app.models.listing import Listing
+from app.services.ebay_client import ebay_client
+from app.services.amazon_client import amazon_client
+from app.services.listing_classifier import ListingClassifier, classifier
+from datetime import datetime
+
+class PricingService:
+    @staticmethod
+    def update_listings(product_id: int):
+        """
+        Background task logic to fetch listings from eBay/Amazon and update DB.
+        Refactored from products.py for better maintainability and debugging.
+        """
+        db = SessionLocal()
+        print(f"[PricingService] Starting update for Product {product_id}")
+        
+        try:
+            product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
+            if not product:
+                print(f"[PricingService] Product {product_id} not found.")
+                return
+
+            # 1. Determine Product Region
+            target_console_region = ListingClassifier.detect_region(product.console_name)
+            if not target_console_region:
+                target_console_region = ListingClassifier.detect_region(product.product_name)
+                
+            if not target_console_region and product.genre != 'Accessories':
+                 target_console_region = 'NTSC-U'
+            
+            # 2. Build Broad Query
+            query = ListingClassifier.clean_query(product.product_name, product.console_name)
+            print(f"[PricingService] Query: '{query}' | Region: {target_console_region}")
+
+            # Determine eBay Category
+            category_id = "139973" # Games
+            if product.genre == 'Systems':
+                category_id = "139971"
+            elif product.genre in ['Accessories', 'Controllers']:
+                category_id = "54968"
+
+            # 3. Sequential Fetching
+            ebay_results = []
+            amazon_results = []
+            
+            try:
+                ebay_results = ebay_client.search_items(query, limit=20, category_ids=category_id)
+                print(f"[PricingService] eBay returned {len(ebay_results)} raw results.")
+            except Exception as e:
+                 print(f"[PricingService] eBay Fetch Error: {e}")
+                 
+            try:
+                 amazon_results = amazon_client.search_items(query, limit=10)
+                 print(f"[PricingService] Amazon returned {len(amazon_results)} raw results.")
+            except Exception as e:
+                 print(f"[PricingService] Amazon Fetch Error: {e}")
+
+            # Accumulators
+            prices_box = []
+            prices_manual = []
+            prices_loose = []
+            
+            # --- PROCESSING LOGIC ---
+            def process_and_filter(items, source, db_session):
+                processed_ids = []
+                # Logging counters
+                skipped_region = 0
+                skipped_relevance = 0
+                skipped_console = 0
+                
+                check_term = ListingClassifier.clean_search_query(product.product_name, "")
+
+                for item in items:
+                    title = item.get('title', '')
+                    
+                    # 1. Classify
+                    item_region = ListingClassifier.detect_region(title)
+                    if not item_region:
+                         if source in ['amazon', 'ebay']:
+                             item_region = 'PAL' # Helper assumption
+                    
+                    item_condition = ListingClassifier.detect_condition(title)
+                    
+                    # 2. Region Filter
+                    if target_console_region and item_region:
+                         if not ListingClassifier.is_region_compatible(item_region, target_console_region):
+                             skipped_region += 1
+                             continue
+                             
+                    # 3. Junk & Relevance
+                    if ListingClassifier.is_junk(title, product.product_name, product.console_name, product.genre):
+                        continue
+                        
+                    if not ListingClassifier.is_relevant(title, check_term):
+                        skipped_relevance += 1
+                        continue
+                        
+                    # Console Relevance
+                    c_terms = [t.lower() for t in product.console_name.split() if len(t) > 2]
+                    if c_terms:
+                         if not any(ct in title.lower() for ct in c_terms):
+                             skipped_console += 1
+                             continue
+                    
+                    # 5. Extract Price
+                    price_val = 0.0
+                    currency = "USD"
+                    external_id = None
+                    url = None
+                    img = None
+                    
+                    if source == 'eBay':
+                         if 'price' in item:
+                            price_val = float(item['price'].get('value', 0))
+                            currency = item['price'].get('currency', 'USD')
+                         external_id = item.get('itemId')
+                         url = item.get('itemWebUrl')
+                         if 'thumbnailImages' in item and item['thumbnailImages']:
+                             img = item['thumbnailImages'][0]['imageUrl']
+                    else: # Amazon
+                         price_val = item.get('price', 0)
+                         currency = item.get('currency', 'USD')
+                         external_id = item.get('asin')
+                         url = item.get('link')
+                         img = item.get('image')
+
+                    if not external_id: continue
+                    processed_ids.append(external_id)
+
+                    # Good Deal Logic
+                    is_good_deal = False
+                    if item_condition == 'MANUAL_ONLY' and product.manual_only_price and price_val > 0:
+                        if price_val < (product.manual_only_price * 0.8): is_good_deal = True
+                    elif item_condition == 'BOX_ONLY' and product.box_only_price and price_val > 0:
+                         if price_val < (product.box_only_price * 0.8): is_good_deal = True
+                    elif item_condition not in ['PARTS', 'BOX_ONLY', 'MANUAL_ONLY']:
+                         if product.loose_price and price_val > 0:
+                            if price_val < (product.loose_price * 0.7): is_good_deal = True
+                    
+                    # Collect Stats
+                    if price_val > 0:
+                        if item_condition == 'BOX_ONLY': prices_box.append(price_val)
+                        elif item_condition == 'MANUAL_ONLY': prices_manual.append(price_val)
+                        elif item_condition not in ['PARTS']: prices_loose.append(price_val)
+
+                    # DB Update
+                    existing = db_session.query(Listing).filter(
+                        Listing.product_id == product_id,
+                        Listing.source == source,
+                        Listing.external_id == external_id
+                    ).first()
+                    
+                    if existing:
+                        existing.price = price_val
+                        existing.title = title
+                        existing.condition = item_condition
+                        existing.is_good_deal = is_good_deal
+                        existing.last_updated = datetime.utcnow()
+                        existing.status = 'active'
+                        if img: existing.image_url = img
+                    else:
+                        new_listing = Listing(
+                            product_id=product_id,
+                            source=source,
+                            external_id=external_id,
+                            title=title,
+                            price=price_val,
+                            currency=currency,
+                            condition=item_condition,
+                            url=url,
+                            image_url=img,
+                            seller_name=source if source=='Amazon' else 'eBay User',
+                            status='active',
+                            is_good_deal=is_good_deal,
+                            last_updated=datetime.utcnow()
+                        )
+                        db_session.add(new_listing)
+                
+                print(f"[PricingService] {source} Filter Stats: Region={skipped_region}, Relevance={skipped_relevance}, Console={skipped_console}. Kept: {len(processed_ids)}")
+                return processed_ids
+
+            # Process Both
+            ebay_ids = process_and_filter(ebay_results, 'eBay', db)
+            amazon_ids = process_and_filter(amazon_results, 'Amazon', db)
+            
+            # --- CLEANUP (Safety Net) ---
+            if ebay_ids:
+                print(f"[PricingService] Pruning stale eBay listings (found {len(ebay_ids)})")
+                db.query(Listing).filter(
+                    Listing.product_id == product_id,
+                    Listing.source == 'eBay',
+                    Listing.status == 'active',
+                    Listing.external_id.notin_(ebay_ids)
+                ).delete(synchronize_session=False)
+
+            if amazon_ids:
+                print(f"[PricingService] Pruning stale Amazon listings (found {len(amazon_ids)})")
+                db.query(Listing).filter(
+                    Listing.product_id == product_id,
+                    Listing.source == 'Amazon',
+                    Listing.status == 'active',
+                    Listing.external_id.notin_(amazon_ids)
+                ).delete(synchronize_session=False)
+            
+            # Update Averages
+            if prices_box: product.box_only_price = sum(prices_box) / len(prices_box)
+            if prices_manual: product.manual_only_price = sum(prices_manual) / len(prices_manual)
+            # Loose price is usually updated from PriceCharting, maybe we shouldn't overwrite it with eBay average?
+            # Existing code only updated box/manual. Loose is kept from scraping main?
+            # Actually products.py didn't update loose_price.
+                
+            db.commit()
+            print(f"[PricingService] Update Complete for {product_id}")
+            
+        except Exception as e:
+            print(f"[PricingService] CRITICAL ERROR: {e}")
+            db.rollback()
+        finally:
+            db.close()

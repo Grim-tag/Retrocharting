@@ -44,6 +44,8 @@ def login_with_google(request: GoogleAuthRequest, req: Request, db: Session = De
 
     except ValueError as e:
         # Invalid token
+        print(f"GOOGLE AUTH ERROR: Validation Failed. Detail: {str(e)}")
+        print(f"Server Config ID: {GOOGLE_CLIENT_ID}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Invalid Google Token: {str(e)}",
