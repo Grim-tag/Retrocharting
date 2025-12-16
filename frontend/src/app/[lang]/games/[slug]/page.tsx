@@ -1,9 +1,7 @@
 import Link from "next/link";
-import AddToWishlistButton from "@/components/AddToWishlistButton";
 import { getProductHistory, getProductsByConsole, getGenres } from "@/lib/api";
 import ListingsTable from "@/components/ListingsTable";
 import MarketAnalysis from "@/components/MarketAnalysis";
-import AddToCollectionButton from "@/components/AddToCollectionButton";
 import PriceHistoryChart from "@/components/PriceHistoryChart";
 import PriceCard from "@/components/PriceCard";
 import WhyThisPrice from "@/components/WhyThisPrice";
@@ -19,6 +17,9 @@ import ConsoleGameCatalog from "@/components/ConsoleGameCatalog";
 import ProductActions from "@/components/ProductActions";
 import ProductDetails from "@/components/ProductDetails";
 import CommentsSection from "@/components/comments/CommentsSection";
+import { getProductById } from "@/lib/cached-api"; // Use Cached Version
+import AlternateLinksRegistrar from "@/components/AlternateLinksRegistrar";
+import { generateConsoleSeo } from "@/lib/seo-utils";
 
 // --- Helper to extract ID from slug ---
 // format: title-console-id (e.g. metal-gear-solid-ps1-4402)
@@ -29,25 +30,12 @@ function getIdFromSlug(slug: string): number {
     return isNaN(id) ? 0 : id;
 }
 
-// Helper to make title case from slug (e.g. super-nintendo -> Super Nintendo)
-function unslugify(slug: string) {
-    // Basic title case, but we prefer finding it in our system list first
-    return slug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-}
-
 // Dispatcher Helper
 function isSystemSlug(slug: string): string | null {
     const flatSystems = Object.values(groupedSystems).flat();
-    // Normalize slug (e.g. Nintendo 64 -> nintendo-64)
-    // Check if the current slug strictly equals a known system slug
     const found = flatSystems.find(s => s.toLowerCase().replace(/ /g, '-') === slug);
-    return found || null; // Returns the proper System Name ("Nintendo 64") or null
+    return found || null;
 }
-
-import { getProductById } from "@/lib/cached-api"; // Use Cached Version
-import AlternateLinksRegistrar from "@/components/AlternateLinksRegistrar";
-
-import { generateConsoleSeo } from "@/lib/seo-utils";
 
 export async function generateMetadata({ params, searchParams }: { params: Promise<{ slug: string; lang: string }>; searchParams: Promise<{ genre?: string, sort?: string }> }): Promise<Metadata> {
     const { slug, lang } = await params;
@@ -80,11 +68,8 @@ export async function generateMetadata({ params, searchParams }: { params: Promi
             title: "Product Not Found | RetroCharting",
         };
     }
-    // ...
-    // (Rest of metadata stays same, relying on product)
-    const shortConsoleName = formatConsoleName(product.console_name);
 
-    // ... (rest of metadata logic) ...
+    const shortConsoleName = formatConsoleName(product.console_name);
     const canonicalPath = getGameUrl(product, lang);
     const canonicalUrl = `https://retrocharting.com${canonicalPath}`;
 
@@ -112,10 +97,10 @@ export default async function Page({
     searchParams
 }: {
     params: Promise<{ slug: string; lang: string }>,
-    searchParams: Promise<{ genre?: string, sort?: string }>
+    searchParams: Promise<{ genre?: string, sort?: string, search?: string }>
 }) {
     const { slug, lang } = await params;
-    const { genre, sort } = await searchParams;
+    const { genre, sort, search: searchQuery } = await searchParams;
     const dict = await getDictionary(lang);
 
     const getSlug = (key: string) => routeMap[key]?.[lang] || key;
@@ -127,10 +112,9 @@ export default async function Page({
     const systemName = isSystemSlug(slug);
 
     if (systemName) {
-        // ... (Console logic same) ...
         // === CONSOLE CATALOG VIEW ===
         const [products, genres] = await Promise.all([
-            getProductsByConsole(systemName, 1000, genre, 'game', sort),
+            getProductsByConsole(systemName, 50, genre, 'game', sort, 0, searchQuery),
             getGenres(systemName)
         ]);
 
@@ -140,10 +124,7 @@ export default async function Page({
         ];
 
         // Generate Dynamic SEO Content
-        let count = products.length;
-        if (genre) {
-            count = products.filter(p => p.genre?.toLowerCase() === genre.toLowerCase()).length;
-        }
+        const count = products.length;
         const seo = generateConsoleSeo(systemName, genre, sort, count, lang);
 
         return (
@@ -185,12 +166,10 @@ export default async function Page({
         );
     }
 
-    // const history = await getProductHistory(id); // create parallel above
     const shortConsoleName = formatConsoleName(product.console_name);
 
     const breadcrumbItems = [
         { label: dict.header.nav.video_games, href: `/${lang}/${gamesSlug}` },
-        // Use console directory - NEW LINK STRUCTURE
         { label: product.console_name, href: `/${lang}/${gamesSlug}/${product.console_name.toLowerCase().replace(/ /g, '-')}` },
         { label: product.product_name, href: getGameUrl(product, lang) }
     ];
@@ -252,15 +231,12 @@ export default async function Page({
                             )}
                         </div>
 
-                        {/* Cross Platform Links */}
                         <CrossPlatformLinks productId={product.id} lang={lang} />
 
-                        {/* DESKTOP: Actions moved to Left Column */}
                         <div className="hidden md:block">
                             <ProductActions product={product} lang={lang} dict={dict} />
                         </div>
 
-                        {/* DESKTOP: Description moved to Left Sidebar */}
                         <div className="hidden md:block">
                             <ProductDetails product={product} dict={dict} lang={lang} gamesSlug={gamesSlug} />
                             <div className="mt-8">
@@ -271,73 +247,36 @@ export default async function Page({
 
                     {/* Right: Details */}
                     <div className="md:col-span-8">
-
-                        {/* Price Cards (Mobile: 2 cols, Desktop: 5 cols single row) */}
                         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-6">
-                            <PriceCard
-                                label={dict.product.prices.loose}
-                                price={product.loose_price}
-                                definition={dict.product.conditions.loose}
-                            />
-                            <PriceCard
-                                label={dict.product.prices.cib}
-                                price={product.cib_price}
-                                color="text-[#007bff]"
-                                definition={dict.product.conditions.cib}
-                                bestValue={true}
-                            />
-                            <PriceCard
-                                label={dict.product.prices.new}
-                                price={product.new_price}
-                                color="text-[#00ff00]"
-                                definition={dict.product.conditions.new}
-                            />
-                            {/* New Cards for Box/Manual */}
-                            <PriceCard
-                                label={dict.product.conditions.box_only}
-                                price={product.box_only_price || 0}
-                                color="text-[#f59e0b]" // amber
-                                definition={dict.product.conditions.box_only}
-                            />
-                            <PriceCard
-                                label={dict.product.conditions.manual_only}
-                                price={product.manual_only_price || 0}
-                                color="text-[#ef4444]" // red
-                                definition={dict.product.conditions.manual_only}
-                            />
+                            <PriceCard label={dict.product.prices.loose} price={product.loose_price} definition={dict.product.conditions.loose} />
+                            <PriceCard label={dict.product.prices.cib} price={product.cib_price} color="text-[#007bff]" definition={dict.product.conditions.cib} bestValue={true} />
+                            <PriceCard label={dict.product.prices.new} price={product.new_price} color="text-[#00ff00]" definition={dict.product.conditions.new} />
+                            <PriceCard label={dict.product.conditions.box_only} price={product.box_only_price || 0} color="text-[#f59e0b]" definition={dict.product.conditions.box_only} />
+                            <PriceCard label={dict.product.conditions.manual_only} price={product.manual_only_price || 0} color="text-[#ef4444]" definition={dict.product.conditions.manual_only} />
                         </div>
 
-                        {/* Middle: Compact Price History Chart */}
                         <div className="mb-6">
                             <h2 className="text-white text-sm font-bold mb-2 uppercase tracking-wider text-gray-400">{dict.product.market.price_trend}</h2>
                             <PriceHistoryChart history={history} className="h-[200px]" dict={dict} />
                         </div>
 
-                        {/* SEO Market Analysis (Full Width / Inserted Here) */}
                         <div className="md:col-span-12 -mx-4 md:mx-0">
                             <MarketAnalysis product={product} dict={dict} lang={lang} />
                         </div>
 
-
-
-
-                        {/* eBay Listings - The CORE Value */}
                         <div className="mb-8">
                             <h2 className="text-white text-lg font-bold mb-3">{dict.product.market.title}</h2>
                             <ListingsTable productId={product.id} dict={dict} />
                         </div>
 
-                        {/* User Comments - NEW */}
                         <div className="mb-8">
                             <CommentsSection productId={product.id} lang={lang} />
                         </div>
 
-                        {/* MOBILE: Actions moved BELOW Listings */}
                         <div className="block md:hidden mb-8">
                             <ProductActions product={product} lang={lang} dict={dict} />
                         </div>
 
-                        {/* MOBILE: Description moved to Bottom */}
                         <div className="block md:hidden mb-8">
                             <ProductDetails product={product} dict={dict} lang={lang} gamesSlug={gamesSlug} />
                             <div className="mt-8">

@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Product } from '@/lib/api';
+import { Product, getProductsByConsole } from '@/lib/api';
 import { getGameUrl } from '@/lib/utils';
 import JsonLd, { generateItemListSchema } from '@/components/seo/JsonLd';
 import {
@@ -43,31 +43,59 @@ export default function ConsoleGameCatalog({
     const searchParams = useSearchParams();
 
     // -- State --
-    // Filter State
-    const [selectedGenre, setSelectedGenre] = useState(searchParams.get('genre') || '');
-    const [searchQuery, setSearchQuery] = useState('');
+    const [allProducts, setAllProducts] = useState<Product[]>(products);
+    const [loadingMore, setLoadingMore] = useState(false);
 
-    // View & Sort State
-    const [viewMode, setViewMode] = useState<ViewMode>('list'); // Default to LIST view
+    // View State
+    const [viewMode, setViewMode] = useState<ViewMode>('list');
     const sortParam = searchParams.get('sort');
     const [sortBy, setSortBy] = useState<SortOption>((sortParam as SortOption) || 'title_asc');
 
-    // Pagination State
-    const [visibleCount, setVisibleCount] = useState(50);
-    const LOAD_INCREMENT = 50;
+    // Search State
+    const searchFromUrl = searchParams.get('search') || '';
+    const [searchTerm, setSearchTerm] = useState(searchFromUrl);
 
-    // -- Effects --
-    // Sync Genre & Sort with URL
+    // -- Sync Props to State --
+    // When URL params change (genre, sort, search) and page re-renders, reset list
     useEffect(() => {
-        const genreFromUrl = searchParams.get('genre') || '';
-        setSelectedGenre(genreFromUrl);
+        setAllProducts(products);
+        setSearchTerm(searchParams.get('search') || '');
+        // Sync sort state too
+        const s = searchParams.get('sort');
+        if (s) setSortBy(s as SortOption);
+    }, [products, searchParams]);
 
-        const sortFromUrl = searchParams.get('sort');
-        if (sortFromUrl) setSortBy(sortFromUrl as SortOption);
+    // -- Handlers --
 
-    }, [searchParams]);
+    // Load More (Client updates List)
+    const handleLoadMore = async () => {
+        setLoadingMore(true);
+        try {
+            const currentCount = allProducts.length;
+            const genre = searchParams.get('genre') || undefined;
+            const sort = searchParams.get('sort') || undefined;
+            const search = searchParams.get('search') || undefined; // Use URL param, not local state
 
-    // Handle Sort Change (Push to URL so page reloads/updates Metadata)
+            const moreProducts = await getProductsByConsole(
+                systemName,
+                50, // Limit
+                genre,
+                'game',
+                sort,
+                currentCount, // Skip
+                search
+            );
+
+            if (moreProducts.length > 0) {
+                setAllProducts(prev => [...prev, ...moreProducts]);
+            }
+        } catch (error) {
+            console.error("Failed to load more products", error);
+        } finally {
+            setLoadingMore(false);
+        }
+    };
+
     const handleSortChange = (newSort: SortOption) => {
         setSortBy(newSort);
         const params = new URLSearchParams(searchParams.toString());
@@ -75,77 +103,41 @@ export default function ConsoleGameCatalog({
         router.push(`/${lang}/${gamesSlug}/${systemSlug}?${params.toString()}`, { scroll: false });
     };
 
-    // Reset pagination on filter change
-    useEffect(() => {
-        setVisibleCount(LOAD_INCREMENT);
-    }, [selectedGenre, searchQuery, sortBy]);
-
-    // -- Handlers --
     const handleGenreClick = (genre: string) => {
-        setSelectedGenre(genre);
         const params = new URLSearchParams(searchParams.toString());
         if (genre) params.set('genre', genre);
         else params.delete('genre');
-        // Reset sort when changing genre? No, keep it.
         router.push(`/${lang}/${gamesSlug}/${systemSlug}?${params.toString()}`, { scroll: false });
     };
 
-    const handleLoadMore = () => {
-        setVisibleCount(prev => prev + LOAD_INCREMENT);
+    // Debounced Search (or Enter)
+    const handleSearch = (term: string) => {
+        setSearchTerm(term);
     };
 
-    // -- Derived Data --
-    const filteredProducts = useMemo(() => {
-        let result = products;
+    // Execute Search on Enter or simple debounce could be added. 
+    // unique Search handler for simple "Enter" usage
+    const executeSearch = () => {
+        const params = new URLSearchParams(searchParams.toString());
+        if (searchTerm) params.set('search', searchTerm);
+        else params.delete('search');
+        router.push(`/${lang}/${gamesSlug}/${systemSlug}?${params.toString()}`, { scroll: false });
+    };
 
-        // 1. Genre Filter
-        if (selectedGenre) {
-            result = result.filter(p => p.genre && p.genre.includes(selectedGenre));
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            executeSearch();
         }
-
-        // 2. Search Filter
-        if (searchQuery) {
-            const query = searchQuery.toLowerCase();
-            result = result.filter(p =>
-                p.product_name.toLowerCase().includes(query)
-            );
-        }
-
-        // 3. Sorting
-        result = [...result].sort((a, b) => {
-            switch (sortBy) {
-                case 'title_asc': return a.product_name.localeCompare(b.product_name);
-                case 'title_desc': return b.product_name.localeCompare(a.product_name);
-
-                case 'loose_asc': return (a.loose_price || 0) - (b.loose_price || 0);
-                case 'loose_desc': return (b.loose_price || 0) - (a.loose_price || 0);
-
-                case 'cib_asc': return (a.cib_price || 0) - (b.cib_price || 0);
-                case 'cib_desc': return (b.cib_price || 0) - (a.cib_price || 0);
-
-                case 'new_asc': return (a.new_price || 0) - (b.new_price || 0);
-                case 'new_desc': return (b.new_price || 0) - (a.new_price || 0);
-
-                default: return 0;
-            }
-        });
-
-        return result;
-    }, [products, selectedGenre, searchQuery, sortBy]);
-
-    const displayedProducts = filteredProducts.slice(0, visibleCount);
-    const hasMore = visibleCount < filteredProducts.length;
+    };
 
     // Helper for table Sort Headers
     const SortHeader = ({ label, fieldKey, alignRight = false }: { label: string, fieldKey: 'title' | 'loose' | 'cib' | 'new', alignRight?: boolean }) => {
         const isAsc = sortBy === `${fieldKey}_asc`;
-        const isDesc = sortBy === `${fieldKey}_desc`;
-
+        // ... (Header logic)
         const toggleSort = () => {
             if (isAsc) handleSortChange(`${fieldKey}_desc` as SortOption);
             else handleSortChange(`${fieldKey}_asc` as SortOption);
         };
-
         return (
             <th
                 className={`py-3 px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider cursor-pointer hover:text-white transition-colors group select-none ${alignRight ? 'text-right' : 'text-left'}`}
@@ -153,7 +145,7 @@ export default function ConsoleGameCatalog({
             >
                 <div className={`flex items-center gap-1 ${alignRight ? 'justify-end' : 'justify-start'}`}>
                     {label}
-                    <ArrowsUpDownIcon className={`w-4 h-4 ${isAsc || isDesc ? 'text-[#ff6600]' : 'text-gray-600 group-hover:text-gray-400'}`} />
+                    <ArrowsUpDownIcon className={`w-4 h-4 ${isAsc ? 'text-[#ff6600]' : 'text-gray-600 group-hover:text-gray-400'}`} />
                 </div>
             </th>
         );
@@ -162,7 +154,7 @@ export default function ConsoleGameCatalog({
     // Schema.org
     const itemListSchema = generateItemListSchema(
         `${systemName} Games Catalog`,
-        displayedProducts.map((p, idx) => ({
+        allProducts.map((p, idx) => ({
             name: p.product_name,
             url: getGameUrl(p, lang),
             image: p.image_url,
@@ -170,34 +162,34 @@ export default function ConsoleGameCatalog({
         }))
     );
 
+    // Use `allProducts` directly for display
+    const displayedProducts = allProducts;
+    // We don't know true total count unless API returns it. 
+    // Simple heuristic: if API returned fewer than limit (50) in current batch? 
+    // Actually we don't know the last batch size here easily without tracking.
+    // Assume hasMore = true unless we get 0 in loadMore? 
+    // Better: check if PRODUCTS length is multiple of 50? 
+    // Or just always show Load More until it returns 0. 
+    // We'll use a simple "hasMore" state or just check if last fetch was full. 
+    // Simpler: Just Show Load More button. If user clicks and 0 return, hide it?
+    // Let's assume we always show it if count >= 50.
+    const hasMore = displayedProducts.length >= 50 && displayedProducts.length % 50 === 0;
+
+    const selectedGenre = searchParams.get('genre') || '';
+
     return (
         <div>
             <style jsx global>{`
-                .custom-scrollbar::-webkit-scrollbar {
-                    height: 8px;
-                    width: 8px;
-                }
-                .custom-scrollbar::-webkit-scrollbar-track {
-                    background: #151922;
-                }
-                .custom-scrollbar::-webkit-scrollbar-thumb {
-                    background-color: #2a3142;
-                    border-radius: 4px;
-                }
-                .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-                    background-color: #3f485e;
-                }
-                /* Firefox */
-                .custom-scrollbar {
-                    scrollbar-width: thin;
-                    scrollbar-color: #2a3142 #151922;
-                }
+                .custom-scrollbar::-webkit-scrollbar { height: 8px; width: 8px; }
+                .custom-scrollbar::-webkit-scrollbar-track { background: #151922; }
+                .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #2a3142; border-radius: 4px; }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #3f485e; }
+                .custom-scrollbar { scrollbar-width: thin; scrollbar-color: #2a3142 #151922; }
             `}</style>
             <JsonLd data={itemListSchema} />
 
             {/* Header Area */}
             <div className="mb-6">
-
                 <div className="mt-4">
                     <h1 className="text-3xl font-bold text-white mb-2">
                         {h1Title || `${systemName} Games`}
@@ -220,8 +212,11 @@ export default function ConsoleGameCatalog({
                     <input
                         type="text"
                         placeholder="Search games..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        value={searchTerm}
+                        onChange={(e) => handleSearch(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        // Add blur to search? 
+                        onBlur={executeSearch}
                         className="w-full bg-[#151922] border border-[#2a3142] text-white pl-10 pr-4 py-2 rounded focus:outline-none focus:border-[#ff6600] transition-colors"
                     />
                 </div>
@@ -303,7 +298,7 @@ export default function ConsoleGameCatalog({
                                     <SortHeader label="Loose" fieldKey="loose" alignRight />
                                     <SortHeader label="CIB" fieldKey="cib" alignRight />
                                     <SortHeader label="New" fieldKey="new" alignRight />
-                                    <th className="py-3 px-4 w-24"></th> {/* Actions Column */}
+                                    <th className="py-3 px-4 w-24"></th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-[#2a3142]">
@@ -324,23 +319,15 @@ export default function ConsoleGameCatalog({
                                         <td className="py-2 px-4 text-sm text-gray-400 hidden lg:table-cell">
                                             {product.genre || '-'}
                                         </td>
-
-                                        {/* Loose Price */}
                                         <td className="py-2 px-4 text-right text-sm font-mono text-gray-300">
                                             {product.loose_price ? `$${product.loose_price.toFixed(2)}` : '-'}
                                         </td>
-
-                                        {/* CIB Price (Blue) */}
                                         <td className="py-2 px-4 text-right text-sm font-mono text-[#007bff] font-bold">
                                             {product.cib_price ? `$${product.cib_price.toFixed(2)}` : '-'}
                                         </td>
-
-                                        {/* New Price (Green) */}
                                         <td className="py-2 px-4 text-right text-sm font-mono text-[#00ff00] font-bold">
                                             {product.new_price ? `$${product.new_price.toFixed(2)}` : '-'}
                                         </td>
-
-                                        {/* Actions */}
                                         <td className="py-2 px-4 text-right">
                                             <TableActions productId={product.id} productName={product.product_name} />
                                         </td>
@@ -395,12 +382,13 @@ export default function ConsoleGameCatalog({
             )}
 
             {/* Empty State */}
-            {filteredProducts.length === 0 && (
+            {displayedProducts.length === 0 && (
                 <div className="text-center text-gray-400 py-12 bg-[#1f2533] rounded border border-[#2a3142]">
                     <p className="text-xl mb-2">No games found.</p>
                     <p className="text-sm">Try adjusting your filters or search query.</p>
+                    {/* Clear all just resets URL */}
                     <button
-                        onClick={() => { setSelectedGenre(''); setSearchQuery(''); }}
+                        onClick={() => router.push(`/${lang}/${gamesSlug}/${systemSlug}`)}
                         className="mt-4 text-[#ff6600] hover:underline"
                     >
                         Clear All Filters
@@ -413,9 +401,10 @@ export default function ConsoleGameCatalog({
                 <div className="mt-8 flex justify-center">
                     <button
                         onClick={handleLoadMore}
-                        className="bg-[#2a3142] hover:bg-[#343b4d] text-white px-8 py-3 rounded-full font-bold transition-colors"
+                        disabled={loadingMore}
+                        className="bg-[#2a3142] hover:bg-[#343b4d] text-white px-8 py-3 rounded-full font-bold transition-colors disabled:opacity-50"
                     >
-                        Load More ({filteredProducts.length - displayedProducts.length} remaining)
+                        {loadingMore ? 'Loading...' : 'Load More'}
                     </button>
                 </div>
             )}

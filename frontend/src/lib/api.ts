@@ -35,7 +35,7 @@ export interface PriceHistoryPoint {
     condition: string;
 }
 
-export async function getProductsByConsole(consoleName: string, limit = 50, genre?: string, type?: 'game' | 'console' | 'accessory', sort?: string): Promise<Product[]> {
+export async function getProductsByConsole(consoleName: string, limit = 50, genre?: string, type?: 'game' | 'console' | 'accessory', sort?: string, skip = 0, search?: string): Promise<Product[]> {
     try {
         const response = await apiClient.get(`/products/`, {
             params: {
@@ -43,7 +43,9 @@ export async function getProductsByConsole(consoleName: string, limit = 50, genr
                 limit,
                 genre,
                 type,
-                sort
+                sort,
+                skip,
+                search
             }
         });
         return response.data;
