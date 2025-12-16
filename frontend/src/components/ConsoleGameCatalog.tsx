@@ -43,8 +43,11 @@ export default function ConsoleGameCatalog({
     const searchParams = useSearchParams();
 
     // -- State --
+    // -- State --
     const [allProducts, setAllProducts] = useState<Product[]>(products);
     const [loadingMore, setLoadingMore] = useState(false);
+    // Assume more if we hit the initial page limit (40) or close to it
+    const [hasMore, setHasMore] = useState(products.length >= 40);
 
     // View State
     const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -56,29 +59,27 @@ export default function ConsoleGameCatalog({
     const [searchTerm, setSearchTerm] = useState(searchFromUrl);
 
     // -- Sync Props to State --
-    // When URL params change (genre, sort, search) and page re-renders, reset list
     useEffect(() => {
         setAllProducts(products);
+        // Reset hasMore when route changes (new initial fetch)
+        setHasMore(products.length >= 40);
         setSearchTerm(searchParams.get('search') || '');
-        // Sync sort state too
         const s = searchParams.get('sort');
         if (s) setSortBy(s as SortOption);
     }, [products, searchParams]);
 
     // -- Handlers --
-
-    // Load More (Client updates List)
     const handleLoadMore = async () => {
         setLoadingMore(true);
         try {
             const currentCount = allProducts.length;
             const genre = searchParams.get('genre') || undefined;
             const sort = searchParams.get('sort') || undefined;
-            const search = searchParams.get('search') || undefined; // Use URL param, not local state
+            const search = searchParams.get('search') || undefined;
 
             const moreProducts = await getProductsByConsole(
                 systemName,
-                50, // Limit
+                50, // Load More Limit
                 genre,
                 'game',
                 sort,
@@ -88,9 +89,14 @@ export default function ConsoleGameCatalog({
 
             if (moreProducts.length > 0) {
                 setAllProducts(prev => [...prev, ...moreProducts]);
+                // If we fetched fewer than requested, we reached the end
+                if (moreProducts.length < 50) setHasMore(false);
+            } else {
+                setHasMore(false);
             }
         } catch (error) {
             console.error("Failed to load more products", error);
+            setHasMore(false);
         } finally {
             setLoadingMore(false);
         }
@@ -164,16 +170,6 @@ export default function ConsoleGameCatalog({
 
     // Use `allProducts` directly for display
     const displayedProducts = allProducts;
-    // We don't know true total count unless API returns it. 
-    // Simple heuristic: if API returned fewer than limit (50) in current batch? 
-    // Actually we don't know the last batch size here easily without tracking.
-    // Assume hasMore = true unless we get 0 in loadMore? 
-    // Better: check if PRODUCTS length is multiple of 50? 
-    // Or just always show Load More until it returns 0. 
-    // We'll use a simple "hasMore" state or just check if last fetch was full. 
-    // Simpler: Just Show Load More button. If user clicks and 0 return, hide it?
-    // Let's assume we always show it if count >= 50.
-    const hasMore = displayedProducts.length >= 50 && displayedProducts.length % 50 === 0;
 
     const selectedGenre = searchParams.get('genre') || '';
 
