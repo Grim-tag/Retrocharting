@@ -96,4 +96,36 @@ class ListingClassifier:
         
         return 'LOOSE'
 
+    @staticmethod
+    def clean_query(product_name: str, console_name: str) -> str:
+        return ListingClassifier.clean_search_query(product_name, console_name)
+
+    @staticmethod
+    def is_relevant(title: str, keyword: str) -> bool:
+        """
+        Naive relevance check: Does the title contain the keyword?
+        """
+        if not keyword: return True
+        return keyword.lower() in title.lower()
+
+    @staticmethod
+    def is_junk(title: str, product_name: str, console_name: str, genre: str) -> bool:
+        """
+        Filters out common junk (Protectors, Arts, Parts)
+        """
+        t = title.lower()
+        junk_terms = ['box protector', 'acrylic case', 'dust cover', 'replacement case', 'artwork only', 'notice seule']
+        if any(j in t for j in junk_terms):
+            return True
+        return False
+
+    @staticmethod
+    def is_region_compatible(item_region: str, target_region: str) -> bool:
+        """
+        Checks if item region is compatible with target.
+        """
+        if item_region == target_region: return True
+        if target_region == 'NTSC-U' and item_region not in ['PAL', 'JP']: return True # Loose/Unknown assumed NTSC?
+        return False
+        
 classifier = ListingClassifier()
