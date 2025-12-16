@@ -433,19 +433,27 @@ def update_listings_background(product_id: int):
             # Check db.query count? 
             # Let's just run delete for now, persistence can be improved later.
             
-            db.query(Listing).filter(
-                Listing.product_id == product_id,
-                Listing.source == 'eBay',
-                Listing.status == 'active',
-                Listing.external_id.notin_(ebay_ids)
-            ).delete(synchronize_session=False)
+            # SAFETY FIX: Only delete if we actually found something.
+            # If API fails or returns 0 items, do NOT wipe the existing data.
+            # It's better to show 'expired' listings than empty page.
+            
+            if ebay_ids:
+                print(f"Pruning stale eBay listings for {product_id} (kept {len(ebay_ids)})")
+                db.query(Listing).filter(
+                    Listing.product_id == product_id,
+                    Listing.source == 'eBay',
+                    Listing.status == 'active',
+                    Listing.external_id.notin_(ebay_ids)
+                ).delete(synchronize_session=False)
 
-            db.query(Listing).filter(
-                Listing.product_id == product_id,
-                Listing.source == 'Amazon',
-                Listing.status == 'active',
-                Listing.external_id.notin_(amazon_ids)
-            ).delete(synchronize_session=False)
+            if amazon_ids:
+                print(f"Pruning stale Amazon listings for {product_id} (kept {len(amazon_ids)})")
+                db.query(Listing).filter(
+                    Listing.product_id == product_id,
+                    Listing.source == 'Amazon',
+                    Listing.status == 'active',
+                    Listing.external_id.notin_(amazon_ids)
+                ).delete(synchronize_session=False)
             
             # Update Averages
             if prices_box: product.box_only_price = sum(prices_box) / len(prices_box)
