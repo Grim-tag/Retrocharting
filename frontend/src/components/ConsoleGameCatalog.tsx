@@ -13,6 +13,7 @@ import {
     ArrowsUpDownIcon
 } from '@heroicons/react/24/outline';
 import TableActions from '@/components/ui/TableActions';
+import Breadcrumbs from "@/components/seo/Breadcrumbs";
 
 interface ConsoleGameCatalogProps {
     products: Product[];
@@ -21,6 +22,8 @@ interface ConsoleGameCatalogProps {
     lang: string;
     gamesSlug: string;
     systemSlug: string;
+    h1Title?: string;
+    introText?: string;
 }
 
 type SortOption = 'title_asc' | 'title_desc' | 'loose_asc' | 'loose_desc' | 'cib_asc' | 'cib_desc' | 'new_asc' | 'new_desc';
@@ -32,7 +35,9 @@ export default function ConsoleGameCatalog({
     systemName,
     lang,
     gamesSlug,
-    systemSlug
+    systemSlug,
+    h1Title,
+    introText
 }: ConsoleGameCatalogProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -44,18 +49,31 @@ export default function ConsoleGameCatalog({
 
     // View & Sort State
     const [viewMode, setViewMode] = useState<ViewMode>('list'); // Default to LIST view
-    const [sortBy, setSortBy] = useState<SortOption>('title_asc');
+    const sortParam = searchParams.get('sort');
+    const [sortBy, setSortBy] = useState<SortOption>((sortParam as SortOption) || 'title_asc');
 
     // Pagination State
     const [visibleCount, setVisibleCount] = useState(50);
     const LOAD_INCREMENT = 50;
 
     // -- Effects --
-    // Sync Genre with URL
+    // Sync Genre & Sort with URL
     useEffect(() => {
         const genreFromUrl = searchParams.get('genre') || '';
         setSelectedGenre(genreFromUrl);
+
+        const sortFromUrl = searchParams.get('sort');
+        if (sortFromUrl) setSortBy(sortFromUrl as SortOption);
+
     }, [searchParams]);
+
+    // Handle Sort Change (Push to URL so page reloads/updates Metadata)
+    const handleSortChange = (newSort: SortOption) => {
+        setSortBy(newSort);
+        const params = new URLSearchParams(searchParams.toString());
+        params.set('sort', newSort);
+        router.push(`/${lang}/${gamesSlug}/${systemSlug}?${params.toString()}`, { scroll: false });
+    };
 
     // Reset pagination on filter change
     useEffect(() => {
@@ -68,6 +86,7 @@ export default function ConsoleGameCatalog({
         const params = new URLSearchParams(searchParams.toString());
         if (genre) params.set('genre', genre);
         else params.delete('genre');
+        // Reset sort when changing genre? No, keep it.
         router.push(`/${lang}/${gamesSlug}/${systemSlug}?${params.toString()}`, { scroll: false });
     };
 
@@ -177,15 +196,26 @@ export default function ConsoleGameCatalog({
             <JsonLd data={itemListSchema} />
 
             {/* Header Area */}
-            <div className="flex flex-col md:flex-row justify-between md:items-end mb-6 gap-4">
-                <div>
+            <div className="mb-6">
+                <Breadcrumbs
+                    items={[
+                        { label: lang === 'fr' ? 'Accueil' : 'Home', href: lang === 'en' ? '/' : '/fr' },
+                        { label: lang === 'fr' ? 'Jeux Vidéo' : 'Video Games', href: lang === 'en' ? '/games' : '/fr/jeux-video' },
+                        { label: systemName, href: '#' } // Current page
+                    ]}
+                    lang={lang}
+                />
+
+                <div className="mt-4">
                     <h1 className="text-3xl font-bold text-white mb-2">
-                        {systemName} Games
-                        {selectedGenre && <span className="text-gray-500 ml-2 text-xl font-normal">/ {selectedGenre}</span>}
+                        {h1Title || `${systemName} Games`}
                     </h1>
-                    <div className="text-gray-400 text-sm">
-                        Showing {filteredProducts.length} games
-                    </div>
+                    <p className="text-gray-400 text-sm max-w-3xl">
+                        {introText || (lang === 'fr'
+                            ? `Retrouvez la liste complète des jeux ${systemName} avec leur cote actualisée.`
+                            : `Complete list of ${systemName} games with current market prices.`
+                        )}
+                    </p>
                 </div>
             </div>
 

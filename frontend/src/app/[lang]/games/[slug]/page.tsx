@@ -47,16 +47,27 @@ function isSystemSlug(slug: string): string | null {
 import { getProductById } from "@/lib/cached-api"; // Use Cached Version
 import AlternateLinksRegistrar from "@/components/AlternateLinksRegistrar";
 
-export async function generateMetadata({ params, searchParams }: { params: Promise<{ slug: string; lang: string }>; searchParams: Promise<{ genre?: string }> }): Promise<Metadata> {
+import { generateConsoleSeo } from "@/lib/seo-utils";
+
+export async function generateMetadata({ params, searchParams }: { params: Promise<{ slug: string; lang: string }>; searchParams: Promise<{ genre?: string, sort?: string }> }): Promise<Metadata> {
     const { slug, lang } = await params;
+    const { genre, sort } = await searchParams;
     const dict = await getDictionary(lang);
 
     // 1. Check if it's a Console Page
     const systemName = isSystemSlug(slug);
     if (systemName) {
+        // Use generic count or 0 for metadata to avoid double fetch latency
+        const seo = generateConsoleSeo(systemName, genre, sort, 0, lang);
+
         return {
-            title: `${systemName} Video Games Price Guide | RetroCharting`,
-            description: `Complete list of ${systemName} games with loose, CIB, and new prices. Filter by genre and find the best deals.`
+            title: seo.title,
+            description: seo.description.replace(' 0 ', ' '),
+            alternates: {
+                canonical: genre || sort
+                    ? `/${lang === 'en' ? 'games' : 'jeux-video'}/${slug}?${new URLSearchParams({ ...(genre && { genre }), ...(sort && { sort }) }).toString()}`
+                    : `/${lang === 'en' ? 'games' : 'jeux-video'}/${slug}`
+            }
         };
     }
 
@@ -101,10 +112,10 @@ export default async function Page({
     searchParams
 }: {
     params: Promise<{ slug: string; lang: string }>,
-    searchParams: Promise<{ genre?: string }>
+    searchParams: Promise<{ genre?: string, sort?: string }>
 }) {
     const { slug, lang } = await params;
-    const { genre } = await searchParams;
+    const { genre, sort } = await searchParams;
     const dict = await getDictionary(lang);
 
     const getSlug = (key: string) => routeMap[key]?.[lang] || key;
@@ -128,10 +139,17 @@ export default async function Page({
             { label: systemName, href: `/${lang}/${gamesSlug}/${slug}` }
         ];
 
+        // Generate Dynamic SEO Content
+        let count = products.length;
+        if (genre) {
+            count = products.filter(p => p.genre?.toLowerCase() === genre.toLowerCase()).length;
+        }
+        const seo = generateConsoleSeo(systemName, genre, sort, count, lang);
+
         return (
             <main className="flex-grow bg-[#0f121e] py-8">
                 <div className="max-w-[1400px] mx-auto px-4">
-                    <Breadcrumbs items={breadcrumbItems} />
+                    <Breadcrumbs items={breadcrumbItems} lang={lang} />
                     <ConsoleGameCatalog
                         products={products}
                         genres={genres}
@@ -139,6 +157,8 @@ export default async function Page({
                         lang={lang}
                         gamesSlug={gamesSlug}
                         systemSlug={slug}
+                        h1Title={seo.h1}
+                        introText={seo.intro}
                     />
                 </div>
             </main>

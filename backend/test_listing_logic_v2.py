@@ -25,7 +25,10 @@ examples = [
     ("The Legend of Zelda NES Classics Nintendo Gameboy Advance SP GB GBA DS", None, "JUNK"), # GBA on NES search
     ("OTL Technologies Écouteurs sans Fil The Legend of Zelda", None, "JUNK"),
     ("LEGO The Legend of Zelda Vénérable Arbre Mojo", None, "JUNK"),
-    ("₪PAS DE JEU₪ Notice Nintendo NES - FAH - The Legend of Zelda 1", "PAL", "MANUAL_ONLY")
+    ("₪PAS DE JEU₪ Notice Nintendo NES - FAH - The Legend of Zelda 1", "PAL", "MANUAL_ONLY"),
+    
+    # SAO Simulation
+    ("Sword Art Online: Last Recollection PS5", None, "Used")
 ]
 
 print(f"{'TITLE':<80} | {'REG (Exp)':<5} | {'REG (Act)':<5} | {'COND (Exp)':<10} | {'COND (Act)':<10} | J:{'':<1} | R:{'':<1}")
@@ -35,6 +38,9 @@ issues = 0
 
 # Mock Products for Relevance Testing
 mock_products = {
+    # SAO (Simulating PAL Product)
+    "Sword Art Online: Last Recollection PS5": ("Sword Art Online: Last Recollection [PAL]", "PlayStation 5", "Games"),
+    
     # Accessories
     "Manette Nintendo 64 Officielle Grise": ("Nintendo 64 Controller", "Nintendo 64", "Accessories"),
     "Nintendo 64 Transfer Pak": ("Transfer Pak", "Nintendo 64", "Accessories"),

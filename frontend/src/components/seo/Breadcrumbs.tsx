@@ -8,12 +8,16 @@ interface BreadcrumbItem {
 
 interface Props {
     items: BreadcrumbItem[];
+    lang?: string;
 }
 
-export default function Breadcrumbs({ items }: Props) {
+export default function Breadcrumbs({ items, lang = 'en' }: Props) {
     // Always start with Home
     const fullItems = [
-        { label: 'Home', href: '/' },
+        {
+            label: lang === 'fr' ? 'Accueil' : 'Home',
+            href: lang === 'en' ? '/' : '/fr'
+        },
         ...items,
     ];
 
