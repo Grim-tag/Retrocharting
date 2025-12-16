@@ -14,6 +14,10 @@ import { getDictionary } from "@/lib/get-dictionary";
 import { routeMap } from "@/lib/route-config";
 import { groupedSystems } from "@/data/systems";
 import ConsoleGameCatalog from "@/components/ConsoleGameCatalog";
+
+// Force Dynamic Rendering to prevent Build-Time "Thundering Herd" on Backend
+// This fixes the "500 Error" during deployment by rendering pages on-demand instead of at build time.
+export const dynamic = 'force-dynamic';
 import ProductActions from "@/components/ProductActions";
 import ProductDetails from "@/components/ProductDetails";
 import CommentsSection from "@/components/comments/CommentsSection";
