@@ -28,20 +28,52 @@ export default function ListingsTable({ productId, dict }: { productId: number; 
 
     useEffect(() => {
         let timeoutId: NodeJS.Timeout;
+        let retryCount = 0;
+        const MAX_RETRIES = 10; // 30 seconds max
 
         async function fetchListings() {
-            const { data, isStale } = await getListings(productId);
-            setListings(data);
-            setLoading(false);
+            setLoading(true);
+            try {
+                const { data, isStale, status } = await getListings(productId);
 
-            if (isStale) {
-                setIsUpdating(true);
-                // Poll again in 5 seconds
-                timeoutId = setTimeout(fetchListings, 5000);
-            } else {
-                setIsUpdating(false);
+                if (status === 202) {
+                    // Cache Miss - Server is scraping in background
+                    if (retryCount < MAX_RETRIES) {
+                        retryCount++;
+                        // Keep loading true, wait 3s and retry
+                        timeoutId = setTimeout(fetchListings, 3000);
+                    } else {
+                        // Timeout
+                        setLoading(false);
+                        setListings([]);
+                    }
+                } else {
+                    // Success (200) or Error
+                    setListings(data);
+                    setLoading(false);
+
+                    if (isStale) {
+                        // Data is old, background refresh triggered?
+                        // If api returns stale data + 200, it usually means "here is old data, refreshing in background"
+                        // So we might want to poll once more in 10s? or just let it be.
+                        // Current logic was: poll once in 5s.
+                        setIsUpdating(true);
+                        timeoutId = setTimeout(async () => {
+                            // One-off refresh attempt
+                            const refreshed = await getListings(productId);
+                            setListings(refreshed.data);
+                            setIsUpdating(false);
+                        }, 5000);
+                    } else {
+                        setIsUpdating(false);
+                    }
+                }
+            } catch (e) {
+                setLoading(false);
             }
         }
+
+        // Initial fetch
         fetchListings();
 
         return () => {

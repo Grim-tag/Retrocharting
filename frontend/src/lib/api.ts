@@ -127,15 +127,17 @@ export async function searchProductsGrouped(query: string): Promise<GroupedProdu
     }
 }
 
-export async function getListings(id: number): Promise<{ data: any[], isStale: boolean }> {
+export async function getListings(id: number): Promise<{ data: any[], isStale: boolean, status: number }> {
     try {
         const response = await apiClient.get(`/products/${id}/listings`, {
             params: { _t: new Date().getTime() } // Cache buster
         });
         const isStale = response.headers['x-is-stale'] === 'true';
-        return { data: response.data, isStale };
-    } catch (error) {
-        return { data: [], isStale: false };
+        return { data: response.data, isStale, status: response.status };
+    } catch (error: any) {
+        // If 202 is treated as error by axios interceptor? usually 2xx is success.
+        // Assuming axios considers 202 success.
+        return { data: [], isStale: false, status: error.response?.status || 500 };
     }
 }
 

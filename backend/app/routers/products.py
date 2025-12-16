@@ -617,19 +617,13 @@ def get_product_listings(
         return db_listings
 
     # Cache Miss: No listings at all. Must wait.
-    print(f"No listings for {product_id}. Fetching synchronously.")
-    # We can reuse the background logic function but run it synchronously here? 
-    # Or just call it. Since it creates its own session, it's safe but slightly inefficient to open another session.
-    # But for simplicity, let's just call it.
-    update_listings_background(product_id)
+    # ASYNC OPTIMIZATION: Do NOT wait. Return 202 (Accepted) and trigger background fetch.
+    from fastapi import status
+    print(f"No listings for {product_id}. Triggering background fetch (Async).")
+    background_tasks.add_task(update_listings_background, product_id)
     
-    # Re-fetch from DB
-    db_listings = db.query(Listing).filter(
-        Listing.product_id == product_id,
-        Listing.status == 'active'
-    ).order_by(Listing.price.asc()).all()
-    
-    return db_listings
+    response.status_code = status.HTTP_202_ACCEPTED
+    return []
 
 @router.get("/{product_id}/history")
 def get_product_history(product_id: int, db: Session = Depends(get_db)):
