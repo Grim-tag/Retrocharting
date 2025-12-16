@@ -6,9 +6,10 @@ import { routeMap } from '@/lib/route-config';
 import { systems } from '@/data/systems';
 
 export const revalidate = 3600; // Cache for 1 hour
+export const dynamic = 'force-dynamic'; // Prevent Build-Time Static Generation of Sitemap if Backend is slow
 
 const BASE_URL = 'https://retrocharting.com';
-const CHUNK_SIZE = 4000; // 4000 products per sitemap (safe size)
+const CHUNK_SIZE = 2000; // Reduced from 4000 to prevent timeouts
 
 export async function generateSitemaps() {
     // 1. Fetch total count from backend
