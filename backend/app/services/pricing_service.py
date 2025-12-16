@@ -3,7 +3,7 @@ from app.models.product import Product as ProductModel
 from app.models.listing import Listing
 from app.services.ebay_client import ebay_client
 from app.services.amazon_client import amazon_client
-from app.services.listing_classifier import ListingClassifier, classifier
+from app.services.listing_classifier import ListingClassifier
 from datetime import datetime
 
 class PricingService:
@@ -11,66 +11,95 @@ class PricingService:
     def update_listings(product_id: int):
         """
         Background task logic to fetch listings from eBay/Amazon and update DB.
-        Refactored from products.py for better maintainability and debugging.
+        REFACTORED V2: Prevents Database Connection Holding.
         """
-        db = SessionLocal()
         print(f"[PricingService] Starting update for Product {product_id}")
         
+        # --- STEP 1: READ CONTEXT (Short DB Session) ---
+        search_context = {}
+        db = SessionLocal()
         try:
             product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
             if not product:
                 print(f"[PricingService] Product {product_id} not found.")
                 return
-
-            # 1. Determine Product Region
+            
+            # Extract primitive data needed for search logic so we can close DB
+            search_context['product_id'] = product.id
+            search_context['product_name'] = product.product_name
+            search_context['console_name'] = product.console_name
+            search_context['genre'] = product.genre
+            search_context['manual_only_price'] = product.manual_only_price
+            search_context['box_only_price'] = product.box_only_price
+            search_context['loose_price'] = product.loose_price
+            
+            # Logic Pre-Calculation (while we have the objects)
             target_console_region = ListingClassifier.detect_region(product.console_name)
             if not target_console_region:
                 target_console_region = ListingClassifier.detect_region(product.product_name)
-                
+            
             if not target_console_region and product.genre != 'Accessories':
                  target_console_region = 'NTSC-U'
-            
-            # 2. Build Broad Query
-            query = ListingClassifier.clean_query(product.product_name, product.console_name)
-            print(f"[PricingService] Query: '{query}' | Region: {target_console_region}")
+            search_context['target_region'] = target_console_region
 
-            # Determine eBay Category
+            search_context['query'] = ListingClassifier.clean_query(product.product_name, product.console_name)
+            
+            # Category ID
             category_id = "139973" # Games
             if product.genre == 'Systems':
                 category_id = "139971"
             elif product.genre in ['Accessories', 'Controllers']:
                 category_id = "54968"
-
-            # 3. Sequential Fetching
-            ebay_results = []
-            amazon_results = []
+            search_context['category_id'] = category_id
             
-            try:
-                ebay_results = ebay_client.search_items(query, limit=20, category_ids=category_id)
-                print(f"[PricingService] eBay returned {len(ebay_results)} raw results.")
-            except Exception as e:
-                 print(f"[PricingService] eBay Fetch Error: {e}")
-                 
-            try:
-                 amazon_results = amazon_client.search_items(query, limit=10)
-                 print(f"[PricingService] Amazon returned {len(amazon_results)} raw results.")
-            except Exception as e:
-                 print(f"[PricingService] Amazon Fetch Error: {e}")
+        except Exception as e:
+            print(f"[PricingService] Read Error: {e}")
+            return
+        finally:
+            db.close() # CRITICAL: Release connection before external API calls
+            
+        # --- STEP 2: EXTERNAL API CALLS (No DB Connection) ---
+        query = search_context['query']
+        category_id = search_context['category_id']
+        target_console_region = search_context['target_region']
+        
+        print(f"[PricingService] Query: '{query}' | Region: {target_console_region} | DB Closed (Safe)")
+
+        ebay_results = []
+        amazon_results = []
+        
+        try:
+            ebay_results = ebay_client.search_items(query, limit=20, category_ids=category_id)
+            print(f"[PricingService] eBay returned {len(ebay_results)} raw results.")
+        except Exception as e:
+                print(f"[PricingService] eBay Fetch Error: {e}")
+                
+        try:
+                amazon_results = amazon_client.search_items(query, limit=10)
+                print(f"[PricingService] Amazon returned {len(amazon_results)} raw results.")
+        except Exception as e:
+                print(f"[PricingService] Amazon Fetch Error: {e}")
+
+        # --- STEP 3: WRITE RESULTS (Short DB Session) ---
+        db = SessionLocal()
+        try:
+            # Re-fetch product to update prices (it might have changed, but unlikely)
+            # We need to attach price updates to an active session object
+            product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
+            if not product: return # Deleted meanwhile?
 
             # Accumulators
             prices_box = []
             prices_manual = []
             prices_loose = []
             
-            # --- PROCESSING LOGIC ---
+            # Helper function (Locally defined to capture context)
             def process_and_filter(items, source, db_session):
                 processed_ids = []
-                # Logging counters
-                skipped_region = 0
-                skipped_relevance = 0
-                skipped_console = 0
+                check_term = ListingClassifier.clean_search_query(search_context['product_name'], "")
                 
-                check_term = ListingClassifier.clean_search_query(product.product_name, "")
+                # Logging counters
+                skipped = {"region": 0, "relevance": 0, "console": 0}
 
                 for item in items:
                     title = item.get('title', '')
@@ -86,22 +115,22 @@ class PricingService:
                     # 2. Region Filter
                     if target_console_region and item_region:
                          if not ListingClassifier.is_region_compatible(item_region, target_console_region):
-                             skipped_region += 1
+                             skipped['region'] += 1
                              continue
                              
                     # 3. Junk & Relevance
-                    if ListingClassifier.is_junk(title, product.product_name, product.console_name, product.genre):
+                    if ListingClassifier.is_junk(title, search_context['product_name'], search_context['console_name'], search_context['genre']):
                         continue
                         
                     if not ListingClassifier.is_relevant(title, check_term):
-                        skipped_relevance += 1
+                        skipped['relevance'] += 1
                         continue
-                        
+                     
                     # Console Relevance
-                    c_terms = [t.lower() for t in product.console_name.split() if len(t) > 2]
+                    c_terms = [t.lower() for t in search_context['console_name'].split() if len(t) > 2]
                     if c_terms:
                          if not any(ct in title.lower() for ct in c_terms):
-                             skipped_console += 1
+                             skipped['console'] += 1
                              continue
                     
                     # 5. Extract Price
@@ -129,15 +158,19 @@ class PricingService:
                     if not external_id: continue
                     processed_ids.append(external_id)
 
-                    # Good Deal Logic
+                    # Good Deal Logic (Using Context Pricing)
                     is_good_deal = False
-                    if item_condition == 'MANUAL_ONLY' and product.manual_only_price and price_val > 0:
-                        if price_val < (product.manual_only_price * 0.8): is_good_deal = True
-                    elif item_condition == 'BOX_ONLY' and product.box_only_price and price_val > 0:
-                         if price_val < (product.box_only_price * 0.8): is_good_deal = True
+                    p_manual = search_context.get('manual_only_price')
+                    p_box = search_context.get('box_only_price')
+                    p_loose = search_context.get('loose_price')
+                    
+                    if item_condition == 'MANUAL_ONLY' and p_manual and price_val > 0:
+                        if price_val < (p_manual * 0.8): is_good_deal = True
+                    elif item_condition == 'BOX_ONLY' and p_box and price_val > 0:
+                         if price_val < (p_box * 0.8): is_good_deal = True
                     elif item_condition not in ['PARTS', 'BOX_ONLY', 'MANUAL_ONLY']:
-                         if product.loose_price and price_val > 0:
-                            if price_val < (product.loose_price * 0.7): is_good_deal = True
+                         if p_loose and price_val > 0:
+                            if price_val < (p_loose * 0.7): is_good_deal = True
                     
                     # Collect Stats
                     if price_val > 0:
@@ -178,7 +211,7 @@ class PricingService:
                         )
                         db_session.add(new_listing)
                 
-                print(f"[PricingService] {source} Filter Stats: Region={skipped_region}, Relevance={skipped_relevance}, Console={skipped_console}. Kept: {len(processed_ids)}")
+                print(f"[PricingService] {source} Filter Stats: Region={skipped['region']}, Relevance={skipped['relevance']}, Console={skipped['console']}. Kept: {len(processed_ids)}")
                 return processed_ids
 
             # Process Both
@@ -187,7 +220,6 @@ class PricingService:
             
             # --- CLEANUP (Safety Net) ---
             if ebay_ids:
-                print(f"[PricingService] Pruning stale eBay listings (found {len(ebay_ids)})")
                 db.query(Listing).filter(
                     Listing.product_id == product_id,
                     Listing.source == 'eBay',
@@ -196,7 +228,6 @@ class PricingService:
                 ).delete(synchronize_session=False)
 
             if amazon_ids:
-                print(f"[PricingService] Pruning stale Amazon listings (found {len(amazon_ids)})")
                 db.query(Listing).filter(
                     Listing.product_id == product_id,
                     Listing.source == 'Amazon',
@@ -207,15 +238,12 @@ class PricingService:
             # Update Averages
             if prices_box: product.box_only_price = sum(prices_box) / len(prices_box)
             if prices_manual: product.manual_only_price = sum(prices_manual) / len(prices_manual)
-            # Loose price is usually updated from PriceCharting, maybe we shouldn't overwrite it with eBay average?
-            # Existing code only updated box/manual. Loose is kept from scraping main?
-            # Actually products.py didn't update loose_price.
                 
             db.commit()
-            print(f"[PricingService] Update Complete for {product_id}")
+            print(f"[PricingService] Update Complete for {product_id}. Prices Updated.")
             
         except Exception as e:
-            print(f"[PricingService] CRITICAL ERROR: {e}")
+            print(f"[PricingService] WRITE ERROR: {e}")
             db.rollback()
         finally:
             db.close()
