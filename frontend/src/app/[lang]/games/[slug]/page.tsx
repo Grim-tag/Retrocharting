@@ -112,9 +112,10 @@ export default async function Page({
     const systemName = isSystemSlug(slug);
 
     if (systemName) {
-        // === CONSOLE CATALOG VIEW ===
+        // Fetch FULL CATALOG for Client-Side Filtering (Limit 2000)
+        // We ignore genre/sort/search params for the fetch to ensure we get everything.
         const [products, genres] = await Promise.all([
-            getProductsByConsole(systemName, 40, genre, 'game', sort, 0, searchQuery),
+            getProductsByConsole(systemName, 2000, undefined, 'game', undefined, 0, undefined),
             getGenres(systemName)
         ]);
 
@@ -145,6 +146,7 @@ export default async function Page({
             </main>
         );
     }
+
 
     // 2. DEFAULT: GAME DETAIL VIEW
     const id = getIdFromSlug(slug);

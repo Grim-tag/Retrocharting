@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Product, getProductsByConsole } from '@/lib/api';
+import { Product } from '@/lib/api';
 import { getGameUrl } from '@/lib/utils';
 import JsonLd, { generateItemListSchema } from '@/components/seo/JsonLd';
 import {
@@ -13,7 +13,7 @@ import {
     ArrowsUpDownIcon
 } from '@heroicons/react/24/outline';
 import TableActions from '@/components/ui/TableActions';
-import Breadcrumbs from "@/components/seo/Breadcrumbs";
+// import Breadcrumbs from "@/components/seo/Breadcrumbs"; // Not used here directly anymore
 
 interface ConsoleGameCatalogProps {
     products: Product[];
@@ -43,103 +43,118 @@ export default function ConsoleGameCatalog({
     const searchParams = useSearchParams();
 
     // -- State --
-    // -- State --
+    // We assume 'products' prop contains the FULL catalog (Limit 2000 from page.tsx)
     const [allProducts, setAllProducts] = useState<Product[]>(products);
-    const [loadingMore, setLoadingMore] = useState(false);
-    // Assume more if we hit the initial page limit (40) or close to it
-    const [hasMore, setHasMore] = useState(products.length >= 40);
 
-    // View State
+    // Filtering State (Initialized from URL params, but managed locally for instant feedback)
+    const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
+    const [selectedGenre, setSelectedGenre] = useState(searchParams.get('genre') || '');
+    const [sortBy, setSortBy] = useState<SortOption>((searchParams.get('sort') as SortOption) || 'title_asc');
     const [viewMode, setViewMode] = useState<ViewMode>('list');
-    const sortParam = searchParams.get('sort');
-    const [sortBy, setSortBy] = useState<SortOption>((sortParam as SortOption) || 'title_asc');
 
-    // Search State
-    const searchFromUrl = searchParams.get('search') || '';
-    const [searchTerm, setSearchTerm] = useState(searchFromUrl);
+    // Pagination State (Client-Side "Virtual" Pagination)
+    const LOAD_INCREMENT = 50;
+    const [visibleCount, setVisibleCount] = useState(LOAD_INCREMENT);
 
-    // -- Sync Props to State --
+    // -- Sync Props (in case of re-fetch or navigation) --
     useEffect(() => {
         setAllProducts(products);
-        // Reset hasMore when route changes (new initial fetch)
-        setHasMore(products.length >= 40);
-        setSearchTerm(searchParams.get('search') || '');
-        const s = searchParams.get('sort');
-        if (s) setSortBy(s as SortOption);
-    }, [products, searchParams]);
+    }, [products]);
+
+    // -- URL Synchronization Helper --
+    const updateUrl = (search: string, genre: string, sort: string) => {
+        const params = new URLSearchParams();
+        if (search) params.set('search', search);
+        if (genre) params.set('genre', genre);
+        if (sort) params.set('sort', sort);
+
+        // Shallow update to avoid full reload/scroll
+        router.push(`/${lang}/${gamesSlug}/${systemSlug}?${params.toString()}`, { scroll: false });
+    };
 
     // -- Handlers --
-    const handleLoadMore = async () => {
-        setLoadingMore(true);
-        try {
-            const currentCount = allProducts.length;
-            const genre = searchParams.get('genre') || undefined;
-            const sort = searchParams.get('sort') || undefined;
-            const search = searchParams.get('search') || undefined;
 
-            const moreProducts = await getProductsByConsole(
-                systemName,
-                50, // Load More Limit
-                genre,
-                'game',
-                sort,
-                currentCount, // Skip
-                search
-            );
-
-            if (moreProducts.length > 0) {
-                setAllProducts(prev => [...prev, ...moreProducts]);
-                // If we fetched fewer than requested, we reached the end
-                if (moreProducts.length < 50) setHasMore(false);
-            } else {
-                setHasMore(false);
-            }
-        } catch (error) {
-            console.error("Failed to load more products", error);
-            setHasMore(false);
-        } finally {
-            setLoadingMore(false);
-        }
-    };
-
-    const handleSortChange = (newSort: SortOption) => {
-        setSortBy(newSort);
-        const params = new URLSearchParams(searchParams.toString());
-        params.set('sort', newSort);
-        router.push(`/${lang}/${gamesSlug}/${systemSlug}?${params.toString()}`, { scroll: false });
-    };
-
-    const handleGenreClick = (genre: string) => {
-        const params = new URLSearchParams(searchParams.toString());
-        if (genre) params.set('genre', genre);
-        else params.delete('genre');
-        router.push(`/${lang}/${gamesSlug}/${systemSlug}?${params.toString()}`, { scroll: false });
-    };
-
-    // Debounced Search (or Enter)
+    // Instant Search
     const handleSearch = (term: string) => {
         setSearchTerm(term);
+        setVisibleCount(LOAD_INCREMENT); // Reset pagination on search
     };
 
-    // Execute Search on Enter or simple debounce could be added. 
-    // unique Search handler for simple "Enter" usage
     const executeSearch = () => {
-        const params = new URLSearchParams(searchParams.toString());
-        if (searchTerm) params.set('search', searchTerm);
-        else params.delete('search');
-        router.push(`/${lang}/${gamesSlug}/${systemSlug}?${params.toString()}`, { scroll: false });
+        updateUrl(searchTerm, selectedGenre, sortBy);
+    };
+
+    // Instant Filter
+    const handleGenreClick = (genre: string) => {
+        const newGenre = genre === selectedGenre ? '' : genre;
+        setSelectedGenre(newGenre);
+        setVisibleCount(LOAD_INCREMENT);
+        updateUrl(searchTerm, newGenre, sortBy);
+    };
+
+    // Instant Sort
+    const handleSortChange = (newSort: SortOption) => {
+        setSortBy(newSort);
+        updateUrl(searchTerm, selectedGenre, newSort); // Update URL immediately for sort
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter') {
-            executeSearch();
+            executeSearch(); // Explicitly update URL on Enter
+            (e.target as HTMLInputElement).blur();
         }
     };
+
+    // Load More (Client-Side)
+    const handleLoadMore = () => {
+        setVisibleCount(prev => prev + LOAD_INCREMENT);
+    };
+
+    // -- Filtering Logic (Memoized for Performance) --
+    const filteredProducts = useMemo(() => {
+        let result = [...allProducts];
+
+        // 1. Genre
+        if (selectedGenre) {
+            result = result.filter(p => p.genre === selectedGenre);
+        }
+
+        // 2. Search
+        if (searchTerm) {
+            const lowerTerm = searchTerm.toLowerCase();
+            result = result.filter(p => p.product_name.toLowerCase().includes(lowerTerm));
+        }
+
+        // 3. Sort
+        result.sort((a, b) => {
+            switch (sortBy) {
+                case 'title_asc': return a.product_name.localeCompare(b.product_name);
+                case 'title_desc': return b.product_name.localeCompare(a.product_name);
+
+                case 'loose_asc': return (a.loose_price || 0) - (b.loose_price || 0);
+                case 'loose_desc': return (b.loose_price || 0) - (a.loose_price || 0);
+
+                case 'cib_asc': return (a.cib_price || 0) - (b.cib_price || 0);
+                case 'cib_desc': return (b.cib_price || 0) - (a.cib_price || 0);
+
+                case 'new_asc': return (a.new_price || 0) - (b.new_price || 0);
+                case 'new_desc': return (b.new_price || 0) - (a.new_price || 0);
+
+                default: return 0;
+            }
+        });
+
+        return result;
+    }, [allProducts, selectedGenre, searchTerm, sortBy]);
+
+    // Slice for display
+    const displayedProducts = filteredProducts.slice(0, visibleCount);
+    const hasMore = visibleCount < filteredProducts.length;
 
     // Helper for table Sort Headers
     const SortHeader = ({ label, fieldKey, alignRight = false }: { label: string, fieldKey: 'title' | 'loose' | 'cib' | 'new', alignRight?: boolean }) => {
         const isAsc = sortBy === `${fieldKey}_asc`;
-        // ... (Header logic)
+
         const toggleSort = () => {
             if (isAsc) handleSortChange(`${fieldKey}_desc` as SortOption);
             else handleSortChange(`${fieldKey}_asc` as SortOption);
@@ -160,18 +175,13 @@ export default function ConsoleGameCatalog({
     // Schema.org
     const itemListSchema = generateItemListSchema(
         `${systemName} Games Catalog`,
-        allProducts.map((p, idx) => ({
+        displayedProducts.map((p, idx) => ({
             name: p.product_name,
             url: getGameUrl(p, lang),
             image: p.image_url,
             position: idx + 1
         }))
     );
-
-    // Use `allProducts` directly for display
-    const displayedProducts = allProducts;
-
-    const selectedGenre = searchParams.get('genre') || '';
 
     return (
         <div>
@@ -211,8 +221,6 @@ export default function ConsoleGameCatalog({
                         value={searchTerm}
                         onChange={(e) => handleSearch(e.target.value)}
                         onKeyDown={handleKeyDown}
-                        // Add blur to search? 
-                        onBlur={executeSearch}
                         className="w-full bg-[#151922] border border-[#2a3142] text-white pl-10 pr-4 py-2 rounded focus:outline-none focus:border-[#ff6600] transition-colors"
                     />
                 </div>
@@ -382,9 +390,12 @@ export default function ConsoleGameCatalog({
                 <div className="text-center text-gray-400 py-12 bg-[#1f2533] rounded border border-[#2a3142]">
                     <p className="text-xl mb-2">No games found.</p>
                     <p className="text-sm">Try adjusting your filters or search query.</p>
-                    {/* Clear all just resets URL */}
                     <button
-                        onClick={() => router.push(`/${lang}/${gamesSlug}/${systemSlug}`)}
+                        onClick={() => {
+                            setSearchTerm('');
+                            setSelectedGenre('');
+                            updateUrl('', '', sortBy);
+                        }}
                         className="mt-4 text-[#ff6600] hover:underline"
                     >
                         Clear All Filters
@@ -392,15 +403,14 @@ export default function ConsoleGameCatalog({
                 </div>
             )}
 
-            {/* Load More */}
+            {/* Load More (Pagination) */}
             {hasMore && (
                 <div className="mt-8 flex justify-center">
                     <button
                         onClick={handleLoadMore}
-                        disabled={loadingMore}
-                        className="bg-[#2a3142] hover:bg-[#343b4d] text-white px-8 py-3 rounded-full font-bold transition-colors disabled:opacity-50"
+                        className="bg-[#2a3142] hover:bg-[#343b4d] text-white px-8 py-3 rounded-full font-bold transition-colors"
                     >
-                        {loadingMore ? 'Loading...' : 'Load More'}
+                        Load More ({filteredProducts.length - displayedProducts.length} remaining)
                     </button>
                 </div>
             )}
