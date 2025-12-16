@@ -52,7 +52,7 @@ class EbayClient:
             clean_items.append(item)
         return clean_items
 
-    def search_items(self, query: str, limit: int = 10, condition: Optional[str] = None, category_ids: Optional[str] = None) -> List[Dict[str, Any]]:
+    def search_items(self, query: str, limit: int = 10, condition: Optional[str] = None, category_ids: Optional[str] = None, marketplace_id: str = "EBAY_FR") -> List[Dict[str, Any]]:
         """
         Search for items on eBay.
         """
@@ -63,7 +63,7 @@ class EbayClient:
         headers = {
             "Authorization": f"Bearer {self.token}",
             "Content-Type": "application/json",
-            "X-EBAY-C-MARKETPLACE-ID": "EBAY_FR"
+            "X-EBAY-C-MARKETPLACE-ID": marketplace_id
         }
         
         params = {

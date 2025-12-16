@@ -7,7 +7,7 @@ class AmazonClient:
         self.base_url = "https://serpapi.com/search"
         self.associate_tag = "retrocharting-21"
 
-    def search_items(self, query: str, limit: int = 5):
+    def search_items(self, query: str, limit: int = 5, domain: str = "amazon.fr"):
         """
         Search Amazon products using SerpApi.
         Returns a list of simplified items.
@@ -23,12 +23,10 @@ class AmazonClient:
             # ERROR FIX: Amazon engine uses 'k' or 'q'? 
             # Error said: Missing query `k` or `node`. So it wants `k`.
             "engine": "amazon",
-            "q": query, # Keep q as fallback? No, replace with k if strict.
-            # Actually, let's pass both to be safe or just k?
             "k": query, # Amazon search query
             "api_key": self.api_key,
             "type": "search",
-            "amazon_domain": "amazon.fr", # Target French Amazon since locale is FR often
+            "amazon_domain": domain, 
             "num": limit
         }
 
@@ -104,5 +102,26 @@ class AmazonClient:
         except Exception as e:
             print(f"Amazon Client Error: {e}")
             return []
+
+    def search_product_smart(self, product):
+        """
+        Smart search strategy:
+        1. If ASIN exists -> Search by ASIN (Precise).
+        2. Else -> Search by Title + Console (Fuzzy Fallback).
+        """
+        if hasattr(product, 'asin') and product.asin:
+            # Search by ASIN is extremely precise
+            # checks both 'asin' field and standard search with ASIN kw
+            print(f"Amazon Smart Search: Using ASIN {product.asin}")
+            results = self.search_items(product.asin, limit=1)
+            # If ASIN search yields result, trustworthy.
+            if results: return results
+
+        # Fallback to Text Search
+        query = f"{product.product_name} {product.console_name}"
+        # Filter out 'PAL' or region tags if needed for cleaner search?
+        # For now, keep full name
+        print(f"Amazon Smart Search: Fallback to name '{query}'")
+        return self.search_items(query, limit=5)
 
 amazon_client = AmazonClient()

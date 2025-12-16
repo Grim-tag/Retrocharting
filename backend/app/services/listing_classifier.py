@@ -3,345 +3,81 @@ import re
 
 class ListingClassifier:
     """
-    Advanced text analysis for Video Game listings.
-    Detects: Region (PAL, NTSC-U, JAP), Condition (Box Only, Manual Only, CIB, Loose), and Junk.
+    Central logic for:
+    1. Detecting Region from Console Name (PAL vs NTSC vs JP)
+    2. Cleaning Search Queries (Removing 'PAL' to get broad results)
+    3. Matching Marketplaces (PAL -> amazon.fr, NTSC -> amazon.com)
     """
 
-    # --- REGION DEFINITIONS ---
-    # PAL: Europe, Australia
-    KEYWORDS_PAL = [
-        r'\bpal\b', r'\beur\b', r'\bukv\b', r'\bfah\b', r'\bfra\b', r'\bfr\b', 
-        r'\besp\b', r'\bita\b', r'\bger\b', r'\bnoe\b', r'\beurope\b', r'\beuropean\b',
-        r'\baus\b', r'\baustralian\b'
-    ]
-    
-    # NTSC-U: USA, Canada, North America
-    KEYWORDS_NTSC_U = [
-        r'\bntsc\b', # Often implies US if not followed by J
-        r'\bntsc-u\b', r'\bntsc-us\b', r'\busa\b', r'\bus\b', r'\bamerican\b', r'\bnorth america\b',
-        r'\bgenesis\b' # genesis is US name for megadrive
-    ]
-    
-    # JAP: Japan
-    KEYWORDS_JAP = [
-        r'\bntsc-j\b', r'\bjap\b', r'\bjapan\b', r'\bjapanese\b', r'\bjp\b', 
-        r'\bfamicom\b', r'\bsuper famicom\b', r'\bpc engine\b' # Specific JP consoles
-    ]
-
-    # --- CONDITION DEFINITIONS ---
-    KEYWORDS_BOX_ONLY = [
-        r'\bbox only\b', r'\bboite seule\b', r'\bboîte seule\b', r'\bempty box\b', 
-        r'\bcase only\b', r'\bboitier seul\b', r'\bboîte vide\b', r'\bboite vide\b',
-        r'\bcaja vacia\b', r'\bscatola vuota\b', r'\bleerschachtel\b'
-    ]
-    
-    KEYWORDS_MANUAL_ONLY = [
-        r'\bmanual only\b', r'\bnotice seule\b', r'\bbooklet only\b', r'\binsert only\b', 
-        r'\bnotice only\b', r'\bmanuel seul\b', r'\bsans jeu\b', r'\bno game\b',
-        r'\banleitung\b', r'\bhandleiding\b'
-    ]
-    
-    KEYWORDS_CIB = [
-        r'\bcib\b', r'\bcomplete\b', r'\bcomplet\b', r'\bboxed\b', r'\ben boite\b', r'\ben boîte\b',
-        r'\bavec notice\b', r'\bwith manual\b', r'\bkomplett\b'
-    ]
+    @staticmethod
+    def detect_region(console_name: str) -> str:
+        """
+        Returns: 'PAL', 'NTSC-U', 'JP', or 'Unknown'
+        """
+        c = console_name.upper()
+        
+        # 1. Explicit PAL
+        if c.startswith("PAL "):
+            return "PAL"
+            
+        # 2. Japan Specifics (Based on analysis)
+        jp_keywords = ["FAMICOM", "PC ENGINE", "SATURN", "WONDERSWAN", "NEO GEO", "PC-FX"]
+        # Excludes "Super Nintendo" (US) vs "Super Famicom" (JP)
+        if any(k in c for k in jp_keywords):
+            return "JP"
+            
+        # 3. USA Specifics
+        us_keywords = ["GENESIS", "TURBOGRAFX", "NINTENDO ENTERTAINMENT SYSTEM", "SUPER NINTENDO"]
+        if any(k in c for k in us_keywords):
+            return "NTSC-U"
+            
+        # 4. Default Fallback
+        # If it's just "Playstation", PriceCharting usually implies NTSC-U default, 
+        # BUT for our French user, maybe treated as generic? 
+        # Let's stick to NTSC-U as default for PriceCharting unless marked PAL.
+        return "NTSC-U"
 
     @staticmethod
-    def detect_region(title: str, default_console_region: str = None) -> str | None:
+    def get_marketplaces(region: str):
         """
-        Detects the region from the listing title.
-        Returns: 'PAL', 'NTSC-U', 'JAP', or None (Unknown/Loose).
+        Returns config for Amazon and eBay based on region.
         """
-        t = title.lower()
-
-        # 1. Check Specific JP terms first (Strong signals)
-        if any(re.search(p, t) for p in ListingClassifier.KEYWORDS_JAP):
-            return 'JAP'
-            
-        # 2. Check PAL terms
-        if any(re.search(p, t) for p in ListingClassifier.KEYWORDS_PAL):
-            return 'PAL'
-            
-        # 3. Check NTSC-U terms
-        # ambiguous "NTSC" usually means US in generic context, but check strict patterns first
-        if any(re.search(p, t) for p in ListingClassifier.KEYWORDS_NTSC_U):
-            # Special case: "NTSC-J" is Japanese, already caught above?
-            # If regex was strict \bntsc\b, it wouldn't match ntsc-j provided boundaries work.
-            if "ntsc-j" in t: 
-                return 'JAP' 
-            return 'NTSC-U'
-
-        # Default fallback? No, return None to indicate uncertainty.
-        return None
+        if region == "PAL":
+            return {
+                "amazon_domain": "amazon.fr",
+                "ebay_marketplace_id": "EBAY_FR",
+                "ebay_search_filter": None # Search local
+            }
+        elif region == "JP":
+            return {
+                "amazon_domain": "amazon.co.jp",
+                "ebay_marketplace_id": "EBAY_US", # eBay JP API doesn't allow buying? Use Global.
+                "ebay_search_filter": "Japan" # Custom logic to append "Japan" or filter location
+            }
+        else: # NTSC-U
+            return {
+                "amazon_domain": "amazon.com",
+                "ebay_marketplace_id": "EBAY_US",
+                "ebay_search_filter": None
+            }
 
     @staticmethod
-    def detect_condition(title: str) -> str:
+    def clean_search_query(product_name: str, console_name: str) -> str:
         """
-        Determines if item is BOX_ONLY, MANUAL_ONLY, or Standard (Game).
+        Removes 'PAL', '[PAL]', '(JP)' noise to create a clean search query.
+        Example: "Super Mario 64 [PAL]" -> "Super Mario 64"
         """
-        t = title.lower()
+        # Remove Bracketed info often found in scraped names
+        clean_prod = re.sub(r'\[.*?\]', '', product_name)
+        clean_prod = re.sub(r'\(.*?\)', '', clean_prod)
         
-        # Priority 1: Box Only (Empty Box)
-        if any(re.search(p, t) for p in ListingClassifier.KEYWORDS_BOX_ONLY):
-            return 'BOX_ONLY'
+        # Remove strict "PAL" word if standalone
+        clean_prod = clean_prod.replace(' PAL', '').replace('PAL ', '')
+        
+        # Add Console Name (Cleaned)
+        # If Console is "PAL Super Nintendo", we just want "Super Nintendo"
+        clean_console = console_name.replace("PAL ", "")
+        
+        return f"{clean_prod.strip()} {clean_console.strip()}"
 
-        if any(re.search(p, t) for p in ListingClassifier.KEYWORDS_MANUAL_ONLY):
-            return 'MANUAL_ONLY'
-            
-        # Priority 2b: Explicit "NO GAME" phrasing (Strongest signal)
-        if "pas de jeu" in t or "no game" in t or "sans jeu" in t:
-             # If it says "No Game", it is definitely NOT a game.
-             # Could be Manual Only or Box Only.
-             # If contains "Notice" -> Manual. If "Boite" -> Box.
-             if "notice" in t or "manuel" in t or "manual" in t:
-                 return 'MANUAL_ONLY'
-             if "boite" in t or "box" in t:
-                 return 'BOX_ONLY'
-             # Default to Manual if ambiguous but "No Game"? Or Parts?
-             return 'MANUAL_ONLY' 
-
-        # Priority 3: Implicit "Note" or "Box" starts
-        # If title STARTS with "Notice" or "Manuel" or "Boite" and doesn't mention "Jeu"/"Game" explicitly later
-        # Regex: ^\s*(notice|manuel|manual|boite|box)\b
-        
-        # Check strict start for Manual
-        if re.search(r'^\s*(notice|manuel|manual|livret|booklet)\b', t):
-            # It starts with "Notice", assume Manual Only unless "Jeu" implies "Notice du Jeu"? 
-            # "Notice du Jeu Super Mario" -> Still Manual Only usually.
-            # "Notice + Jeu" -> Game.
-            # "Notice et Jeu" -> Game.
-            if 'jeu' not in t and 'game' not in t and 'cartouche' not in t and 'cartridge' not in t:
-                 return 'MANUAL_ONLY'
-            # Check for "+ Jeu" connector
-            if not any(x in t for x in ['+ jeu', '+ game', 'avec jeu', 'with game', 'jeu compris']):
-                 return 'MANUAL_ONLY'
-
-        # Check strict start for Box
-        if re.search(r'^\s*(boite|box|boîte)\b', t):
-            if 'jeu' not in t and 'game' not in t and 'cartouche' not in t:
-                 return 'BOX_ONLY'
-        
-        # Priority 4: Implicit (Contains "Notice" but no "Game" or connectors)
-        # e.g. "Super Mario Bros Notice" -> Manual
-        # e.g. "Super Mario Bros avec Notice" -> Game (Connectors: avec, with, +, incl, compris)
-        if any(re.search(p, t) for p in [r'\bnotice\b', r'\bmanuel\b', r'\bmanual\b']):
-             # Must NOT have game terms
-             if not any(x in t for x in ['jeu', 'game', 'cartouche', 'cartridge', 'console']):
-                 # Must NOT have connectors (avec, with, +, incl) which imply Game + Manual
-                 if not any(x in t for x in ['avec', 'with', 'incl', 'compris', r'\+', 'und']):
-                     return 'MANUAL_ONLY'
-
-        return 'Used' # Default to Game
-        
-    @staticmethod
-    def is_junk(title: str, product_name: str, console_name: str, genre: str) -> bool:
-        """
-        Returns True if the item is irrelevant (Amiibo, Protector, Mod, etc.)
-        """
-        t = title.lower()
-        p_name = product_name.lower()
-        
-        # 1. Universal Junk
-        junk_terms = [
-            'repro', 'mod', 'hs', 'for parts', 'broken', 'defective', 'junk', 'non fonctionnel',
-            'fan made', 'custom', 'telecopie', 'pirate', 'hack',
-            # New Junk Terms
-            'coaster', 'sous-verre', 'mug', 'tasse', 'keychain', 'porte-clés',
-            'guide', 'strategy guide', 'walkthrough', 'book', 'livre', 'artbook',
-            'soundtrack', 'ost', 'vinyl', 'cd audio', 'music',
-            'lego', 'building set', 'construction', 'toy', 'jouet', 'plush', 'peluche',
-            'earphone', 'écouteur', 'headset', 'casque', 'audio',
-            'shirt', 't-shirt', 'hoodie', 'apparel', 'vêtement'
-        ]
-        if any(x in t for x in junk_terms): return True
-        
-        # 2. Accessories masking as Games (Amiibo, Protectors)
-        # Apply this generally unless the product IS an Amiibo/Accessory
-        if genre != 'Accessories' and 'amiibo' not in p_name:
-             if 'amiibo' in t: return True
-             
-        if 'protector' in t or 'protection' in t or 'film' in t or 'ecran' in t or 'acrylic' in t or 'stand' in t:
-             return True
-
-        # 3. System Parts (if querying System)
-        if genre == 'Systems':
-            bad_sys_terms = [
-                "cable", "câble", "adaptateur", "adapter", "case", "housse", "sacoche", 
-                "fan", "ventilateur", "sticker", "skin", "controller", "manette", "pad", 
-                "chargeur", "charger", "alim", "power", "supply", "part", "pièce", "button", "bouton",
-                "pile", "battery", "batterie", "contact", "rubber", "caoutchouc",
-                "fourreau", "sleeve", "rallonge", "extender", "extension", "cordon", "cord",
-                "kit", "tool", "tournevis", "screwdriver", "condensateur", "capacitor",
-                "repair", "réparation", "restauration", "notice", "manuel", "rf switch" 
-            ]
-            if any(bad in t for bad in bad_sys_terms): return True
-            
-            # Anti-Mini checks
-            if "mini" not in p_name and ("mini" in t or "classic edition" in t):
-                return True
-                
-        # 4. Cross-Platform Contamination
-        # e.g. "Wii" results when looking for "NES"
-        c_name = console_name.lower()
-        
-        # List of major keywords to exclude if NOT in target console name
-        # If target IS "Game Boy Advance", don't exclude "Advance".
-        exclusions = {
-            "wii": ["wii"],
-            "switch": ["switch"],
-            "ds": ["ds", "3ds", "2ds"],
-            "gameboy": ["gameboy", "gba", "advance", "gb", "gbc"], # careful: "GB" is short
-            "ps1": ["ps1", "playstation 1", "psx"],
-            "ps2": ["ps2", "playstation 2"],
-            "ps3": ["ps3", "playstation 3"],
-            "ps4": ["ps4", "playstation 4"],
-            "xbox": ["xbox"],
-            "nes": ["nes", "famicom"],    # Don't exclude NES if on NES
-            "snes": ["snes", "super nintendo"]
-        }
-        
-        # Iterate over all known exclusion groups
-        for key, terms in exclusions.items():
-            # If the TARGET console matches this group, SKIP excluding them.
-            # e.g. if c_name="nintendo ds", key="ds" -> Match (via term check).
-            # e.g. if c_name="nes", key="gameboy" -> No match. Check terms.
-            
-            # Is the target console part of this group?
-            is_target_group = False
-            for term in terms:
-                if term in c_name: is_target_group = True
-                
-            if is_target_group: continue
-            
-            # If not target group, check if Title contains these foreign terms
-            for term in terms:
-                # Use word boundary for short terms like "ds", "gb"
-                if len(term) <= 3:
-                    if re.search(rf'\b{term}\b', t): return True
-                else:
-                    if term in t: return True
-        
-        return False
-
-    @staticmethod
-    def is_relevant(title: str, product_name: str, strict: bool = False) -> bool:
-        """
-        Check if the title contains significant parts of the product name.
-        Handles synonyms (N64=Nintendo 64) and partial matches.
-        """
-        t = title.lower()
-        
-        # 0. Clean & Synonyms
-        p_clean = re.sub(r'\[.*?\]', '', product_name)
-        p_clean = re.sub(r'\(.*?\)', '', p_clean)
-        p_clean = p_clean.lower() # e.g. "nintendo 64 controller"
-
-        # Apply common synonyms to product name tokens? 
-        # Or better: Normalize title?
-        # If product="Nintendo 64", listing="N64".
-        # Let's synonymize the SEARCH TERMS.
-        
-        # Manually fix specific console names in p_clean and title
-        # 1. Console Synonyms
-        replacements = {
-            "nintendo 64": "n64",
-            "super nintendo": "snes",
-            "super nes": "snes",
-            "famicom": "nes", # careful with japanese
-            "entertainment system": "nes"
-        }
-        for k, v in replacements.items():
-            p_clean = p_clean.replace(k, v)
-            t = t.replace(k, v)
-            
-        # 2. Accessory Synonyms (Normalize to English)
-        acc_replacements = {
-            "manette": "controller",
-            "pad": "controller",
-            "joypad": "controller",
-            "joystick": "controller",
-            "remote": "controller",
-            "télécommande": "controller",
-            "carte mémoire": "memory card",
-            "memory card": "memory card", # keep
-            "transfer pak": "transfer pak",
-            "expansion pak": "expansion pak",
-            "rumble pak": "rumble pak",
-            "vibration": "rumble",
-            "console": "console", # keep
-            "system": "console"
-        }
-        for k, v in acc_replacements.items():
-            if k in p_clean: p_clean = p_clean.replace(k, v)
-            if k in t: t = t.replace(k, v)
-            
-        # Tokenize (allow >= 2 chars, e.g. "go")
-        terms = [x for x in p_clean.split() if len(x) >= 2]
-        if not terms: return True
-        
-        match_count = 0
-        missed_terms = []
-        
-        for term in terms:
-            if term in t:
-                match_count += 1
-            else:
-                missed_terms.append(term)
-                
-        # Logic: 
-        # If short name (<= 2 terms), require ALL.
-        # If long name (> 2 terms), allow 1 miss (often "The", "Edition", "Controller" vs "Manette").
-        
-        if len(terms) <= 2:
-            return match_count == len(terms)
-        else:
-            # Allow 1 miss.
-            # But if the missed term is KEY? e.g. "Zelda" in "Legend of Zelda"?
-            # "Legend", "of", "Zelda". "of" skipped by regex? No, len("of")=2.
-            # "Legend", "Zelda". If "Zelda" missing -> Bad.
-            
-            # Refinement: If > 50% match?
-            # 3 terms: needs 2. (66%) -> OK.
-            # 4 terms: needs 3. (75%) -> OK.
-            return match_count >= (len(terms) - 1)
-    @staticmethod
-    def is_region_compatible(item_region: str, console_region: str) -> bool:
-        """
-        Strict matching logic.
-        Ref: PAL Console -> Accepts PAL or None (Loose). Rejects JAP/NTSC-U.
-        """
-        if not item_region:
-            return True # Loose games often have no region in title, safely include.
-            
-        if console_region == 'PAL':
-            return item_region == 'PAL'
-        elif console_region == 'JAP':
-            return item_region == 'JAP'
-        elif console_region == 'NTSC-U':
-            return item_region == 'NTSC-U'
-            
-        # If console region is unknown (e.g. "GameBoy" is region free-ish?), default Accept?
-        return True
-
-    @staticmethod
-    def clean_query(product_name: str, console_name: str) -> str:
-        """
-        Creates a 'Broad Search' query.
-        Removes [Tags] and Region words from the query components.
-        """
-        # Remove [STUFF], (STUFF)
-        p_clean = re.sub(r'\[.*?\]', '', product_name)
-        p_clean = re.sub(r'\(.*?\)', '', p_clean)
-        
-        # Remove region keywords
-        bad_words = ['pal', 'ntsc', 'ntsc-u', 'ntsc-j', 'jap', 'japan', 'import', 'fah', 'fra', 'eur']
-        tokens = p_clean.split()
-        p_clean = " ".join([t for t in tokens if t.lower() not in bad_words])
-        
-        c_clean = re.sub(r'\[.*?\]', '', console_name)
-        c_clean = re.sub(r'\(.*?\)', '', c_clean)
-        tokens_c = c_clean.split()
-        c_clean = " ".join([t for t in tokens_c if t.lower() not in bad_words])
-
-        return f"{p_clean} {c_clean}".strip()
-
+classifier = ListingClassifier()
