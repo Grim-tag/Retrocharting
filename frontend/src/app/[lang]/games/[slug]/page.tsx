@@ -130,7 +130,7 @@ export default async function Page({
         // ... (Console logic same) ...
         // === CONSOLE CATALOG VIEW ===
         const [products, genres] = await Promise.all([
-            getProductsByConsole(systemName, 50, genre, 'game', sort),
+            getProductsByConsole(systemName, 1000, genre, 'game', sort),
             getGenres(systemName)
         ]);
 
