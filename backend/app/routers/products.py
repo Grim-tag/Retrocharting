@@ -29,14 +29,16 @@ def read_products(
     console: Optional[str] = None,
     genre: Optional[str] = None,
     type: Optional[str] = None, # 'game', 'console', 'accessory'
+    sort: Optional[str] = None, # 'loose_asc', 'loose_desc', etc
     db: Session = Depends(get_db)
 ):
-    query = db.query(ProductModel)
+    # Performance Optimization: Defer 'description' as it's large and unused in List View
+    from sqlalchemy.orm import defer
+    query = db.query(ProductModel).options(defer(ProductModel.description))
     
     if search:
         query = query.filter(ProductModel.product_name.ilike(f"%{search}%"))
     if console:
-        # print(f"Filtering by console: '{console}'")
         query = query.filter(ProductModel.console_name == console)
     if genre:
         query = query.filter(ProductModel.genre.ilike(genre))
@@ -48,6 +50,17 @@ def read_products(
              query = query.filter(ProductModel.genre == 'Systems')
         elif type == 'accessory':
              query = query.filter(ProductModel.genre.in_(['Accessories', 'Controllers']))
+             
+    # Sorting Logic (Server Side)
+    if sort:
+        if sort == 'title_asc': query = query.order_by(ProductModel.product_name.asc())
+        elif sort == 'title_desc': query = query.order_by(ProductModel.product_name.desc())
+        elif sort == 'loose_asc': query = query.order_by(ProductModel.loose_price.asc().nullslast())
+        elif sort == 'loose_desc': query = query.order_by(ProductModel.loose_price.desc().nullslast())
+        elif sort == 'cib_asc': query = query.order_by(ProductModel.cib_price.asc().nullslast())
+        elif sort == 'cib_desc': query = query.order_by(ProductModel.cib_price.desc().nullslast())
+        elif sort == 'new_asc': query = query.order_by(ProductModel.new_price.asc().nullslast())
+        elif sort == 'new_desc': query = query.order_by(ProductModel.new_price.desc().nullslast())
         
     products = query.offset(skip).limit(limit).all()
     return products
