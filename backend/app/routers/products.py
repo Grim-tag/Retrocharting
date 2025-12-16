@@ -7,9 +7,7 @@ from app.db.session import get_db
 from app.models.product import Product as ProductModel
 from app.models.price_history import PriceHistory
 from app.models.sales_transaction import SalesTransaction
-from app.schemas.product import Product as ProductSchema
-from app.services.ebay_client import ebay_client
-from app.models.user import User
+from app.schemas.product import Product as ProductSchema, ProductList
 from app.services.ebay_client import ebay_client
 from app.models.user import User
 from app.routers.auth import get_current_admin_user
@@ -21,7 +19,7 @@ from app.services.listing_classifier import ListingClassifier
 
 router = APIRouter()
 
-@router.get("/", response_model=List[ProductSchema])
+@router.get("/", response_model=List[ProductList])
 def read_products(
     skip: int = 0,
     limit: int = 100,
