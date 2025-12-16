@@ -112,10 +112,10 @@ export default async function Page({
     const systemName = isSystemSlug(slug);
 
     if (systemName) {
-        // Fetch FULL CATALOG for Client-Side Filtering (Limit 2000)
-        // We ignore genre/sort/search params for the fetch to ensure we get everything.
+        // Fetch Only 40 items Server-Side to prevent OOM on deployment (512MB limit)
+        // The Client Component will hydrate the rest of the catalog.
         const [products, genres] = await Promise.all([
-            getProductsByConsole(systemName, 2000, undefined, 'game', undefined, 0, undefined),
+            getProductsByConsole(systemName, 40, undefined, 'game', undefined, 0, undefined),
             getGenres(systemName)
         ]);
 

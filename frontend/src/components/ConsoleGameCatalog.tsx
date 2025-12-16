@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Product } from '@/lib/api';
+import { Product, getProductsByConsole } from '@/lib/api';
 import { getGameUrl } from '@/lib/utils';
 import JsonLd, { generateItemListSchema } from '@/components/seo/JsonLd';
 import {
@@ -55,11 +55,37 @@ export default function ConsoleGameCatalog({
     // Pagination State (Client-Side "Virtual" Pagination)
     const LOAD_INCREMENT = 50;
     const [visibleCount, setVisibleCount] = useState(LOAD_INCREMENT);
+    const [isLoadingFull, setIsLoadingFull] = useState(true);
 
-    // -- Sync Props (in case of re-fetch or navigation) --
+    // -- Sync Props (in case of re-refetch or navigation) --
     useEffect(() => {
         setAllProducts(products);
     }, [products]);
+
+    // -- HYDRATION: Fetch Full Catalog on Mount --
+    useEffect(() => {
+        const fetchFullCatalog = async () => {
+            // If we already have a large list from props (e.g. dev mode), skip.
+            if (products.length > 100) {
+                setIsLoadingFull(false);
+                return;
+            }
+
+            try {
+                // Fetch up to 2000 items to enable instant client-side filtering
+                const fullCatalog = await getProductsByConsole(systemName, 2000, undefined, 'game', undefined, 0, undefined);
+                if (fullCatalog && fullCatalog.length > 0) {
+                    setAllProducts(fullCatalog);
+                }
+            } catch (err) {
+                console.error("Failed to hydrate full catalog", err);
+            } finally {
+                setIsLoadingFull(false);
+            }
+        };
+
+        fetchFullCatalog();
+    }, [systemName, products.length]);
 
     // -- URL Synchronization Helper --
     const updateUrl = (search: string, genre: string, sort: string) => {
