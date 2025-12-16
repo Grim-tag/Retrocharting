@@ -153,7 +153,7 @@ export default function ConsoleGameCatalog({
 
     return (
         <div>
-            <style jsx>{`
+            <style jsx global>{`
                 .custom-scrollbar::-webkit-scrollbar {
                     height: 8px;
                     width: 8px;
@@ -167,6 +167,11 @@ export default function ConsoleGameCatalog({
                 }
                 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
                     background-color: #3f485e;
+                }
+                /* Firefox */
+                .custom-scrollbar {
+                    scrollbar-width: thin;
+                    scrollbar-color: #2a3142 #151922;
                 }
             `}</style>
             <JsonLd data={itemListSchema} />
