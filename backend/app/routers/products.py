@@ -227,39 +227,26 @@ def update_listings_background(product_id: int):
             category_id = "54968"
 
         try:
-            # Parallel Fetching (eBay + Amazon)
-            from concurrent.futures import ThreadPoolExecutor
+            # SEQUENTIAL FETCHING (Low Memory / High Stability)
+            # Replaced ThreadPoolExecutor to prevent worker starvation on Render Free Tier
             
             ebay_results = []
             amazon_results = []
             
-            def fetch_ebay():
-                # Pass cleaned query
-                return ebay_client.search_items(query, limit=20, category_ids=category_id)
-                
-            def fetch_amazon():
-                try:
-                    # Amazon Cleaner Query
-                    # Amazon is very messy. strict Broad Search might be too broad?
-                    # "Super Mario 64 Nintendo 64" is fine.
-                    return amazon_client.search_items(query, limit=10)
-                except Exception as e:
-                    print(f"Amazon Fetch Error: {e}")
-                    return []
-
-            with ThreadPoolExecutor(max_workers=2) as executor:
-                future_ebay = executor.submit(fetch_ebay)
-                future_amazon = executor.submit(fetch_amazon)
-                
-                try:
-                    ebay_results = future_ebay.result(timeout=10)
-                except Exception as e:
-                    print(f"eBay Future Error: {e}")
-                    
-                try:
-                    amazon_results = future_amazon.result(timeout=10)
-                except Exception as e:
-                    print(f"Amazon Future Error: {e}")
+            # 1. Fetch eBay
+            try:
+                ebay_results = ebay_client.search_items(query, limit=20, category_ids=category_id)
+            except Exception as e:
+                 print(f"eBay Fetch Error: {e}")
+                 
+            # 2. Fetch Amazon
+            try:
+                 amazon_results = amazon_client.search_items(query, limit=10)
+            except Exception as e:
+                 print(f"Amazon Fetch Error: {e}")
+                 
+            # Note: Sequential is slower (latency adds up) but safer for reliability.
+            # Background task latency is acceptable (Async UI).
 
             # Accumulators for average calculation
             prices_box = []
@@ -300,9 +287,19 @@ def update_listings_background(product_id: int):
                         
                     # Check Product Relevance
                     # Ensure the title actually mentions the game we are looking for.
-                    # This filters out "Mandragora" when looking for "Spy Hunter"
-                    if not ListingClassifier.is_relevant(title, product.product_name):
-                        continue
+                    # FIX: Use 'query' (cleaned keywords) for relevance check, as product.product_name might contain "[PAL]" etc.
+                    # Actually, 'query' contains console name too. "Metroid Prime Gamecube".
+                    # If title is "Metroid Prime", 'is_relevant("Metroid Prime", "Metroid Prime Gamecube")' might fail if it expects full match?
+                    # ListingClassifier.is_relevant(title, keyword) checks if keyword in title.
+                    # So we should use a simplified keyword.
+                    # Let's use product.product_name but cleaned?
+                    # Or just rely on 'query' filtering done by API?
+                    # Let's try checking against the CLEAN product name.
+                    check_term = ListingClassifier.clean_search_query(product.product_name, "") # Clean name only
+                    if not ListingClassifier.is_relevant(title, check_term):
+                         # Fallback: if check_term was too stripped?
+                         # Let's trust it.
+                         continue
                         
                     # Check Console Relevance (Strict for Systems, flexible for games but heavily suggested)
                     # If looking for "Nintendo 64" game, title should probably not say "PS1".
