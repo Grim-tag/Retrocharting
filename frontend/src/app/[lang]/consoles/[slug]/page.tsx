@@ -137,7 +137,7 @@ export default async function Page({
                     <Breadcrumbs items={breadcrumbItems} />
 
                     {/* SEO STATS (TOP) */}
-                    <ConsoleSeoStats products={products} systemName={systemName} region={region} />
+                    <ConsoleSeoStats products={products} systemName={systemName} region={region} lang={lang} />
 
                     <div className="mt-6">
                         <ConsoleGameCatalog
@@ -151,7 +151,7 @@ export default async function Page({
                         />
                     </div>
                     {/* SEO FAQ (BOTTOM) */}
-                    <ConsoleFaq products={products} systemName={systemName} region={region} />
+                    <ConsoleFaq products={products} systemName={systemName} region={region} lang={lang} />
                 </div>
             </main>
         );
