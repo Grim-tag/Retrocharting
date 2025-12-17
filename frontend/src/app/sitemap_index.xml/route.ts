@@ -5,7 +5,7 @@ export const revalidate = 3600; // Cache for 1 hour
 
 export async function GET() {
   const baseUrl = 'https://retrocharting.com';
-  const CHUNK_SIZE = 4000;
+  const CHUNK_SIZE = 1000;
 
   let total = 0;
   let debugError = "";
