@@ -81,7 +81,9 @@ def sitemap_products(
     """
     # Prefer products with images or prices as they are 'high quality' pages
     products = db.query(ProductModel.id, ProductModel.product_name, ProductModel.console_name, ProductModel.genre, ProductModel.loose_price)\
-        .order_by(ProductModel.loose_price.desc().nullslast())\
+    # Sort by ID for stability and performance (Primary Key Scan)
+    products = db.query(ProductModel.id, ProductModel.product_name, ProductModel.console_name, ProductModel.genre, ProductModel.loose_price)\
+        .order_by(ProductModel.id.asc())\
         .offset(skip)\
         .limit(limit)\
         .all()

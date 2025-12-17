@@ -9,7 +9,7 @@ export const revalidate = 3600; // Cache for 1 hour
 export const dynamic = 'force-dynamic'; // Prevent Build-Time Static Generation of Sitemap if Backend is slow
 
 const BASE_URL = 'https://retrocharting.com';
-const CHUNK_SIZE = 1000; // Reduced to prevent timeouts
+const CHUNK_SIZE = 500; // Reduced to 500 for maximum speed/stability
 
 export async function generateSitemaps() {
     // 1. Fetch total count from backend
