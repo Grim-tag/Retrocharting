@@ -407,7 +407,7 @@ export default function ConsoleGameCatalog({
                                         <td className="py-2 px-4">
                                             <div className="w-10 h-10 bg-[#151922] rounded flex items-center justify-center overflow-hidden border border-[#2a3142]">
                                                 {product.image_url ? (
-                                                    <img src={product.image_url} alt="" className="w-full h-full object-contain" loading="lazy" />
+                                                    <img src={product.image_url} alt={`${product.product_name} ${product.console_name}`} className="w-full h-full object-contain" loading="lazy" />
                                                 ) : <div className="w-2 h-2 bg-gray-700 rounded-full" />}
                                             </div>
                                         </td>
@@ -452,7 +452,7 @@ export default function ConsoleGameCatalog({
                                 {product.image_url ? (
                                     <img
                                         src={product.image_url}
-                                        alt={product.product_name}
+                                        alt={`${product.product_name} ${product.console_name}`}
                                         className="w-full h-full object-contain group-hover:scale-105 transition-transform"
                                         loading="lazy"
                                     />
