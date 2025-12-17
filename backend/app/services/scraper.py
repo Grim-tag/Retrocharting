@@ -12,6 +12,8 @@ from bs4 import BeautifulSoup
 import json
 import os
 import shutil
+from io import BytesIO
+from PIL import Image
 
 from app.db.session import SessionLocal
 # Models imported inside functions to prevent circular imports
@@ -47,19 +49,12 @@ def slugify(text: str) -> str:
     
     return slug
 
-def _migrate_cloudinary_image(db: Session, product: "Product") -> bool:
+def _process_and_save_image(img_data: bytes, product_name: str, product_id: int) -> str:
     """
-    Downloads existing Cloudinary image and saves locally.
-    Avoids scraping PriceCharting HTML.
+    Converts image bytes to WebP, saves to static/images/products, 
+    and returns the local URL.
     """
     try:
-        if not product.image_url or "cloudinary" not in product.image_url:
-            return False
-            
-        original_url = product.image_url
-        p_slug = slugify(product.product_name)
-        filename = f"{p_slug}-{product.id}.jpg"
-        
         # Paths
         current_dir = os.path.dirname(os.path.abspath(__file__))
         backend_dir = os.path.dirname(os.path.dirname(current_dir))
@@ -67,23 +62,46 @@ def _migrate_cloudinary_image(db: Session, product: "Product") -> bool:
         
         if not os.path.exists(static_img_dir):
             os.makedirs(static_img_dir)
-            
+
+        # 1. Clean Filename
+        p_slug = slugify(product_name)
+        filename = f"retrocharting-{p_slug}-{product_id}.webp"
         local_path = os.path.join(static_img_dir, filename)
+
+        # 2. Process with Pillow
+        image = Image.open(BytesIO(img_data))
+        
+        # Convert to RGB if necessary (e.g. if PNG with alpha)
+        if image.mode in ("RGBA", "P"):
+            image = image.convert("RGB")
+            
+        # 3. Save as WebP
+        image.save(local_path, "WEBP", quality=80)
+        
+        # 4. Return URL
+        return f"{settings.API_BASE_URL}/static/images/products/{filename}"
+    except Exception as e:
+        print(f"Image processing error: {e}")
+        return None
+
+def _migrate_cloudinary_image(db: Session, product: "Product") -> bool:
+    """
+    Downloads existing Cloudinary image and saves locally as WebP.
+    """
+    try:
+        if not product.image_url or "cloudinary" not in product.image_url:
+            return False
+            
+        original_url = product.image_url
         
         # Download
-        # Cloudinary URLs are robust, usually no need for special headers
-        img_resp = requests.get(original_url, stream=True, timeout=15)
+        img_resp = requests.get(original_url, timeout=15)
         if img_resp.status_code == 200:
-            with open(local_path, 'wb') as f:
-                img_resp.raw.decode_content = True
-                shutil.copyfileobj(img_resp.raw, f)
-            
-            # Update DB with Local URL
-            product.image_url = f"{settings.API_BASE_URL}/static/images/products/{filename}"
-            return True
-        else:
-             print(f"Cloudinary download failed: {img_resp.status_code}")
-             return False
+            new_url = _process_and_save_image(img_resp.content, product.product_name, product.id)
+            if new_url:
+                product.image_url = new_url
+                return True
+        return False
 
     except Exception as e:
         print(f"Migration error: {e}")
@@ -470,34 +488,17 @@ def _scrape_html_logic(db: Session, product: "Product") -> bool:
                         original_url = img.get('src')
                         try:
                             # LOCAL STORAGE LOGIC (Replaces Cloudinary)
-                            p_slug = slugify(product.product_name)
-                            filename = f"{p_slug}-{product.id}.jpg" # Simple JPG extension
-                            
-                            # Ensure directories exist
-                            # backend/app/services/scraper.py -> ../../../static/images/products
-                            # Use absolute path based on settings or relative calculation
-                            current_dir = os.path.dirname(os.path.abspath(__file__))
-                            backend_dir = os.path.dirname(os.path.dirname(current_dir)) # backend/
-                            static_img_dir = os.path.join(backend_dir, "static", "images", "products")
-                            
-                            if not os.path.exists(static_img_dir):
-                                os.makedirs(static_img_dir)
-                                
-                            local_path = os.path.join(static_img_dir, filename)
-                            
-                            # Download and Save
-                            # Use a separate request to fetch image
-                            img_resp = requests.get(original_url, stream=True, timeout=10)
+                            # Download
+                            img_resp = requests.get(original_url, timeout=10)
                             if img_resp.status_code == 200:
-                                with open(local_path, 'wb') as f:
-                                    img_resp.raw.decode_content = True
-                                    shutil.copyfileobj(img_resp.raw, f)
-                                
-                                # Set URL to local static path
-                                # e.g. https://api.retrocharting.com/static/images/products/foo.jpg
-                                product.image_url = f"{settings.API_BASE_URL}/static/images/products/{filename}"
+                                new_url = _process_and_save_image(img_resp.content, product.product_name, product.id)
+                                if new_url:
+                                    product.image_url = new_url
+                                else:
+                                    # Fallback
+                                    product.image_url = original_url
                             else:
-                                print(f"  Image donwload failed: {img_resp.status_code}")
+                                print(f"  Image download failed: {img_resp.status_code}")
                                 product.image_url = original_url # Fallback
 
                         except Exception as e:

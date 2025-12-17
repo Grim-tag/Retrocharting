@@ -1,4 +1,5 @@
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from sqlalchemy import or_
 from app.db.session import SessionLocal
@@ -57,24 +58,29 @@ def enrichment_job(max_duration: int = 600, limit: int = 50):
             
             print(f"IGDB Job: Processing batch of {len(products)}...")
             
-            for p in products:
-                if time.time() - start_time > max_duration:
-                    break
+            # Parallel Processing
+            with ThreadPoolExecutor(max_workers=4) as executor:
+                futures = {executor.submit(enrich_product_with_igdb, p.id): p.id for p in products}
                 
-                try:
-                    enrich_product_with_igdb(p.id)
-                    processed_count += 1
-                    
-                    # Update log every 10 items
-                    if processed_count % 10 == 0:
-                        db.query(ScraperLog).filter(ScraperLog.id == current_log_id).update({"items_processed": processed_count})
-                        db.commit()
+                for future in as_completed(futures):
+                    if time.time() - start_time > max_duration:
+                        executor.shutdown(wait=False)
+                        break
                         
-                    # Rate limit sleep
-                    time.sleep(0.3) 
-                    
-                except Exception as e:
-                    print(f"IGDB Job Item Error: {e}")
+                    try:
+                        future.result() # Process
+                        processed_count += 1
+                        
+                        # Update log every 10 items
+                        if processed_count % 10 == 0:
+                            db.query(ScraperLog).filter(ScraperLog.id == current_log_id).update({"items_processed": processed_count})
+                            db.commit()
+                            
+                    except Exception as e:
+                        print(f"IGDB Worker Error: {e}")
+                        
+                    # Rate limit safety per worker? Unnecessary with 4 workers (IGDB limit is lenient for metadata)
+                    time.sleep(0.1)
             
             # If we processed fewer than limit, we might be done or just finished checks
             # But since we filter by missing description, if we successfully updated them, they won't appear next query.

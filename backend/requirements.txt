@@ -14,3 +14,4 @@ APScheduler
 thefuzz
 python-Levenshtein
 python-multipart
+Pillow

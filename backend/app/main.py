@@ -166,17 +166,15 @@ def startup_event():
         from app.services.enrichment import enrichment_job
 
         scheduler = BackgroundScheduler()
-        # SAFE SCRAPING: Run every 5 minutes, 10 items per batch (to avoid OOM/Zombie)
-        # TURBO MIGRATION: 200 items every 2 mins. (Safe for Cloudinary download)
-        scheduler.add_job(scrape_missing_data, 'interval', minutes=2, args=[110, 200], id='auto_scrape', replace_existing=True)
+        # SAFE SCRAPING: Run every 1 minutes, 200 items per batch (Turbo Mode)
+        scheduler.add_job(scrape_missing_data, 'interval', minutes=1, args=[110, 200], id='auto_scrape', replace_existing=True)
         
-        # PRICE REFRESH (ARGUS ENGINE): Keep prices live. 100 items every 15 mins (~10k/day)
+        # PRICE REFRESH (ARGUS ENGINE): Keep prices live. 300 items every 5 mins.
         from app.services.scraper import refresh_prices_job
-        scheduler.add_job(refresh_prices_job, 'interval', minutes=15, args=[100], id='price_refresh', replace_existing=True)
+        scheduler.add_job(refresh_prices_job, 'interval', minutes=5, args=[300], id='price_refresh', replace_existing=True)
 
-        # IGDB ENRICHMENT: Run every 15 minutes, 500 items per batch (Turbo Mode)
-        # 500 items * ~0.4s = ~200s (3.3 mins) processing time. plenty of buffer in 15 mins.
-        scheduler.add_job(enrichment_job, 'interval', minutes=15, args=[600, 500], id='auto_enrich', replace_existing=True)
+        # IGDB ENRICHMENT: Run every 2 minutes, 50 items per batch (Paralled Turbo)
+        scheduler.add_job(enrichment_job, 'interval', minutes=2, args=[110, 50], id='auto_enrich', replace_existing=True)
         
         scheduler.start()
         print("APScheduler started: Scraping & IGDB jobs registered.")
