@@ -202,6 +202,13 @@ def startup_event():
         else:
             print("Schema check: 'players' column exists.")
 
+        # 1.5 Product 'image_blob' column
+        if 'image_blob' not in product_cols:
+             print("Migrating: Adding 'image_blob' column to products table...")
+             with engine.connect() as conn:
+                 conn.execute(text("ALTER TABLE products ADD COLUMN image_blob BYTEA")) # Postgres uses BYTEA
+                 conn.commit()
+
         # 2. Listing 'is_good_deal' column
         listing_cols = [c['name'] for c in inspector.get_columns('listings')]
         if 'is_good_deal' not in listing_cols:

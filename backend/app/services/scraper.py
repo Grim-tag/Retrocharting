@@ -49,37 +49,24 @@ def slugify(text: str) -> str:
     
     return slug
 
-def _process_and_save_image(img_data: bytes, product_name: str, product_id: int) -> str:
+def _process_image_to_bytes(img_data: bytes) -> bytes:
     """
-    Converts image bytes to WebP, saves to static/images/products, 
-    and returns the local URL.
+    Converts image bytes to WebP and returns the bytes.
+    Does NOT save to disk.
     """
     try:
-        # Paths
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        backend_dir = os.path.dirname(os.path.dirname(current_dir))
-        static_img_dir = os.path.join(backend_dir, "static", "images", "products")
-        
-        if not os.path.exists(static_img_dir):
-            os.makedirs(static_img_dir)
-
-        # 1. Clean Filename
-        p_slug = slugify(product_name)
-        filename = f"retrocharting-{p_slug}-{product_id}.webp"
-        local_path = os.path.join(static_img_dir, filename)
-
-        # 2. Process with Pillow
+        # 1. Process with Pillow
         image = Image.open(BytesIO(img_data))
         
         # Convert to RGB if necessary (e.g. if PNG with alpha)
         if image.mode in ("RGBA", "P"):
             image = image.convert("RGB")
             
-        # 3. Save as WebP
-        image.save(local_path, "WEBP", quality=80)
+        # 2. Save to Buffer as WebP
+        buffer = BytesIO()
+        image.save(buffer, "WEBP", quality=80)
+        return buffer.getvalue()
         
-        # 4. Return URL
-        return f"{settings.API_BASE_URL}/static/images/products/{filename}"
     except Exception as e:
         print(f"Image processing error: {e}")
         return None
@@ -97,9 +84,11 @@ def _migrate_cloudinary_image(db: Session, product: "Product") -> bool:
         # Download
         img_resp = requests.get(original_url, timeout=15)
         if img_resp.status_code == 200:
-            new_url = _process_and_save_image(img_resp.content, product.product_name, product.id)
-            if new_url:
-                product.image_url = new_url
+            new_bytes = _process_image_to_bytes(img_resp.content)
+            if new_bytes:
+                product.image_blob = new_bytes
+                # Point to API endpoint
+                product.image_url = f"{settings.API_BASE_URL}/api/v1/products/{product.id}/image"
                 return True
         return False
 
@@ -114,11 +103,14 @@ async def scrape_single_product(db: Session, product: "Product"):
     2. ALWAYS Use API (if token available) to update prices to catch Box/Manual.
     """
     # Check if we need rich metadata
+    # Database Storage Update: Only accept /products/{id}/image as valid (Deprecated static)
+    has_valid_image = product.image_url and ("/image" in product.image_url)
+
     needs_metadata = (
         not product.description or 
         not product.image_url or 
         "cloudinary" in (product.image_url or "") or # Migrate Cloudinary -> Local
-        "/static/" not in (product.image_url or "") or # Ensure Local
+        not has_valid_image or
         not product.publisher
     )
 
@@ -155,11 +147,14 @@ def process_product_id(product_id: int) -> bool:
         success = False
         
         # Check metadata needs inside this session
+        # Database Storage Update: Only accept /products/{id}/image as valid (Deprecated static)
+        has_valid_image = product.image_url and ("/image" in product.image_url)
+        
         needs_metadata = (
-            not product.description or 
-            not product.image_url or 
+            not product.description or
+            not product.image_url or
             "cloudinary" in (product.image_url or "") or
-            "/static/" not in (product.image_url or "") or
+            not has_valid_image or
             not product.publisher
         )
 
@@ -491,9 +486,10 @@ def _scrape_html_logic(db: Session, product: "Product") -> bool:
                             # Download
                             img_resp = requests.get(original_url, timeout=10)
                             if img_resp.status_code == 200:
-                                new_url = _process_and_save_image(img_resp.content, product.product_name, product.id)
-                                if new_url:
-                                    product.image_url = new_url
+                                new_bytes = _process_image_to_bytes(img_resp.content)
+                                if new_bytes:
+                                    product.image_blob = new_bytes
+                                    product.image_url = f"{settings.API_BASE_URL}/api/v1/products/{product.id}/image"
                                 else:
                                     # Fallback
                                     product.image_url = original_url

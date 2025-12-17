@@ -408,6 +408,31 @@ def read_product(
     
     return product
 
+@router.get("/{product_id}/image")
+def get_product_image(
+    product_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Serves the product image directly from the Database (BLOB).
+    """
+    product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
+    if not product:
+        return Response(status_code=404)
+        
+    if product.image_blob:
+        return Response(content=product.image_blob, media_type="image/webp", headers={
+            "Cache-Control": "public, max-age=86400" # Cache for 1 day
+        })
+        
+    # Fallback to external URL if blob is missing but URL exists
+    # Prevent loop if URL points to self
+    if product.image_url and "retrocharting" not in product.image_url and "localhost" not in product.image_url:
+         from fastapi.responses import RedirectResponse
+         return RedirectResponse(product.image_url)
+         
+    return Response(status_code=404)
+
 @router.get("/{product_id}/related", response_model=List[ProductSchema])
 def get_related_products(product_id: int, db: Session = Depends(get_db)):
     current_product = db.query(ProductModel).filter(ProductModel.id == product_id).first()

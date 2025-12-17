@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Date, DateTime
+from sqlalchemy import Column, Integer, String, Float, Date, DateTime, LargeBinary
 from sqlalchemy.orm import relationship
 from app.db.session import Base
 
@@ -17,6 +17,7 @@ class Product(Base):
     genre = Column(String, nullable=True)
     release_date = Column(Date, nullable=True)
     image_url = Column(String, nullable=True)
+    image_blob = Column(LargeBinary, nullable=True) # Stored Image Data
     description = Column(String, nullable=True)
     last_scraped = Column(DateTime, nullable=True)
 
