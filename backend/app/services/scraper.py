@@ -87,8 +87,9 @@ def _migrate_cloudinary_image(db: Session, product: "Product") -> bool:
             new_bytes = _process_image_to_bytes(img_resp.content)
             if new_bytes:
                 product.image_blob = new_bytes
-                # Point to API endpoint
-                product.image_url = f"{settings.API_BASE_URL}/api/v1/products/{product.id}/image"
+                # Point to API endpoint with SEO slug
+                slug = slugify(f"{product.product_name} {product.console_name}")
+                product.image_url = f"{settings.API_BASE_URL}/api/v1/products/{product.id}/image/{slug}.webp"
                 return True
         return False
 
@@ -489,7 +490,8 @@ def _scrape_html_logic(db: Session, product: "Product") -> bool:
                                 new_bytes = _process_image_to_bytes(img_resp.content)
                                 if new_bytes:
                                     product.image_blob = new_bytes
-                                    product.image_url = f"{settings.API_BASE_URL}/api/v1/products/{product.id}/image"
+                                    slug = slugify(f"{product.product_name} {product.console_name}")
+                                    product.image_url = f"{settings.API_BASE_URL}/api/v1/products/{product.id}/image/{slug}.webp"
                                 else:
                                     # Fallback
                                     product.image_url = original_url

@@ -408,21 +408,30 @@ def read_product(
     
     return product
 
-@router.get("/{product_id}/image")
+@router.get("/{product_id}/image", include_in_schema=False)
+@router.get("/{product_id}/image/{filename}")
 def get_product_image(
     product_id: int,
+    filename: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
     """
     Serves the product image directly from the Database (BLOB).
+    Supports SEO-friendly filenames (ignored logic-wise, used for display).
     """
     product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
     if not product:
         return Response(status_code=404)
         
     if product.image_blob:
+        # Suggest filename if not provided
+        if not filename:
+             # Basic slugify if we need to generate it on fly, strictly strictly not needed if URL has it
+             filename = f"product-{product_id}.webp"
+             
         return Response(content=product.image_blob, media_type="image/webp", headers={
-            "Cache-Control": "public, max-age=86400" # Cache for 1 day
+            "Cache-Control": "public, max-age=86400",
+            "Content-Disposition": f'inline; filename="{filename}"'
         })
         
     # Fallback to external URL if blob is missing but URL exists
