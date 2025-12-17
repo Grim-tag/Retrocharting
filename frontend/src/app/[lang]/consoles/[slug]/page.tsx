@@ -134,6 +134,7 @@ export default async function Page({
                         lang={lang}
                         gamesSlug={consolesSlug}
                         systemSlug={slug}
+                        productType="console" // Explicitly fetch consoles
                     />
                 </div>
             </main>

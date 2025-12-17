@@ -27,6 +27,7 @@ interface ConsoleGameCatalogProps {
     systemSlug: string;
     h1Title?: string;
     introText?: string;
+    productType?: 'game' | 'console' | 'accessory'; // NEW PROP
 }
 
 type SortOption = 'title_asc' | 'title_desc' | 'loose_asc' | 'loose_desc' | 'cib_asc' | 'cib_desc' | 'new_asc' | 'new_desc';
@@ -40,7 +41,8 @@ export default function ConsoleGameCatalog({
     gamesSlug,
     systemSlug,
     h1Title: initialH1,
-    introText: initialIntro
+    introText: initialIntro,
+    productType = 'game' // Default to game for backward compatibility
 }: ConsoleGameCatalogProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -84,7 +86,8 @@ export default function ConsoleGameCatalog({
                 // Offset starts at 40 (since we have 40 from server)
                 // NOTE: We fetch 200 items.
                 setIsLoadingFull(true);
-                const fastChunk = await getProductsByConsole(systemName, 200, undefined, 'game', undefined, 40, undefined);
+                // Use productType prop here!
+                const fastChunk = await getProductsByConsole(systemName, 200, undefined, productType, undefined, 40, undefined);
 
                 if (!isMounted) return;
 
@@ -105,7 +108,7 @@ export default function ConsoleGameCatalog({
                 let hasNextBatch = true;
 
                 while (hasNextBatch && isMounted) {
-                    const batch = await getProductsByConsole(systemName, BATCH_SIZE, undefined, 'game', undefined, currentOffset, undefined);
+                    const batch = await getProductsByConsole(systemName, BATCH_SIZE, undefined, productType, undefined, currentOffset, undefined);
 
                     if (!isMounted) break;
 
