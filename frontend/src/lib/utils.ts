@@ -57,11 +57,11 @@ export function getGameUrl(product: { id: number; product_name: string; console_
 
     // 2. Generate clean product slug (title-console)
     // We treat title as universal (no translation), just slugified
-    const titleSlug = product.product_name.toLowerCase()
+    const titleSlug = (product.product_name || 'unknown-product').toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/(^-|-$)/g, '');
 
-    const consoleSlug = formatConsoleName(product.console_name).toLowerCase()
+    const consoleSlug = formatConsoleName(product.console_name || 'unknown-console').toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/(^-|-$)/g, '');
 
