@@ -52,11 +52,35 @@ class PricingService:
                 category_id = "54968"
             search_context['category_id'] = category_id
             
+            # --- SONAR STRATEGY: CHECK CACHE VALIDITY (7 DAYS) ---
+            should_fetch_amazon = True
+            existing_amazon = db.query(Listing).filter(
+                Listing.product_id == product_id,
+                Listing.source == 'Amazon',
+                Listing.status == 'active'
+            ).order_by(Listing.last_updated.desc()).first()
+            
+            if existing_amazon and existing_amazon.last_updated:
+                days_since = (datetime.utcnow() - existing_amazon.last_updated).days
+                if days_since < 7:
+                    should_fetch_amazon = False
+                    print(f"[PricingService] Amazon Listing is Fresh ({days_since} days old). Skipping API call.")
+            
+            search_context['should_fetch_amazon'] = should_fetch_amazon
+            search_context['product_object'] = product # Need strict object for smart search helper? No, object detached. 
+            # We need to pass data dict or re-fetch in smart search? 
+            # amazon_client.search_product_smart expects an object with .asin, .ean attributes.
+            # We can create a simple dummy object or pass the detached product if lazy load not needed.
+            # Detached product is safe for attribute access.
+            
         except Exception as e:
             print(f"[PricingService] Read Error: {e}")
             return
         finally:
-            db.close() # CRITICAL: Release connection before external API calls
+            # We keep 'product' in memory but it's detached. 
+            # If we need it for search_product_smart, we should ensure we have the attrs.
+            pass
+            db.close()
             
         # --- STEP 2: EXTERNAL API CALLS (No DB Connection) ---
         query = search_context['query']
@@ -69,16 +93,38 @@ class PricingService:
         amazon_results = []
         
         try:
+            # Always fetch eBay (High Quota)
             ebay_results = ebay_client.search_items(query, limit=20, category_ids=category_id)
             print(f"[PricingService] eBay returned {len(ebay_results)} raw results.")
         except Exception as e:
-                print(f"[PricingService] eBay Fetch Error: {e}")
+            print(f"[PricingService] eBay Fetch Error: {e}")
                 
         try:
-                amazon_results = amazon_client.search_items(query, limit=10)
-                print(f"[PricingService] Amazon returned {len(amazon_results)} raw results.")
+            if search_context.get('should_fetch_amazon', True):
+                # Use Smart Search (ASIN -> EAN -> Keyword)
+                # We need to reconstruct a mini-product object for the helper or change helper?
+                # Let's mock the product object structure expected by smart search
+                class MockProduct:
+                    def __init__(self, d): 
+                        self.asin = getattr(d, 'asin', None)
+                        self.ean = getattr(d, 'ean', None)
+                        self.product_name = d.product_name
+                        self.console_name = d.console_name
+                
+                # We need access to the product attrs we gathered. `product` var from Step 1 is local to try/finally block?
+                # Ah, Python variables in try block leak to function scope? Yes, usually.
+                # But `product` was defined inside `try`. If exception, we return.
+                # If no exception, `product` is available but DB closed so relations fail. Attributes are fine.
+                
+                # Check if we preserved `product`? 
+                # Step 1 `product` variable IS visible here.
+                amazon_results = amazon_client.search_product_smart(product)
+                print(f"[PricingService] Amazon returned {len(amazon_results)} raw results (Sonar Active).")
+            else:
+                print(f"[PricingService] Amazon Search Skipped (Cache Hit).")
+                
         except Exception as e:
-                print(f"[PricingService] Amazon Fetch Error: {e}")
+            print(f"[PricingService] Amazon Fetch Error: {e}")
 
         # --- STEP 3: WRITE RESULTS (Short DB Session) ---
         db = SessionLocal()

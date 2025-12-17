@@ -116,6 +116,12 @@ class AmazonClient:
             results = self.search_items(product.asin, limit=1)
             # If ASIN search yields result, trustworthy.
             if results: return results
+            
+        if hasattr(product, 'ean') and product.ean:
+            # Search by EAN is also very precise on Amazon
+            print(f"Amazon Smart Search: Using EAN {product.ean}")
+            results = self.search_items(product.ean, limit=1)
+            if results: return results
 
         # Fallback to Text Search
         query = f"{product.product_name} {product.console_name}"

@@ -7,6 +7,9 @@ class EbayClient:
     BASE_URL = "https://api.ebay.com/buy/browse/v1/item_summary/search"
     OAUTH_URL = "https://api.ebay.com/identity/v1/oauth2/token"
     
+    # Add field filters to request GTIN explicitly if possible, though 'fieldgroups' param is limited in browse API
+    # We rely on default response containing 'gtin' or 'epid'
+    
     def __init__(self):
         self.client_id = settings.EBAY_CLIENT_ID
         self.client_secret = settings.EBAY_CLIENT_SECRET
@@ -49,6 +52,10 @@ class EbayClient:
             title = item.get('title', '').lower()
             if any(keyword in title for keyword in self.NEGATIVE_KEYWORDS_STRICT):
                 continue
+            
+            # Extract GTIN/EAN/UPC if available in 'additionalImages' or top level? 
+            # eBay JSON structure varies. Usually 'gtin' is top level in itemSummary
+            # Ensure we keep these fields
             clean_items.append(item)
         return clean_items
 

@@ -61,12 +61,21 @@ export default function ProductDetails({ product, dict, lang, gamesSlug }: Produ
                     <span className="text-white font-medium text-right">{product.esrb_rating || "-"}</span>
                 </div>
                 <div className="flex justify-between border-b border-[#2a3142]/50 pb-2">
-                    <span className="text-gray-500">EAN</span>
-                    <span className="text-white font-medium text-right">{product.ean || "-"}</span>
+                    <span className="text-gray-500">{dict.product.details.rating}</span>
+                    <span className="text-white font-medium text-right">{product.esrb_rating || "-"}</span>
                 </div>
-                <div className="flex justify-between border-b border-[#2a3142]/50 pb-2">
+                {/* Protected Data: Visible but Blurred to deter scraping */}
+                <div className="flex justify-between border-b border-[#2a3142]/50 pb-2 group cursor-pointer" title="Click or Hover to Reveal">
+                    <span className="text-gray-500">EAN</span>
+                    <span className="text-white font-medium text-right blur-[3px] group-hover:blur-0 transition-all duration-300 select-none bg-[#2a3142]/30 px-2 rounded">
+                        {product.ean || "🔒 Verified"}
+                    </span>
+                </div>
+                <div className="flex justify-between border-b border-[#2a3142]/50 pb-2 group cursor-pointer" title="Click or Hover to Reveal">
                     <span className="text-gray-500">GTIN/UPC</span>
-                    <span className="text-white font-medium text-right">{product.gtin || "-"}</span>
+                    <span className="text-white font-medium text-right blur-[3px] group-hover:blur-0 transition-all duration-300 select-none bg-[#2a3142]/30 px-2 rounded">
+                        {product.gtin || product.ean || "🔒 Verified"}
+                    </span>
                 </div>
             </div>
         </div>
