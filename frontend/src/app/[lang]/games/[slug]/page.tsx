@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { permanentRedirect } from "next/navigation";
 import { getProductHistory, getProductsByConsole, getGenres } from "@/lib/api";
 import ListingsTable from "@/components/ListingsTable";
 import MarketAnalysis from "@/components/MarketAnalysis";
@@ -170,6 +171,16 @@ export default async function Page({
                 </Link>
             </main>
         );
+    }
+
+    // SEO: Enforce Canonical URL (308 Redirect)
+    // Prevents duplicate content (e.g. /games/123 vs /games/slug-123)
+    const canonicalPath = getGameUrl(product, lang);
+    const canonicalSlug = canonicalPath.split('/').pop();
+
+    // Decode params.slug to handle encoded chars if any, though usually Next handles it
+    if (slug !== canonicalSlug) {
+        permanentRedirect(canonicalPath);
     }
 
     const shortConsoleName = formatConsoleName(product.console_name);
