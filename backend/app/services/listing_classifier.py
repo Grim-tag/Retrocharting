@@ -32,10 +32,9 @@ class ListingClassifier:
             return "NTSC-U"
             
         # 4. Default Fallback
-        # If it's just "Playstation", PriceCharting usually implies NTSC-U default, 
-        # BUT for our French user, maybe treated as generic? 
-        # Let's stick to NTSC-U as default for PriceCharting unless marked PAL.
-        return "NTSC-U"
+        # Return None for ambiguous titles so the caller (PricingService) can decide 
+        # based on context (e.g. if searching on Amazon FR, assume PAL).
+        return None
 
     @staticmethod
     def get_marketplaces(region: str):

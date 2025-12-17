@@ -169,8 +169,10 @@ class PricingService:
                     # 1. Classify
                     item_region = ListingClassifier.detect_region(title)
                     if not item_region:
-                         if source in ['amazon', 'ebay']:
-                             item_region = 'PAL' # Helper assumption
+                         # Contextual Fallback:
+                         # If the item has no distinct region marker, assume it matches the region we are looking for.
+                         # E.g. Searching for PAL on Amazon FR returns "Game X" (Unknown) -> Assume PAL.
+                         item_region = target_console_region
                     
                     item_condition = ListingClassifier.detect_condition(title)
                     
