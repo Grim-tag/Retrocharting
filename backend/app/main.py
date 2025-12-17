@@ -15,7 +15,7 @@ from app.models.collection_item import CollectionItem
 from app.models.comment import Comment
 
 # Create tables on startup
-Base.metadata.create_all(bind=engine)
+# Base.metadata.create_all(bind=engine) # Moved to startup_event
 
 app = FastAPI(title="RetroCharting API")
 
@@ -151,162 +151,48 @@ def health_debug():
     return status
 
 @app.on_event("startup")
-def startup_event():
-    # AUTO-MIGRATE: Ensure DB schema matches code (Adds missing columns like 'asin')
+async def startup_event():
+    print("Startup: Initializing Application...")
+    
+    # 1. Create Tables (Safe to run if exist)
+    try:
+        # Move create_all here to prevent import-time blocking
+        Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        print(f"Startup Table Creation Warning: {e}")
+
+    # 2. Initialize Scheduler (Crucial)
+    try:
+        from apscheduler.schedulers.background import BackgroundScheduler
+        from app.services.scraper import scrape_missing_data
+        from app.services.enrichment import enrichment_job, refresh_prices_job
+
+        scheduler = BackgroundScheduler()
+        # SCRAPER: 2 workers max (defined in scraper.py), run every 1 min
+        scheduler.add_job(scrape_missing_data, 'interval', minutes=1, args=[110, 200], id='auto_scrape', replace_existing=True)
+        # PRICE REFRESH: Every 10 mins
+        scheduler.add_job(refresh_prices_job, 'interval', minutes=10, args=[300], id='price_refresh', replace_existing=True)
+        # ENRICHMENT: Every 2 mins
+        scheduler.add_job(enrichment_job, 'interval', minutes=2, args=[110, 50], id='auto_enrich', replace_existing=True)
+        
+        scheduler.start()
+        print("APScheduler started.")
+    except Exception as e:
+        print(f"Failed to start scheduler: {e}")
+
+    # 3. Quick Schema Check (Minimal)
+    # Rely on manual migration mainly.
+    # We remove the heavy introspection here to ensure fast boot.
+    # If columns are missing, we expect 'run_auto_migrations' (from migrations.py) to handle it if called,
+    # OR we trust previous deploys.
+    # Let's call the optimized run_auto_migrations ONCE.
     try:
         from app.db.migrations import run_auto_migrations
         run_auto_migrations(engine)
     except Exception as e:
-        print(f"Startup Migration Error: {e}")
+         print(f"Auto-migration skipped due to error: {e}")
 
-    # Initialize Scheduler for automated scraping
-    try:
-        from apscheduler.schedulers.background import BackgroundScheduler
-        from app.services.scraper import scrape_missing_data
-        from app.services.enrichment import enrichment_job
-
-        scheduler = BackgroundScheduler()
-        # SAFE SCRAPING: Run every 1 minutes, 200 items per batch (Turbo Mode)
-        scheduler.add_job(scrape_missing_data, 'interval', minutes=1, args=[110, 200], id='auto_scrape', replace_existing=True)
-        
-        # PRICE REFRESH (ARGUS ENGINE): Keep prices live. 300 items every 5 mins.
-        from app.services.scraper import refresh_prices_job
-        scheduler.add_job(refresh_prices_job, 'interval', minutes=5, args=[300], id='price_refresh', replace_existing=True)
-
-        # IGDB ENRICHMENT: Run every 2 minutes, 50 items per batch (Paralled Turbo)
-        scheduler.add_job(enrichment_job, 'interval', minutes=2, args=[110, 50], id='auto_enrich', replace_existing=True)
-        
-        scheduler.start()
-        print("APScheduler started: Scraping & IGDB jobs registered.")
-    except Exception as e:
-        print(f"Failed to start scheduler: {e}")
-
-    # Auto-migration logs
-    print("Startup complete. Tables ready.")
-    
-    # --- AUTO-MIGRATION: Check for new columns and add them if missing ---
-    try:
-        from app.db.session import engine
-        from sqlalchemy import inspect, text
-        
-        print("Checking DB Schema...")
-        inspector = inspect(engine)
-        
-        # 1. Product 'players' column
-        product_cols = [c['name'] for c in inspector.get_columns('products')]
-        if 'players' not in product_cols:
-            print("Migrating: Adding 'players' column to products table...")
-            with engine.connect() as conn:
-                conn.execute(text("ALTER TABLE products ADD COLUMN players TEXT"))
-                conn.commit()
-        else:
-            print("Schema check: 'players' column exists.")
-
-        # 1.5 Product 'image_blob' column
-        if 'image_blob' not in product_cols:
-             print("Migrating: Adding 'image_blob' column to products table...")
-             with engine.connect() as conn:
-                 conn.execute(text("ALTER TABLE products ADD COLUMN image_blob BYTEA")) # Postgres uses BYTEA
-                 conn.commit()
-
-        # 2. Listing 'is_good_deal' column
-        listing_cols = [c['name'] for c in inspector.get_columns('listings')]
-        if 'is_good_deal' not in listing_cols:
-            print("Migrating: Adding 'is_good_deal' column to listings table...")
-            with engine.connect() as conn:
-                conn.execute(text("ALTER TABLE listings ADD COLUMN is_good_deal BOOLEAN DEFAULT false"))
-                conn.commit()
-        else:
-            print("Schema check: 'is_good_deal' column exists.")
-
-        # 3. CollectionItem 'paid_price' column
-        collection_cols = [c['name'] for c in inspector.get_columns('collection_items')]
-        if 'paid_price' not in collection_cols:
-            print("Migrating: Adding 'paid_price' column to collection_items table...")
-            with engine.connect() as conn:
-                conn.execute(text("ALTER TABLE collection_items ADD COLUMN paid_price FLOAT"))
-                conn.commit()
-        else:
-            print("Schema check: 'paid_price' column exists.")
-
-        if 'notes' not in collection_cols:
-             print("Migrating: Adding 'notes' column to collection_items table...")
-             with engine.connect() as conn:
-                 conn.execute(text("ALTER TABLE collection_items ADD COLUMN notes TEXT"))
-                 conn.commit()
-
-        if 'user_images' not in collection_cols:
-             print("Migrating: Adding 'user_images' column to collection_items table...")
-             with engine.connect() as conn:
-                 conn.execute(text("ALTER TABLE collection_items ADD COLUMN user_images TEXT"))
-                 conn.commit()
-
-        if 'purchase_date' not in collection_cols:
-             print("Migrating: Adding 'purchase_date' column to collection_items table...")
-             with engine.connect() as conn:
-                 # Standardize on TIMESTAMP/DATETIME
-                 conn.execute(text("ALTER TABLE collection_items ADD COLUMN purchase_date TIMESTAMP"))
-                 conn.commit()
-
-        # Check users table columns
-        inspector = inspect(engine)
-        user_cols = [col['name'] for col in inspector.get_columns('users')]
-        
-        if 'ip_address' not in user_cols:
-            print("Migrating: Adding 'ip_address' column to users table...")
-            with engine.connect() as conn:
-                conn.execute(text("ALTER TABLE users ADD COLUMN ip_address VARCHAR"))
-                conn.commit()
-
-        print("Auto-migration checks complete.")
-
-        # 4. User 'user_rank', 'xp', 'last_active' columns
-        user_cols = [c['name'] for c in inspector.get_columns('users')]
-        
-        if 'user_rank' not in user_cols:
-             print("Migrating: Adding 'user_rank' column to users table...")
-             with engine.connect() as conn:
-                 conn.execute(text("ALTER TABLE users ADD COLUMN user_rank VARCHAR DEFAULT 'Loose'"))
-                 conn.commit()
-
-        if 'xp' not in user_cols:
-            print("Migrating: Adding 'xp' column to users table...")
-            with engine.connect() as conn:
-                conn.execute(text("ALTER TABLE users ADD COLUMN xp INTEGER DEFAULT 0"))
-                conn.commit()
-        
-        if 'last_active' not in user_cols:
-             print("Migrating: Adding 'last_active' column to users table...")
-             with engine.connect() as conn:
-                conn.commit()
-        
-        if 'scraper_logs' in inspector.get_table_names():
-            log_cols = [c['name'] for c in inspector.get_columns('scraper_logs')]
-            if 'source' not in log_cols:
-                print("Migrating: Adding 'source' column to scraper_logs table...")
-                with engine.connect() as conn:
-                    conn.execute(text("ALTER TABLE scraper_logs ADD COLUMN source VARCHAR DEFAULT 'scraper'"))
-                    conn.commit()
-
-        # 6. Comment 'status' column migration
-        if 'comments' in inspector.get_table_names():
-            comment_cols = [c['name'] for c in inspector.get_columns('comments')]
-            if 'status' not in comment_cols:
-                print("Migrating: Adding 'status' column to comments table...")
-                with engine.connect() as conn:
-                    # Add column
-                    conn.execute(text("ALTER TABLE comments ADD COLUMN status VARCHAR DEFAULT 'pending'"))
-                    
-                    # Backfill from is_approved if exists
-                    if 'is_approved' in comment_cols:
-                        conn.execute(text("UPDATE comments SET status = 'approved' WHERE is_approved = true"))
-                        conn.execute(text("UPDATE comments SET status = 'pending' WHERE is_approved = false"))
-                    
-                    conn.commit()
-    except Exception as e:
-        print(f"Auto-migration failed: {e}")
-        import traceback
-        traceback.print_exc()
+    print("Startup complete.")
     # ---------------------------------------------------------------------
 
 @app.get("/debug-csv")
