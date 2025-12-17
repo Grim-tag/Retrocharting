@@ -267,7 +267,7 @@ def scrape_missing_data(max_duration: int = 600, limit: int = 50):
     db: Session = SessionLocal()
     
     # Max concurrency
-    MAX_WORKERS = 8
+    MAX_WORKERS = 2
     
     print(f"Starting PARALLEL scraper service (Workers: {MAX_WORKERS}). Duration: {max_duration}s")
     
