@@ -124,9 +124,10 @@ class AmazonClient:
             if results: return results
 
         # Fallback to Text Search
-        query = f"{product.product_name} {product.console_name}"
-        # Filter out 'PAL' or region tags if needed for cleaner search?
-        # For now, keep full name
+        # Use cleaning logic to remove PAL/NTSC noise (which kills results on FR/JP marketplaces)
+        from app.services.listing_classifier import ListingClassifier
+        query = ListingClassifier.clean_search_query(product.product_name, product.console_name)
+        
         print(f"Amazon Smart Search: Fallback to name '{query}' on {domain}")
         return self.search_items(query, limit=5, domain=domain)
 
