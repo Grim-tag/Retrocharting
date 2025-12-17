@@ -28,40 +28,44 @@ export async function GET() {
 
   const numChunks = Math.ceil(total / CHUNK_SIZE);
 
+  // 1. Start XML
   let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <?xml-stylesheet type="text/xsl" href="/sitemap.xsl"?>
-<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`;
+
+  // 2. Add Product Sitemaps (0.xml, 1.xml ...) - HIGH PRIORITY
   for (let i = 0; i < numChunks; i++) {
     xml += `
-    < sitemap >
-    <loc>${ baseUrl }/sitemap/${ i }.xml </loc>
-      < lastmod > ${ new Date().toISOString() } </lastmod>
-        </sitemap>`;
-}
+  <sitemap>
+    <loc>${baseUrl}/sitemap/${i}.xml</loc>
+    <lastmod>${new Date().toISOString()}</lastmod>
+  </sitemap>`;
+  }
 
-// Static pages at the end, AllKeysShop style
-xml += `
+  // 3. Add Main Pages Sitemap (main-pages.xml) - LOW PRIORITY (End of List)
+  xml += `
   <sitemap>
     <loc>${baseUrl}/sitemap/main-pages.xml</loc>
     <lastmod>${new Date().toISOString()}</lastmod>
   </sitemap>`;
 
-// Inject Debug Entry if Error Occurred
-if (debugError) {
-  xml += `
+  // 4. Inject Debug Entry if Error Occurred
+  if (debugError) {
+    xml += `
   <sitemap>
     <loc>${baseUrl}/debug/sitemap_error?msg=${encodeURIComponent(debugError)}</loc>
     <lastmod>${new Date().toISOString()}</lastmod>
   </sitemap>`;
-}
+  }
 
-xml += `
+  // 5. Close XML
+  xml += `
 </sitemapindex>`;
 
-return new NextResponse(xml, {
-  headers: {
-    'Content-Type': 'application/xml',
-    'Cache-Control': 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400',
-  },
-});
+  return new NextResponse(xml, {
+    headers: {
+      'Content-Type': 'application/xml',
+      'Cache-Control': 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400',
+    },
+  });
 }
