@@ -152,47 +152,38 @@ def health_debug():
 
 @app.on_event("startup")
 async def startup_event():
-    print("Startup: Initializing Application...")
+    print("Startup: Initializing Application (RESCUE MODE)...")
     
     # 1. Create Tables (Safe to run if exist)
-    try:
-        # Move create_all here to prevent import-time blocking
-        Base.metadata.create_all(bind=engine)
-    except Exception as e:
-        print(f"Startup Table Creation Warning: {e}")
+    # try:
+    #     Base.metadata.create_all(bind=engine)
+    # except Exception as e:
+    #     print(f"Startup Table Creation Warning: {e}")
 
     # 2. Initialize Scheduler (Crucial)
-    try:
-        from apscheduler.schedulers.background import BackgroundScheduler
-        from app.services.scraper import scrape_missing_data
-        from app.services.enrichment import enrichment_job, refresh_prices_job
-
-        scheduler = BackgroundScheduler()
-        # SCRAPER: 2 workers max (defined in scraper.py), run every 1 min
-        scheduler.add_job(scrape_missing_data, 'interval', minutes=1, args=[110, 200], id='auto_scrape', replace_existing=True)
-        # PRICE REFRESH: Every 10 mins
-        scheduler.add_job(refresh_prices_job, 'interval', minutes=10, args=[300], id='price_refresh', replace_existing=True)
-        # ENRICHMENT: Every 2 mins
-        scheduler.add_job(enrichment_job, 'interval', minutes=2, args=[110, 50], id='auto_enrich', replace_existing=True)
-        
-        scheduler.start()
-        print("APScheduler started.")
-    except Exception as e:
-        print(f"Failed to start scheduler: {e}")
+    # try:
+    #     from apscheduler.schedulers.background import BackgroundScheduler
+    #     from app.services.scraper import scrape_missing_data
+    #     from app.services.enrichment import enrichment_job, refresh_prices_job
+    #
+    #     scheduler = BackgroundScheduler()
+    #     scheduler.add_job(scrape_missing_data, 'interval', minutes=1, args=[110, 200], id='auto_scrape', replace_existing=True)
+    #     scheduler.add_job(refresh_prices_job, 'interval', minutes=10, args=[300], id='price_refresh', replace_existing=True)
+    #     scheduler.add_job(enrichment_job, 'interval', minutes=2, args=[110, 50], id='auto_enrich', replace_existing=True)
+    #     
+    #     scheduler.start()
+    #     print("APScheduler started.")
+    # except Exception as e:
+    #     print(f"Failed to start scheduler: {e}")
 
     # 3. Quick Schema Check (Minimal)
-    # Rely on manual migration mainly.
-    # We remove the heavy introspection here to ensure fast boot.
-    # If columns are missing, we expect 'run_auto_migrations' (from migrations.py) to handle it if called,
-    # OR we trust previous deploys.
-    # Let's call the optimized run_auto_migrations ONCE.
-    try:
-        from app.db.migrations import run_auto_migrations
-        run_auto_migrations(engine)
-    except Exception as e:
-         print(f"Auto-migration skipped due to error: {e}")
+    # try:
+    #     from app.db.migrations import run_auto_migrations
+    #     run_auto_migrations(engine)
+    # except Exception as e:
+    #      print(f"Auto-migration skipped due to error: {e}")
 
-    print("Startup complete.")
+    print("Startup complete (RESCUE MODE).")
     # ---------------------------------------------------------------------
 
 @app.get("/debug-csv")
