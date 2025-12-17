@@ -20,6 +20,9 @@ import ProductDetails from "@/components/ProductDetails";
 import CommentsSection from "@/components/comments/CommentsSection";
 import AlternateLinksRegistrar from "@/components/AlternateLinksRegistrar";
 import { getProductById } from "@/lib/cached-api";
+// SEO Components
+import ConsoleSeoStats from "@/components/seo/ConsoleSeoStats";
+import ConsoleFaq from "@/components/seo/ConsoleFaq";
 
 // --- Helper to extract ID from slug ---
 function getIdFromSlug(slug: string): number {
@@ -127,15 +130,23 @@ export default async function Page({
             <main className="flex-grow bg-[#0f121e] py-8">
                 <div className="max-w-[1400px] mx-auto px-4">
                     <Breadcrumbs items={breadcrumbItems} />
-                    <ConsoleGameCatalog
-                        products={products}
-                        genres={[]}
-                        systemName={systemName}
-                        lang={lang}
-                        gamesSlug={consolesSlug}
-                        systemSlug={slug}
-                        productType="console" // Explicitly fetch consoles
-                    />
+
+                    {/* SEO STATS (TOP) */}
+                    <ConsoleSeoStats products={products} systemName={systemName} />
+
+                    <div className="mt-6">
+                        <ConsoleGameCatalog
+                            products={products}
+                            genres={[]}
+                            systemName={systemName}
+                            lang={lang}
+                            gamesSlug={consolesSlug}
+                            systemSlug={slug}
+                            productType="console" // Explicitly fetch consoles
+                        />
+                    </div>
+                    {/* SEO FAQ (BOTTOM) */}
+                    <ConsoleFaq products={products} systemName={systemName} />
                 </div>
             </main>
         );
