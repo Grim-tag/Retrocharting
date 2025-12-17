@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getListings } from "@/lib/api";
-import { formatPrice } from "@/lib/currency";
+import { formatPrice, convertPriceToUSD } from "@/lib/currency";
 import { useCurrency } from "@/context/CurrencyContext";
 
 interface Listing {
@@ -82,8 +82,16 @@ export default function ListingsTable({ productId, dict }: { productId: number; 
     }, [productId]);
 
     // Split listings
-    const gameListings = listings.filter(l => !['BOX_ONLY', 'MANUAL_ONLY', 'PARTS'].includes(l.condition));
-    const extraListings = listings.filter(l => ['BOX_ONLY', 'MANUAL_ONLY'].includes(l.condition));
+    const gameListings = listings
+        .filter(l => !['BOX_ONLY', 'MANUAL_ONLY', 'PARTS'].includes(l.condition))
+        .sort((a, b) => convertPriceToUSD(a.price, a.currency) - convertPriceToUSD(b.price, b.currency));
+
+    // Sort logic: low to high based on normalized USD price
+
+    const extraListings = listings
+        .filter(l => ['BOX_ONLY', 'MANUAL_ONLY'].includes(l.condition))
+        .sort((a, b) => convertPriceToUSD(a.price, a.currency) - convertPriceToUSD(b.price, b.currency));
+
     // We could hide PARTS or put them in extras? Let's assume extras for now.
 
     // Determine which to show
