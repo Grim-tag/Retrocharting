@@ -49,6 +49,7 @@ export const generateVideoGameSchema = (product: any, url: string) => ({
     image: product.image_url ? [product.image_url] : [],
     description: product.description || `Price guide, values, and details for ${product.product_name} on ${product.console_name}.`,
     sku: product.id?.toString(),
+    gtin13: product.ean || undefined, // Add EAN/GTIN here for Google
     gamePlatform: product.console_name,
     genre: product.genre ? product.genre.split(',').map((g: string) => g.trim()) : [],
     applicationCategory: 'Game',
