@@ -103,7 +103,7 @@ class AmazonClient:
             print(f"Amazon Client Error: {e}")
             return []
 
-    def search_product_smart(self, product):
+    def search_product_smart(self, product, domain: str = "amazon.fr"):
         """
         Smart search strategy:
         1. If ASIN exists -> Search by ASIN (Precise).
@@ -112,22 +112,22 @@ class AmazonClient:
         if hasattr(product, 'asin') and product.asin:
             # Search by ASIN is extremely precise
             # checks both 'asin' field and standard search with ASIN kw
-            print(f"Amazon Smart Search: Using ASIN {product.asin}")
-            results = self.search_items(product.asin, limit=1)
+            print(f"Amazon Smart Search: Using ASIN {product.asin} on {domain}")
+            results = self.search_items(product.asin, limit=1, domain=domain)
             # If ASIN search yields result, trustworthy.
             if results: return results
             
         if hasattr(product, 'ean') and product.ean:
             # Search by EAN is also very precise on Amazon
-            print(f"Amazon Smart Search: Using EAN {product.ean}")
-            results = self.search_items(product.ean, limit=1)
+            print(f"Amazon Smart Search: Using EAN {product.ean} on {domain}")
+            results = self.search_items(product.ean, limit=1, domain=domain)
             if results: return results
 
         # Fallback to Text Search
         query = f"{product.product_name} {product.console_name}"
         # Filter out 'PAL' or region tags if needed for cleaner search?
         # For now, keep full name
-        print(f"Amazon Smart Search: Fallback to name '{query}'")
-        return self.search_items(query, limit=5)
+        print(f"Amazon Smart Search: Fallback to name '{query}' on {domain}")
+        return self.search_items(query, limit=5, domain=domain)
 
 amazon_client = AmazonClient()

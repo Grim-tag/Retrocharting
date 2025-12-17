@@ -41,6 +41,21 @@ class PricingService:
             if not target_console_region and product.genre != 'Accessories':
                  target_console_region = 'NTSC-U'
             search_context['target_region'] = target_console_region
+            
+            # --- REGION MAPPING LOGIC (New) ---
+            amazon_domain = "amazon.fr"
+            ebay_marketplace = "EBAY_FR"
+            
+            if target_console_region == 'NTSC-U':
+                amazon_domain = "amazon.com"
+                ebay_marketplace = "EBAY_US" 
+            elif target_console_region == 'NTSC-J':
+                amazon_domain = "amazon.co.jp"
+                ebay_marketplace = "EBAY_US" # Fallback to US for broader JP coverage on eBay, or specific if needed.
+                # User specified "ebay.com" for NTSC.
+            
+            search_context['amazon_domain'] = amazon_domain
+            search_context['ebay_marketplace'] = ebay_marketplace
 
             search_context['query'] = ListingClassifier.clean_query(product.product_name, product.console_name)
             
@@ -85,16 +100,17 @@ class PricingService:
         # --- STEP 2: EXTERNAL API CALLS (No DB Connection) ---
         query = search_context['query']
         category_id = search_context['category_id']
-        target_console_region = search_context['target_region']
+        ebay_marketplace = search_context.get('ebay_marketplace', 'EBAY_FR')
+        amazon_domain = search_context.get('amazon_domain', 'amazon.fr')
         
-        print(f"[PricingService] Query: '{query}' | Region: {target_console_region} | DB Closed (Safe)")
+        print(f"[PricingService] Query: '{query}' | Region: {target_console_region} | Market: {amazon_domain}/{ebay_marketplace} | DB Closed (Safe)")
 
         ebay_results = []
         amazon_results = []
         
         try:
             # Always fetch eBay (High Quota)
-            ebay_results = ebay_client.search_items(query, limit=20, category_ids=category_id)
+            ebay_results = ebay_client.search_items(query, limit=20, category_ids=category_id, marketplace_id=ebay_marketplace)
             print(f"[PricingService] eBay returned {len(ebay_results)} raw results.")
         except Exception as e:
             print(f"[PricingService] eBay Fetch Error: {e}")
@@ -118,7 +134,7 @@ class PricingService:
                 
                 # Check if we preserved `product`? 
                 # Step 1 `product` variable IS visible here.
-                amazon_results = amazon_client.search_product_smart(product)
+                amazon_results = amazon_client.search_product_smart(product, domain=amazon_domain)
                 print(f"[PricingService] Amazon returned {len(amazon_results)} raw results (Sonar Active).")
             else:
                 print(f"[PricingService] Amazon Search Skipped (Cache Hit).")
