@@ -14,6 +14,8 @@ import {
     ArrowsUpDownIcon
 } from '@heroicons/react/24/outline';
 import TableActions from '@/components/ui/TableActions';
+import { useCurrency } from '@/context/CurrencyContext';
+import { formatPrice } from '@/lib/currency'; // Import Helper
 // import Breadcrumbs from "@/components/seo/Breadcrumbs"; // Not used here directly anymore
 
 interface ConsoleGameCatalogProps {
@@ -42,6 +44,7 @@ export default function ConsoleGameCatalog({
 }: ConsoleGameCatalogProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
+    const { currency } = useCurrency(); // Remove convertPrice, just get code
 
     // -- State --
     // We assume 'products' prop contains the FULL catalog (Limit 2000 from page.tsx)
@@ -414,13 +417,13 @@ export default function ConsoleGameCatalog({
                                             {product.genre || '-'}
                                         </td>
                                         <td className="py-2 px-4 text-right text-sm font-mono text-gray-300">
-                                            {product.loose_price ? `$${product.loose_price.toFixed(2)}` : '-'}
+                                            {formatPrice(product.loose_price, currency)}
                                         </td>
                                         <td className="py-2 px-4 text-right text-sm font-mono text-[#007bff] font-bold">
-                                            {product.cib_price ? `$${product.cib_price.toFixed(2)}` : '-'}
+                                            {formatPrice(product.cib_price, currency)}
                                         </td>
                                         <td className="py-2 px-4 text-right text-sm font-mono text-[#00ff00] font-bold">
-                                            {product.new_price ? `$${product.new_price.toFixed(2)}` : '-'}
+                                            {formatPrice(product.new_price, currency)}
                                         </td>
                                         <td className="py-2 px-4 text-right">
                                             <TableActions productId={product.id} productName={product.product_name} />
@@ -466,7 +469,7 @@ export default function ConsoleGameCatalog({
                                 <div className="flex justify-between items-end mt-auto pt-2 border-t border-[#2a3142]">
                                     <div className="text-xs text-gray-400">Loose</div>
                                     <div className="font-bold text-[#ff6600]">
-                                        {product.loose_price ? `$${product.loose_price.toFixed(2)}` : '-'}
+                                        {formatPrice(product.loose_price, currency)}
                                     </div>
                                 </div>
                             </div>
