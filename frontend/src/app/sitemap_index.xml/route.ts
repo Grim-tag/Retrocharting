@@ -31,35 +31,37 @@ export async function GET() {
   let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <?xml-stylesheet type="text/xsl" href="/sitemap.xsl"?>
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <sitemap>
-    <loc>${baseUrl}/sitemap/static.xml</loc>
-    <lastmod>${new Date().toISOString()}</lastmod>
-  </sitemap>`;
-
   for (let i = 0; i < numChunks; i++) {
     xml += `
+    < sitemap >
+    <loc>${ baseUrl }/sitemap/${ i }.xml </loc>
+      < lastmod > ${ new Date().toISOString() } </lastmod>
+        </sitemap>`;
+}
+
+// Static pages at the end, AllKeysShop style
+xml += `
   <sitemap>
-    <loc>${baseUrl}/sitemap/${i}.xml</loc>
+    <loc>${baseUrl}/sitemap/main-pages.xml</loc>
     <lastmod>${new Date().toISOString()}</lastmod>
   </sitemap>`;
-  }
 
-  // Inject Debug Entry if Error Occurred
-  if (debugError) {
-    xml += `
+// Inject Debug Entry if Error Occurred
+if (debugError) {
+  xml += `
   <sitemap>
     <loc>${baseUrl}/debug/sitemap_error?msg=${encodeURIComponent(debugError)}</loc>
     <lastmod>${new Date().toISOString()}</lastmod>
   </sitemap>`;
-  }
+}
 
-  xml += `
+xml += `
 </sitemapindex>`;
 
-  return new NextResponse(xml, {
-    headers: {
-      'Content-Type': 'application/xml',
-      'Cache-Control': 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400',
-    },
-  });
+return new NextResponse(xml, {
+  headers: {
+    'Content-Type': 'application/xml',
+    'Cache-Control': 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400',
+  },
+});
 }

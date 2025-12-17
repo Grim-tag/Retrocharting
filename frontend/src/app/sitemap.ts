@@ -28,7 +28,7 @@ export async function generateSitemaps() {
 
     // 3. Create ID list
     const sitemaps = [
-        { id: 'static' }, // Special ID for static routes & categories
+        { id: 'main-pages' }, // Renamed from static to match index
     ];
 
     for (let i = 0; i < numChunks; i++) {
@@ -48,7 +48,7 @@ export default async function sitemap({ id }: SitemapProps): Promise<MetadataRou
     const resolvedId = (id instanceof Promise) ? await id : id;
 
     // --- STATIC SITEMAP ---
-    if (resolvedId === 'static') {
+    if (resolvedId === 'main-pages' || resolvedId === 'static') { // Keep static for backward compat if needed
         const staticRoutes: MetadataRoute.Sitemap = [];
         const langs = ['en', 'fr'];
         const mainPages = ['', 'login', 'register'];
