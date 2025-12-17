@@ -64,21 +64,34 @@ class ListingClassifier:
     @staticmethod
     def clean_search_query(product_name: str, console_name: str) -> str:
         """
-        Removes 'PAL', '[PAL]', '(JP)' noise to create a clean search query.
-        Example: "Super Mario 64 [PAL]" -> "Super Mario 64"
+        Removes 'PAL', 'NTSC', 'JP' and other region noise to create a clean search query.
+        The region filtering is now handled by selecting the correct Marketplace/Domain.
         """
-        # Remove Bracketed info often found in scraped names
+        # 1. Remove Bracketed/Parenthesis info (e.g. [PAL], (Japan))
         clean_prod = re.sub(r'\[.*?\]', '', product_name)
         clean_prod = re.sub(r'\(.*?\)', '', clean_prod)
         
-        # Remove strict "PAL" word if standalone
-        clean_prod = clean_prod.replace(' PAL', '').replace('PAL ', '')
+        # 2. Remove specific keywords (Case Insensitive)
+        # We replace with space to avoid merging words, then strip later
+        keywords = ['PAL', 'NTSC', 'NTSC-U', 'NTSC-J', 'JAP', 'JAPAN', 'USA', 'UNK', 'IMPORT']
         
-        # Add Console Name (Cleaned)
-        # If Console is "PAL Super Nintendo", we just want "Super Nintendo"
-        clean_console = console_name.replace("PAL ", "")
+        flags = re.IGNORECASE
+        for kw in keywords:
+            # Word boundary to avoid replacing inside words
+            clean_prod = re.sub(r'\b' + re.escape(kw) + r'\b', '', clean_prod, flags=flags)
+            
+        # 3. Clean Console Name
+        # Remove PAL/JP/NTSC prefixes from console name if present
+        clean_console = console_name
+        for kw in keywords:
+             clean_console = re.sub(r'\b' + re.escape(kw) + r'\b', '', clean_console, flags=flags)
+
+        # 4. Final Cleanup
+        # Remove double spaces
+        query = f"{clean_prod} {clean_console}"
+        query = re.sub(r'\s+', ' ', query).strip()
         
-        return f"{clean_prod.strip()} {clean_console.strip()}"
+        return query
 
     @staticmethod
     def detect_condition(title: str) -> str:
