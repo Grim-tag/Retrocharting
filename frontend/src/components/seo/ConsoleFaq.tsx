@@ -10,9 +10,10 @@ import JsonLd from '@/components/seo/JsonLd';
 interface ConsoleFaqProps {
     products: Product[];
     systemName: string;
+    region?: 'PAL' | 'NTSC' | 'JP' | 'NTSC-J';
 }
 
-export default function ConsoleFaq({ products, systemName }: ConsoleFaqProps) {
+export default function ConsoleFaq({ products, systemName, region = 'NTSC' }: ConsoleFaqProps) {
     const { currency } = useCurrency();
 
     const data = useMemo(() => {
@@ -36,20 +37,55 @@ export default function ConsoleFaq({ products, systemName }: ConsoleFaqProps) {
 
     if (!data) return null;
 
-    const faqItems = [
-        {
-            question: `Combien coûte une ${systemName} aujourd'hui ?`,
-            answer: `Le prix d'une ${systemName} dépend grandement de son état et du modèle. Comptez environ ${data.min} pour une console seule (en loose), et ${data.avg} pour un pack complet en bon état. Les éditions collector scellées peuvent atteindre ${data.max}.`
-        },
-        {
-            question: `Quelle est la ${systemName} la plus chère ?`,
-            answer: `Selon notre base de données actuelle, le modèle le plus coté est la ${data.mostExpensiveName}, estimée à ${data.max}. Ce prix peut varier selon la présence de la boîte d'origine et des notices.`
-        },
-        {
-            question: `Comment connaître la valeur de ma ${systemName} ?`,
-            answer: `Utilisez RetroCharting pour rechercher votre modèle précis dans notre catalogue ci-dessus. Nous analysons les ventes réelles quotidiennement sur eBay et autres marketplaces pour vous donner une cote fiable et actualisée, basée sur ce que les acheteurs paient vraiment.`
-        }
-    ];
+    let faqItems = [];
+
+    if (region === 'PAL') {
+        faqItems = [
+            {
+                question: `Combien coûte une ${systemName} (PAL) en Europe ?`,
+                answer: `Le prix d'une ${systemName} version européenne dépend de son état. Comptez environ ${data.min} pour une console seule (en loose), et ${data.avg} pour un pack complet en bon état. Les éditions limitées spécifiques à l'Europe valent jusqu'à ${data.max}.`
+            },
+            {
+                question: `Les jeux ${systemName} PAL sont-ils compatibles tous pays ?`,
+                answer: `Attention, les consoles ${systemName} PAL sont généralement zonées pour l'Europe (50Hz). Assurez-vous que vos jeux sont bien au format PAL pour garantir une compatibilité parfaite, sauf si la console a été modifiée.`
+            },
+            {
+                question: `Quelle est la ${systemName} la plus chère du catalogue ?`,
+                answer: `Le modèle le plus rare recensé est la ${data.mostExpensiveName}, estimée à ${data.max}.`
+            }
+        ];
+    } else if (region === 'JP' || region === 'NTSC-J') {
+        faqItems = [
+            {
+                question: `Quel est le prix d'une ${systemName} en Import Japon ?`,
+                answer: `Les consoles ${systemName} japonaises (NTSC-J) sont souvent moins chères ou plus variées. Le prix moyen constaté est de ${data.avg}. L'entrée de gamme se situe à ${data.min}, mais les éditions collector exclusives au Japon peuvent monter à ${data.max}.`
+            },
+            {
+                question: `Faut-il un adaptateur pour une ${systemName} japonaise ?`,
+                answer: `Oui, le courant au Japon est en 100-110V. Pour brancher une ${systemName} japonaise en France (220V), un convertisseur de tension est OBLIGATOIRE sous peine de griller l'alimentation.`
+            },
+            {
+                question: `Les jeux français passent-ils sue une ${systemName} Japonaise ?`,
+                answer: `Généralement non, la ${systemName} japonaise est zonée NTSC-J. Elle ne lira que les jeux japonais, sauf utilisation d'un adaptateur ou modification de la console.`
+            }
+        ];
+    } else {
+        // Default / US
+        faqItems = [
+            {
+                question: `Combien coûte une ${systemName} aujourd'hui ?`,
+                answer: `Le prix d'une ${systemName} dépend grandement de son état. Comptez environ ${data.min} pour une console seule, et ${data.avg} pour un pack complet. Les éditions collector scellées peuvent atteindre ${data.max}.`
+            },
+            {
+                question: `Quelle est la ${systemName} la plus chère ?`,
+                answer: `Selon notre base de données, le modèle le plus coté est la ${data.mostExpensiveName}, estimée à ${data.max}.`
+            },
+            {
+                question: `Comment connaître la valeur de ma ${systemName} ?`,
+                answer: `Utilisez RetroCharting pour rechercher votre modèle précis. Nous analysons les ventes réelles quotidiennement sur eBay pour vous donner une cote fiable.`
+            }
+        ];
+    }
 
     // Prepare JSON-LD Schema
     const faqSchema = {

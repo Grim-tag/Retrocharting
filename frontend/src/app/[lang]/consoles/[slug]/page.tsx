@@ -126,13 +126,18 @@ export default async function Page({
             { label: systemName, href: `/${lang}/${consolesSlug}/${slug}` }
         ];
 
+        // Region Detection
+        let region: 'PAL' | 'NTSC' | 'JP' | 'NTSC-J' = 'NTSC';
+        if (systemName.startsWith("PAL")) region = 'PAL';
+        else if (systemName.startsWith("JP") || systemName.startsWith("Japan")) region = 'JP';
+
         return (
             <main className="flex-grow bg-[#0f121e] py-8">
                 <div className="max-w-[1400px] mx-auto px-4">
                     <Breadcrumbs items={breadcrumbItems} />
 
                     {/* SEO STATS (TOP) */}
-                    <ConsoleSeoStats products={products} systemName={systemName} />
+                    <ConsoleSeoStats products={products} systemName={systemName} region={region} />
 
                     <div className="mt-6">
                         <ConsoleGameCatalog
@@ -146,7 +151,7 @@ export default async function Page({
                         />
                     </div>
                     {/* SEO FAQ (BOTTOM) */}
-                    <ConsoleFaq products={products} systemName={systemName} />
+                    <ConsoleFaq products={products} systemName={systemName} region={region} />
                 </div>
             </main>
         );
