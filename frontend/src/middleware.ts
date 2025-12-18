@@ -23,6 +23,17 @@ export function middleware(request: NextRequest) {
         return NextResponse.next();
     }
 
+    // [NEW] Force HTTPS in Production
+    // Render/Vercel/Heroku pass 'x-forwarded-proto'
+    if (process.env.NODE_ENV === "production") {
+        const proto = request.headers.get("x-forwarded-proto");
+        if (proto === "http") {
+            const url = new URL(request.url);
+            url.protocol = "https:";
+            return NextResponse.redirect(url, 301);
+        }
+    }
+
     // [NEW] Domain Redirection: Clean traffic to retrocharting.com
     // Redirects *.onrender.com -> retrocharting.com
     const host = request.headers.get("host") || "";
