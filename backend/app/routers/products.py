@@ -408,9 +408,14 @@ def read_product(
         raise HTTPException(status_code=404, detail="Product not found")
         
     # Trigger Auto-Enrichment if description is missing
-    # We check if we already tried recently? (Maybe add a last_enriched flag later)
-    # For now, if description is empty, try to fetch it.
+    # RATE LIMIT: Only try once every 24 hours to prevent bot-induced threadpool exhaustion.
+    from datetime import datetime, timedelta
+    should_enrich = False
     if not product.description or len(product.description) < 10:
+        if not product.last_scraped or product.last_scraped < datetime.utcnow() - timedelta(hours=24):
+            should_enrich = True
+    
+    if should_enrich:
         background_tasks.add_task(enrich_product_with_igdb, product_id)
         
     # Manually populate computed fields not in DB table but in Schema
