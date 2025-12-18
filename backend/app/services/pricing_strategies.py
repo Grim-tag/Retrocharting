@@ -11,98 +11,91 @@ from app.services.amazon_client import amazon_client
 class PricingStrategy(ABC):
     """
     Base Strategy (The Mother).
-    Contains shared tools for Database and API access.
-    Does NOT contain business logic for filtering (left to children).
+    Separates Network Fetching (Slow) from Database Saving (Fast).
     """
-    def __init__(self, db_session):
-        self.db = db_session
+    def __init__(self):
+        pass
 
     @abstractmethod
-    def fetch_listings(self, product: Product) -> List[Dict]:
+    def fetch_listings_data(self, product: Product) -> Dict[str, List[Dict]]:
         """
-        Orchestrates fetching from eBay/Amazon and updating the DB.
-        Must be implemented by children to define specific search queries and filters.
+        Pure Network Operation.
+        Fetches data from APIs. Does NOT touch the Database.
+        Returns a dictionary of results: {'ebay': [...], 'amazon': [...]}
         """
         pass
 
-    def _save_listings(self, product: Product, listings: List[Dict], source: str):
+    def save_listings(self, db_session, product_id: int, listings_data: Dict[str, List[Dict]]):
         """
-        Shared helper to save listings to DB.
-        Common to all strategies.
+        Pure Database Operation.
+        Saves the fetched data to the DB.
         """
-        processed_ids = []
-        product_id = product.id
-
-        # Accumulators for Price Calculation
-        prices_box = []
-        prices_manual = []
-        prices_loose = []
-
-        for item in listings:
-            external_id = item.get('external_id')
-            if not external_id: continue
-            processed_ids.append(external_id)
-
-            price_val = item.get('price', 0.0)
-            condition = item.get('condition', 'LOOSE')
+        total_saved = 0
+        
+        # Helper to process a specific source list
+        def _save_source(source_items, source_name):
+            processed_ids = []
             
-            # --- Stats Collection for Averages ---
-            if price_val > 0:
-                if condition == 'BOX_ONLY': prices_box.append(price_val)
-                elif condition == 'MANUAL_ONLY': prices_manual.append(price_val)
-                elif condition != 'PARTS': prices_loose.append(price_val)
+            for item in source_items:
+                external_id = item.get('external_id')
+                if not external_id: continue
+                processed_ids.append(external_id)
 
-            # --- DB Upsert ---
-            existing = self.db.query(Listing).filter(
+                price_val = item.get('price', 0.0)
+                condition = item.get('condition', 'LOOSE')
+                
+                # Update or Insert
+                existing = db_session.query(Listing).filter(
+                    Listing.product_id == product_id,
+                    Listing.source == source_name,
+                    Listing.external_id == external_id
+                ).first()
+
+                if existing:
+                    existing.price = price_val
+                    existing.title = item.get('title', '')
+                    existing.condition = condition
+                    existing.is_good_deal = item.get('is_good_deal', False)
+                    existing.last_updated = datetime.utcnow()
+                    existing.status = 'active'
+                    if item.get('image_url'): existing.image_url = item.get('image_url')
+                else:
+                    new_listing = Listing(
+                        product_id=product_id,
+                        source=source_name,
+                        external_id=external_id,
+                        title=item.get('title', ''),
+                        price=price_val,
+                        currency=item.get('currency', 'EUR'),
+                        condition=condition,
+                        url=item.get('url'),
+                        image_url=item.get('image_url'),
+                        seller_name=item.get('seller_name'),
+                        status='active',
+                        is_good_deal=item.get('is_good_deal', False),
+                        last_updated=datetime.utcnow()
+                    )
+                    db_session.add(new_listing)
+            
+            # Cleanup old listings
+            cleanup_query = db_session.query(Listing).filter(
                 Listing.product_id == product_id,
-                Listing.source == source,
-                Listing.external_id == external_id
-            ).first()
-
-            if existing:
-                existing.price = price_val
-                existing.title = item.get('title', '')
-                existing.condition = condition
-                existing.is_good_deal = item.get('is_good_deal', False)
-                existing.last_updated = datetime.utcnow()
-                existing.status = 'active'
-                if item.get('image_url'): existing.image_url = item.get('image_url')
-            else:
-                new_listing = Listing(
-                    product_id=product_id,
-                    source=source,
-                    external_id=external_id,
-                    title=item.get('title', ''),
-                    price=price_val,
-                    currency=item.get('currency', 'USD'),
-                    condition=condition,
-                    url=item.get('url'),
-                    image_url=item.get('image_url'),
-                    seller_name=item.get('seller_name'),
-                    status='active',
-                    is_good_deal=item.get('is_good_deal', False),
-                    last_updated=datetime.utcnow()
-                )
-                self.db.add(new_listing)
-        
-        # Cleanup old listings
-        # Cleanup old listings
-        cleanup_query = self.db.query(Listing).filter(
-            Listing.product_id == product_id,
-            Listing.source == source,
-            Listing.status == 'active'
-        )
-        
-        if processed_ids:
-            cleanup_query = cleanup_query.filter(Listing.external_id.notin_(processed_ids))
+                Listing.source == source_name,
+                Listing.status == 'active'
+            )
             
-        cleanup_query.delete(synchronize_session=False)
+            if processed_ids:
+                cleanup_query = cleanup_query.filter(Listing.external_id.notin_(processed_ids))
+                
+            cleanup_query.delete(synchronize_session=False)
 
-        # Commit is handled by caller or here? 
-        # Ideally caller, but to be safe lets commit if we own the session? 
-        # Note: In the service we pass session. Let's let the service commit.
-        
-        return prices_loose, prices_box, prices_manual
+        # Execute for both sources
+        if 'ebay' in listings_data:
+            _save_source(listings_data['ebay'], 'eBay')
+        if 'amazon' in listings_data:
+            _save_source(listings_data['amazon'], 'Amazon')
+            
+        return True
 
 class GamesPricingStrategy(PricingStrategy):
     """
@@ -112,7 +105,7 @@ class GamesPricingStrategy(PricingStrategy):
     - Filters out 'Manuel Seul' or 'Boite Vide' unless searching for them? 
     - Actually, we collect them but Condition logic is standard.
     """
-    def fetch_listings(self, product: Product) -> List[Dict]:
+    def fetch_listings_data(self, product: Product) -> Dict[str, List[Dict]]:
         # 1. Prepare SEARCH CONTEXT
         # Games specific: We want to match Title + Console
         query = ListingClassifier.clean_query(product.product_name, product.console_name)
@@ -168,16 +161,8 @@ class GamesPricingStrategy(PricingStrategy):
                  'is_good_deal': False
              })
 
-        # 4. Save & Update Logic is handled by Service? 
-        # No, Strategy fetch_listings should return the processed data or save it?
-        # The abstract method says "fetch_listings", but the service usually orchestrates saving.
-        # Let's handle SAVING inside the strategy to keep Service empty.
-        
-        loose_e, box_e, man_e = self._save_listings(product, ebay_items, 'eBay')
-        loose_a, box_a, man_a = self._save_listings(product, amazon_items, 'Amazon')
-        
-        # Return something?
-        return {"ebay": len(ebay_items), "amazon": len(amazon_items)}
+        # Return Data for Service to Save
+        return {"ebay": ebay_items, "amazon": amazon_items}
 
     def _process_results(self, items: List[Any], source: str, product: Product, target_region: str) -> List[Dict]:
         """
@@ -255,7 +240,7 @@ class ConsolesPricingStrategy(GamesPricingStrategy):
     Strategy specific for CONSOLES (Hardware).
     Inherits from GamesStrategy structure but overrides queries and filters.
     """
-    def fetch_listings(self, product: Product) -> List[Dict]:
+    def fetch_listings_data(self, product: Product) -> Dict[str, List[Dict]]:
         # 1. Modify Query: Add "Console" explicitly if not present
         base_query = ListingClassifier.clean_query(product.product_name, "")
         if "console" not in base_query.lower() and "system" not in base_query.lower():
@@ -322,10 +307,7 @@ class ConsolesPricingStrategy(GamesPricingStrategy):
                  'is_good_deal': False
              })
 
-        loose_e, box_e, man_e = self._save_listings(product, ebay_items, 'eBay')
-        loose_a, box_a, man_a = self._save_listings(product, amazon_items, 'Amazon')
-        
-        return {"ebay": len(ebay_items), "amazon": len(amazon_items)}
+        return {"ebay": ebay_items, "amazon": amazon_items}
 
     def _process_results(self, items: List[Any], source: str, product: Product, target_region: str) -> List[Dict]:
         """
@@ -401,7 +383,7 @@ class AccessoriesPricingStrategy(GamesPricingStrategy):
     """
     Strategy for ACCESSORIES (Controllers, Cables).
     """
-    def fetch_listings(self, product: Product) -> List[Dict]:
+    def fetch_listings_data(self, product: Product) -> Dict[str, List[Dict]]:
         query = ListingClassifier.clean_query(product.product_name, product.console_name)
         target_region = ListingClassifier.detect_region(product.console_name) or 'PAL'
         config = ListingClassifier.get_marketplaces(target_region) 
@@ -421,16 +403,16 @@ class AccessoriesPricingStrategy(GamesPricingStrategy):
         except Exception as e:
             print(f"[AccessoriesStrategy] eBay Error: {e}")
 
-        self._save_listings(product, ebay_items, 'eBay')
-        return {"ebay": len(ebay_items)}
+        return {"ebay": ebay_items}
 
 
 class StrategyFactory:
     @staticmethod
-    def get_strategy(product: Product, db_session) -> PricingStrategy:
+    def get_strategy(product: Product, db_session=None) -> PricingStrategy:
+        # db_session is no longer needed for Strategy instantiation
         if product.genre == 'Systems':
-            return ConsolesPricingStrategy(db_session)
+            return ConsolesPricingStrategy()
         elif product.genre in ['Accessories', 'Controllers']:
-            return AccessoriesPricingStrategy(db_session)
+            return AccessoriesPricingStrategy()
         else:
-            return GamesPricingStrategy(db_session)
+            return GamesPricingStrategy()
