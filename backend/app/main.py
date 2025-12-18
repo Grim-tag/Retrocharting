@@ -159,8 +159,18 @@ def _run_migration_background():
     to avoid blocking Uvicorn startup / port binding.
     """
     try:
-        from app.db.session import engine
+        from app.db.session import engine, Base
         print("Migration: Starting background schema check...")
+        
+        # 1. Create Tables (Safe fallback)
+        # Moving this here ensures app starts even if DB is unreachable temporarily.
+        try:
+            Base.metadata.create_all(bind=engine)
+            print("Migration: Tables created/verified.")
+        except Exception as e:
+            print(f"Migration: Table creation failed (DB might be down): {e}")
+            return # Stop if we can't connect
+            
         with engine.begin() as connection:
             connection.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS ean VARCHAR"))
             connection.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS asin VARCHAR"))
@@ -175,15 +185,12 @@ def _run_migration_background():
 async def startup_event():
     print("Startup: Initializing Application...")
     
-    # 1. Create Tables (Safe to run if exist)
+    # 1. Async Initialization (Tables + Migrations)
+    # We move ALL DB interaction to background to prevent "Port scan timeout" if DB is slow/recovering.
     try:
-        Base.metadata.create_all(bind=engine)
-        
-        # Async Migration
         threading.Thread(target=_run_migration_background, daemon=True).start()
-
     except Exception as e:
-        print(f"Startup Table Creation Warning: {e}")
+        print(f"Startup Thread Error: {e}")
 
     # 2. Initialize Scheduler (Crucial)
     try:
