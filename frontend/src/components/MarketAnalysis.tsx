@@ -28,7 +28,15 @@ export default function MarketAnalysis({ product, dict, lang }: MarketAnalysisPr
 
     // Basic logic: Check if console is in MODERN_SYSTEMS list
     const isModern = MODERN_SYSTEMS.some(sys => product.console_name?.includes(sys));
-    const mode = isModern ? 'modern' : 'retro';
+
+    // Check if Product is a Console (Hardware) vs Game
+    const isConsole = product.genre && ['Systems', 'Console', 'Consoles'].includes(product.genre);
+
+    let mode = isModern ? 'modern' : 'retro';
+    if (isConsole) {
+        mode = isModern ? 'console_modern' : 'console_retro';
+    }
+
     const templates = dict.product.seo[mode];
 
     if (!templates) return null;

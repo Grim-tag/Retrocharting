@@ -57,13 +57,25 @@ export function getGameUrl(product: { id: number; product_name: string; console_
 
     // 2. Generate clean product slug (title-console)
     // We treat title as universal (no translation), just slugified
-    const titleSlug = (product.product_name || 'unknown-product').toLowerCase()
+    let cleanProductName = (product.product_name || 'unknown-product').toLowerCase();
+
+    // Remove brackets [] and () as requested for cleaner SEO URLs
+    cleanProductName = cleanProductName.replace(/[\[\]\(\)]/g, '');
+
+    const titleSlug = cleanProductName
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/(^-|-$)/g, '');
 
     const consoleSlug = formatConsoleName(product.console_name || 'unknown-console').toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/(^-|-$)/g, '');
+
+    // Avoid repetition: if title already contains console slug (common for packs), don't append it
+    // e.g. Title: "playstation-5-bundle" / Console: "playstation-5"
+    let fullSlugPart = titleSlug;
+    if (!titleSlug.includes(consoleSlug)) {
+        fullSlugPart = `${titleSlug}-${consoleSlug}`;
+    }
 
     // 3. Append ID at the end with localized keyword
     const suffixMap: Record<string, string> = {
@@ -72,7 +84,7 @@ export function getGameUrl(product: { id: number; product_name: string; console_
     };
     const safeLang = lang ? lang.toLowerCase() : 'en';
     const suffix = suffixMap[safeLang] || 'prices';
-    const fullSlug = `${titleSlug}-${consoleSlug}-${suffix}-${product.id}`;
+    const fullSlug = `${fullSlugPart}-${suffix}-${product.id}`;
 
     // 4. Construct path (handle root for EN)
     if (lang === 'en') {

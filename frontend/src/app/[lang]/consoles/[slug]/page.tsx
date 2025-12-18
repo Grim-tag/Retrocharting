@@ -3,6 +3,7 @@ import { getDictionary } from "@/lib/get-dictionary";
 import { getProductById } from "@/lib/cached-api";
 import { formatConsoleName, getGameUrl } from "@/lib/utils";
 import { groupedSystems } from "@/data/systems";
+import { redirect } from "next/navigation";
 
 import ConsoleCategoryView from "@/components/views/ConsoleCategoryView";
 import ConsoleProductView from "@/components/views/ConsoleProductView";
@@ -83,6 +84,22 @@ export default async function Page({
     if (systemName) {
         // Render Category View (Independent)
         return <ConsoleCategoryView slug={slug} systemName={systemName} lang={lang} />;
+    }
+
+    // 2. SEO Redirection Check (For Product Pages)
+    // If the current slug doesn't match the new clean URL logic, redirect.
+    const id = getIdFromSlug(slug);
+    // We fetch purely for redirection check. The View will fetch again (cached).
+    const product = await getProductById(id);
+
+    if (product) {
+        const canonicalPath = getGameUrl(product, lang);
+        // Path is like /en/consoles/slug-id. We need just the last segment to compare with `slug`
+        const canonicalSlug = canonicalPath.split('/').pop();
+
+        if (canonicalSlug && slug !== canonicalSlug) {
+            redirect(canonicalPath);
+        }
     }
 
     // 2. Render Product View (Independent)

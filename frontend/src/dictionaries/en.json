@@ -167,6 +167,29 @@
                 "pop_neutral": "a classic for the system",
                 "action_buy": "add it to your game library",
                 "action_wait": "watch for price drops"
+            },
+            "console_retro": {
+                "h1": "What is the value of the {{name}} console?",
+                "h2": "Is this model rare or collectible?",
+                "value_analysis": "The current value for a Complete In Box (CIB) {{name}} is around {{cib_price}}. For a loose console, expect to pay around {{loose_price}}. {{gap_text}}",
+                "context_analysis": "This system is a piece of video game history. {{trend_text}}",
+                "gap_high": "The original box is very hard to find in good condition, explaining the premium for CIB.",
+                "gap_low": "The price difference is small, so we recommend looking for a complete unit.",
+                "trend_stable": "It is a stable investment, a must-have for any {{platform}} collector.",
+                "trend_up": "Its value is steadily rising; it might be the right time to invest before it becomes unaffordable.",
+                "trend_down": "The price is currently quite low, making it an excellent opportunity to add it to your collection."
+            },
+            "console_modern": {
+                "h1": "Where to buy the {{name}} bundle at the best price?",
+                "h2": "Should you invest in {{name}} right now?",
+                "value_analysis": "To buy {{name}}, expect to pay around {{loose_price}} for a pre-owned (refurbished) unit versus {{new_price}} for a brand new sealed one. {{deal_text}}",
+                "context_analysis": "As a recent console, {{popularity_text}}. {{action_text}}",
+                "deal_good": "Buying used saves you {{save_percent}}%, which is great for funding a few extra games.",
+                "deal_bad": "The used market is close to retail price: for warranty and reliability, prefer a new unit.",
+                "pop_high": "this model is highly sought after (potential stock shortages)",
+                "pop_neutral": "it is a solid choice in the {{platform}} lineup",
+                "action_buy": "It's a purchase aimed at enjoyment that serves as a solid asset.",
+                "action_wait": "If you are not in a rush, an official price drop might occur soon."
             }
         }
     },

@@ -77,31 +77,50 @@ export default async function ConsoleProductView({ slug, lang }: ConsoleProductV
                 />
 
                 {/* --- MOBILE OPTIMIZED LAYOUT START --- */}
-
                 {/* 1. TITLE: Always Top (Full Width) */}
-                <div className="flex items-start justify-between gap-4 mb-6">
-                    <h1 className="text-2xl sm:text-4xl font-bold text-white leading-tight">
-                        {product.product_name} {shortConsoleName} {dict.product.market.suffix}
-                    </h1>
-                    {/* Region Flag Badge */}
-                    <div className="hidden sm:block">
-                        {(product.console_name.includes("PAL") || product.product_name.includes("PAL")) && (
-                            <div className="bg-blue-600 px-3 py-1 rounded text-xs font-bold text-white uppercase tracking-wider shrink-0 mt-2">
-                                🇪🇺 PAL Region
+                {/* User Request: PAL PS5 Call Of Duty ... Prices & Value */}
+                {(() => {
+                    const cleanName = product.product_name.replace(/[\[\]]/g, '').trim();
+                    // Determine Region Prefix
+                    let regionPrefix = "";
+                    if (product.console_name.includes("PAL") || cleanName.includes("PAL")) regionPrefix = "PAL";
+                    else if (product.console_name.includes("Japan") || product.console_name.includes("JP")) regionPrefix = "JP";
+
+                    // Determine Short System Name (e.g. PS5)
+                    // We try to find the base system name without region
+                    let baseSystem = product.console_name.replace("PAL ", "").replace("JP ", "").replace("Japan ", "").trim();
+                    // Regex to map Playstation X -> PSX
+                    let shortSystem = baseSystem.replace(/Playstation\s+(\d+)/i, "PS$1").replace("Playstation", "PS").replace("Nintendo", "Nintendo");
+
+                    // Construct H1
+                    const h1Text = `${regionPrefix} ${shortSystem} ${cleanName} ${dict.product.market.suffix}`.trim();
+
+                    return (
+                        <div className="flex items-start justify-between gap-4 mb-6">
+                            <h1 className="text-2xl sm:text-4xl font-bold text-white leading-tight">
+                                {h1Text}
+                            </h1>
+                            {/* Region Flag Badge (Kept for visual flair, even if H1 is explicit) */}
+                            <div className="hidden sm:block">
+                                {regionPrefix === 'PAL' && (
+                                    <div className="bg-blue-600 px-3 py-1 rounded text-xs font-bold text-white uppercase tracking-wider shrink-0 mt-2">
+                                        🇪🇺 PAL Region
+                                    </div>
+                                )}
+                                {regionPrefix === 'JP' && (
+                                    <div className="bg-red-600 px-3 py-1 rounded text-xs font-bold text-white uppercase tracking-wider shrink-0 mt-2">
+                                        🇯🇵 NTSC-J
+                                    </div>
+                                )}
+                                {(!regionPrefix) && (
+                                    <div className="bg-green-600 px-3 py-1 rounded text-xs font-bold text-white uppercase tracking-wider shrink-0 mt-2">
+                                        🇺🇸 NTSC-U
+                                    </div>
+                                )}
                             </div>
-                        )}
-                        {(product.console_name.includes("Japan") || product.console_name.includes("JP") || product.product_name.includes("[JP]")) && (
-                            <div className="bg-red-600 px-3 py-1 rounded text-xs font-bold text-white uppercase tracking-wider shrink-0 mt-2">
-                                🇯🇵 NTSC-J
-                            </div>
-                        )}
-                        {(!product.console_name.includes("PAL") && !product.console_name.includes("Japan") && !product.console_name.includes("JP")) && (
-                            <div className="bg-green-600 px-3 py-1 rounded text-xs font-bold text-white uppercase tracking-wider shrink-0 mt-2">
-                                🇺🇸 NTSC-U
-                            </div>
-                        )}
-                    </div>
-                </div>
+                        </div>
+                    );
+                })()}
 
                 <div className="text-[#ff6600] font-bold text-lg mb-6 flex items-center gap-2 -mt-4">
                     <span>{product.console_name}</span>

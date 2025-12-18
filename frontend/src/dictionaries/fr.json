@@ -167,6 +167,29 @@
                 "pop_neutral": "un classique de la console",
                 "action_buy": "l'ajouter à votre bibliothèque de jeux",
                 "action_wait": "surveiller les offres pour une baisse de prix"
+            },
+            "console_retro": {
+                "h1": "Quelle est la valeur de la console {{name}} ?",
+                "h2": "Est-ce un modèle rare ou collector ?",
+                "value_analysis": "La cote actuelle pour {{name}} complet en boite avoisine {{cib_price}}. En loose (console seule), comptez environ {{loose_price}}. {{gap_text}}",
+                "context_analysis": "Cette machine est une pièce d'histoire du jeu vidéo. {{trend_text}}",
+                "gap_high": "La boite d'origine est très difficile à trouver en bon état, ce qui explique la surcote du complet.",
+                "gap_low": "La différence de prix est faible, il est conseillé de chercher un modèle complet.",
+                "trend_stable": "C'est un investissement stable, indispensable pour tout collectionneur de {{platform}}.",
+                "trend_up": "Sa valeur augmente régulièrement, c'est peut-être le moment d'investir avant qu'elle ne devienne intouchable.",
+                "trend_down": "Le prix est actuellement plutôt bas, une excellente opportunité pour l'ajouter à votre collection."
+            },
+            "console_modern": {
+                "h1": "Où acheter le pack {{name}} au meilleur prix ?",
+                "h2": "Faut-il investir dans {{name}} maintenant ?",
+                "value_analysis": "Pour acquérir {{name}}, comptez actuellement {{loose_price}} en occasion (reconditionné) contre {{new_price}} pour un modèle neuf scellé. {{deal_text}}",
+                "context_analysis": "S'agissant d'une console récente, {{popularity_text}}. {{action_text}}",
+                "deal_good": "L'occasion permet d'économiser {{save_percent}}%, ce qui est idéal pour financer quelques jeux supplémentaires.",
+                "deal_bad": "Le marché de l'occasion est proche du neuf : pour la garantie et la fiabilité, préférez un modèle neuf.",
+                "pop_high": "ce modèle est particulièrement recherché (ruptures possibles)",
+                "pop_neutral": "c'est une valeur sûre de la gamme {{platform}}",
+                "action_buy": "C'est un achat plaisir qui gardera une belle valeur de revente.",
+                "action_wait": "Si vous n'êtes pas pressé, une baisse de prix officielle pourrait survenir."
             }
         }
     },
