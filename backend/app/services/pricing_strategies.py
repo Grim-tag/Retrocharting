@@ -86,13 +86,17 @@ class PricingStrategy(ABC):
                 self.db.add(new_listing)
         
         # Cleanup old listings
+        # Cleanup old listings
+        cleanup_query = self.db.query(Listing).filter(
+            Listing.product_id == product_id,
+            Listing.source == source,
+            Listing.status == 'active'
+        )
+        
         if processed_ids:
-            self.db.query(Listing).filter(
-                Listing.product_id == product_id,
-                Listing.source == source,
-                Listing.status == 'active',
-                Listing.external_id.notin_(processed_ids)
-            ).delete(synchronize_session=False)
+            cleanup_query = cleanup_query.filter(Listing.external_id.notin_(processed_ids))
+            
+        cleanup_query.delete(synchronize_session=False)
 
         # Commit is handled by caller or here? 
         # Ideally caller, but to be safe lets commit if we own the session? 
