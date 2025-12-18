@@ -7,6 +7,21 @@ class AmazonClient:
         self.base_url = "https://serpapi.com/search"
         self.associate_tag = "retrocharting-21"
 
+
+
+    def generate_affiliate_link(self, asin: str, domain: str = "amazon.fr") -> str:
+        """
+        Generate a direct affiliate link for a given ASIN.
+        """
+        base_link = f"https://www.{domain}/dp/{asin}"
+        return self._add_affiliate_tag(base_link)
+
+    def _add_affiliate_tag(self, link: str) -> str:
+        if "?" in link:
+            return link + f"&tag={self.associate_tag}"
+        else:
+            return link + f"?tag={self.associate_tag}"
+
     def search_items(self, query: str, limit: int = 5, domain: str = "amazon.fr"):
         """
         Search Amazon products using SerpApi.

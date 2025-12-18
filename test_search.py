@@ -16,15 +16,17 @@ class MockProduct:
 def test_search():
     client = AmazonClient()
     
-    # CASE 1: Product with ASIN
-    p1 = MockProduct(asin="B0CKXMY3X7", ean=None, name="PlayStation 5 Call of Duty", console="PlayStation 5")
-    print(f"--- Testing ASIN Search for {p1.asin} ---")
-    results = client.search_product_smart(p1)
-    for r in results:
-        print(f"Found: {r['title']} - ASIN: {r['asin']} - Link: {r['link']}")
-
-    if not results:
-        print("NO RESULTS FOUND via ASIN smart search.")
+    asins = ["B0FP2S1MNB", "B0FN7ZG39D"]
+    
+    for asin in asins:
+        print(f"\n--- Testing ASIN {asin} ---")
+        results = client.search_items(asin, limit=1, domain="amazon.fr")
+        
+        if not results:
+            print("NO RESULTS returned from Amazon Client.")
+        
+        for r in results:
+            print(f"[ASIN {asin}] Found: {r['title']} | ASIN: {r['asin']} | Price: {r['price']}")
 
 if __name__ == "__main__":
     test_search()

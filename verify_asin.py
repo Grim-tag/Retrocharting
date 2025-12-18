@@ -42,4 +42,5 @@ def verify_product(product_id):
         db.close()
 
 if __name__ == "__main__":
-    verify_product(66710)
+    verify_product(66716)
+    verify_product(66717)

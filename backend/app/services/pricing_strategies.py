@@ -148,6 +148,22 @@ class GamesPricingStrategy(PricingStrategy):
         except Exception as e:
             print(f"[GamesStrategy] Amazon Error: {e}")
 
+        # Fallback: If no Amazon results but ASIN exists, generate synthetic listing
+        if not amazon_items and product.asin:
+             print(f"[GamesStrategy] No Amazon items found. Generating fallback for ASIN {product.asin}")
+             link = amazon_client.generate_affiliate_link(product.asin, config['amazon_domain'])
+             amazon_items.append({
+                 'external_id': product.asin,
+                 'title': f"{product.product_name} (Voir sur Amazon)",
+                 'price': 0.0,
+                 'currency': 'EUR',
+                 'condition': 'New',
+                 'url': link,
+                 'image_url': product.image_url,
+                 'seller_name': 'Amazon',
+                 'is_good_deal': False
+             })
+
         # 4. Save & Update Logic is handled by Service? 
         # No, Strategy fetch_listings should return the processed data or save it?
         # The abstract method says "fetch_listings", but the service usually orchestrates saving.
@@ -281,6 +297,22 @@ class ConsolesPricingStrategy(GamesPricingStrategy):
             amazon_items = self._process_results(raw_amz, 'Amazon', product, target_region)
         except Exception as e:
             print(f"[ConsolesStrategy] Amazon Error: {e}")
+
+        # Fallback: If no Amazon results but ASIN exists, generate synthetic listing
+        if not amazon_items and product.asin:
+             print(f"[ConsolesStrategy] No Amazon items found. Generating fallback for ASIN {product.asin}")
+             link = amazon_client.generate_affiliate_link(product.asin, config['amazon_domain'])
+             amazon_items.append({
+                 'external_id': product.asin,
+                 'title': f"{product.product_name} (Voir sur Amazon)",
+                 'price': 0.0,
+                 'currency': 'EUR',
+                 'condition': 'New',
+                 'url': link,
+                 'image_url': product.image_url,
+                 'seller_name': 'Amazon',
+                 'is_good_deal': False
+             })
 
         loose_e, box_e, man_e = self._save_listings(product, ebay_items, 'eBay')
         loose_a, box_a, man_a = self._save_listings(product, amazon_items, 'Amazon')
