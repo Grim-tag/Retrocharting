@@ -23,6 +23,7 @@ export interface Product {
     genre?: string;
     ean?: string;
     gtin?: string;
+    asin?: string;
     release_date?: string; // ISO date string
     sales_count?: number;
 }

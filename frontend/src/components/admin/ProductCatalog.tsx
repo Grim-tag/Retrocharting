@@ -94,7 +94,11 @@ export default function ProductCatalog({ type, title }: ProductCatalogProps) {
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!editingProduct || !token) return;
+        if (!editingProduct) return;
+        if (!token) {
+            alert("Error: No authentication token found. Please relogin.");
+            return;
+        }
 
         try {
             const { updateProduct } = await import('@/lib/api');
@@ -381,7 +385,7 @@ export default function ProductCatalog({ type, title }: ProductCatalogProps) {
                                 Cancel
                             </button>
                             <button
-                                onClick={handleSave}
+                                type="submit"
                                 className="bg-[#ff6600] hover:bg-[#ff8533] text-white px-6 py-2 rounded font-bold"
                             >
                                 Save Changes
