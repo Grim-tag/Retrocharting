@@ -150,26 +150,40 @@ def health_debug():
         
     return status
 
+import threading
+from sqlalchemy import text
+
+def _run_migration_background():
+    """
+    Attempts to run schema migration (adding columns) in a background thread
+    to avoid blocking Uvicorn startup / port binding.
+    """
+    try:
+        from app.db.session import engine
+        print("Migration: Starting background schema check...")
+        with engine.begin() as connection:
+            connection.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS ean VARCHAR"))
+            connection.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS asin VARCHAR"))
+            connection.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS gtin VARCHAR"))
+            connection.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS publisher VARCHAR"))
+            connection.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS developer VARCHAR"))
+            print("Migration: Success - Columns ensured.")
+    except Exception as e:
+        print(f"Migration Error (Background): {e}")
+
 @app.on_event("startup")
 async def startup_event():
     print("Startup: Initializing Application...")
     
     # 1. Create Tables (Safe to run if exist)
     try:
-        # Move create_all here to prevent import-time blocking
         Base.metadata.create_all(bind=engine)
         
-        # MANUAL MIGRATION: Add missing columns for Admin Edit
-        from sqlalchemy import text
-        with engine.begin() as connection: # begin() automatically commits on success
-             connection.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS ean VARCHAR"))
-             connection.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS asin VARCHAR"))
-             connection.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS gtin VARCHAR"))
-             connection.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS publisher VARCHAR"))
-             connection.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS developer VARCHAR"))
-             print("Schema Migration: New columns ensured.")
+        # Async Migration
+        threading.Thread(target=_run_migration_background, daemon=True).start()
+
     except Exception as e:
-        print(f"Startup Table Creation/Migration Warning: {e}")
+        print(f"Startup Table Creation Warning: {e}")
 
     # 2. Initialize Scheduler (Crucial)
     try:
