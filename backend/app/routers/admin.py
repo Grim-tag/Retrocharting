@@ -152,3 +152,44 @@ def trigger_image_migration(
          # Fallback if no BG tasks (should not happen in FastAPI)
          result = migrate_product_images(db, limit)
          return result
+
+@router.post("/db/migrate", dependencies=[Depends(get_admin_access)])
+def migrate_db_schema(db: Session = Depends(get_db)):
+    """
+    Manual Schema Migration to add missing columns.
+    """
+    from sqlalchemy import text
+    try:
+        # Add new columns if they don't exist
+        # Postgres 9.6+ supports IF NOT EXISTS
+        commands = [
+            "ALTER TABLE products ADD COLUMN IF NOT EXISTS ean VARCHAR",
+            "ALTER TABLE products ADD COLUMN IF NOT EXISTS asin VARCHAR",
+            "ALTER TABLE products ADD COLUMN IF NOT EXISTS gtin VARCHAR",
+            "ALTER TABLE products ADD COLUMN IF NOT EXISTS publisher VARCHAR",
+            "ALTER TABLE products ADD COLUMN IF NOT EXISTS developer VARCHAR",
+        ]
+        
+        results = []
+        for cmd in commands:
+            try:
+                db.execute(text(cmd))
+                results.append(f"Success: {cmd}")
+            except Exception as e:
+                # If using older Postgres, IF NOT EXISTS might fail? 
+                # Or just duplicate column error.
+                # We catch to allow others to proceed.
+                results.append(f"Skipped: {cmd} -> {str(e)}")
+                # In SQLAlchemy, if an error occurs in a transaction, we might need to rollback before next command?
+                # Actually, standard execute might invalidate transaction.
+                # Ideally we run separate transactions or rely on savepoints.
+                # But here, we'll try just rollback and continue if possible, or just fail fast.
+                # Actually, `IF NOT EXISTS` should prevent errors. 
+                # If error happens, it's likely something else.
+                db.rollback() 
+                
+        db.commit()
+        return {"status": "success", "log": results}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))

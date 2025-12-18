@@ -158,8 +158,18 @@ async def startup_event():
     try:
         # Move create_all here to prevent import-time blocking
         Base.metadata.create_all(bind=engine)
+        
+        # MANUAL MIGRATION: Add missing columns for Admin Edit
+        from sqlalchemy import text
+        with engine.begin() as connection: # begin() automatically commits on success
+             connection.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS ean VARCHAR"))
+             connection.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS asin VARCHAR"))
+             connection.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS gtin VARCHAR"))
+             connection.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS publisher VARCHAR"))
+             connection.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS developer VARCHAR"))
+             print("Schema Migration: New columns ensured.")
     except Exception as e:
-        print(f"Startup Table Creation Warning: {e}")
+        print(f"Startup Table Creation/Migration Warning: {e}")
 
     # 2. Initialize Scheduler (Crucial)
     try:
