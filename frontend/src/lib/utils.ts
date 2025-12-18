@@ -76,22 +76,23 @@ export function getGameUrl(product: { id: number; product_name: string; console_
     // We want to detect that "playstation-5" is already in title.
     const baseConsoleSlug = consoleSlug.replace(/^(pal-|jp-|japan-)/, '');
 
+    // Identify Region to preserve it if needed
+    const regionMatch = consoleSlug.match(/^(pal-|jp-|japan-)/);
+    const regionPrefix = regionMatch ? regionMatch[0] : '';
+
     let fullSlugPart = titleSlug;
     // If the title slug contains the base console slug (e.g. "playstation-5"), we consider the context present
-    if (!titleSlug.includes(baseConsoleSlug)) {
+    if (titleSlug.includes(baseConsoleSlug)) {
+        // Redundancy found. We do NOT append the full console slug.
+        // BUT we must preserve the region if the title doesn't have it.
+        // e.g. "playstation-5-bundle" (no pal) -> "pal-playstation-5-bundle"
+        if (regionPrefix && !fullSlugPart.startsWith(regionPrefix)) {
+            fullSlugPart = `${regionPrefix}${fullSlugPart}`;
+        }
+    } else {
+        // No redundancy, append the full console slug
         fullSlugPart = `${titleSlug}-${consoleSlug}`;
     }
-    // If it DOES contain it, we might still want the REGION info if missing?
-    // User wants: "pal-playstation-5-marvel..."
-    // Current titleSlug: "playstation-5-marvel..."
-    // We might need to PREPEND region if missing?
-    // But user asked for "pal-playstation-5-marvel..." (Region-System-Game).
-    // If title is "playstation-5-marvel...", and we don't append "-pal-playstation-5", we get "playstation-5-marvel-prices".
-    // Missing "pal".
-    // But maybe that's fine? Or should we inject `pal-` at start?
-    // Let's stick to MINIMAL repetition. "playstation-5-marvel-prices" is very clean.
-    // If the user REALLY wants "pal-playstation-5-marvel...", they would need `consoleSlug` BUT without the repeated `playstation-5`.
-    // Let's trust "Simpler is better".
 
     // 3. Append ID at the end with localized keyword
     const suffixMap: Record<string, string> = {
