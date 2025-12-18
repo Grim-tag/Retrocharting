@@ -277,6 +277,8 @@ class ConsolesPricingStrategy(GamesPricingStrategy):
         amazon_items = []
 
         loose_e, box_e, man_e = self._save_listings(product, ebay_items, 'eBay')
+        # Force cleanup of Amazon listings (we don't scrape Amazon for consoles currently)
+        self._save_listings(product, [], 'Amazon')
         
         return {"ebay": len(ebay_items), "amazon": 0}
 
