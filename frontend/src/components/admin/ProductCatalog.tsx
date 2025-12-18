@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useAuth } from '@/context/AuthContext';
 
 // Expanded Interface including new fields
 interface Product {
@@ -33,7 +34,7 @@ export default function ProductCatalog({ type, title }: ProductCatalogProps) {
     const [debouncedSearch, setDebouncedSearch] = useState("");
 
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-    const [token, setToken] = useState<string>('');
+    const { token } = useAuth();
 
     // Debounce search
     useEffect(() => {
@@ -43,11 +44,7 @@ export default function ProductCatalog({ type, title }: ProductCatalogProps) {
         return () => clearTimeout(timer);
     }, [search]);
 
-    // Client-side only token access
-    useEffect(() => {
-        const t = localStorage.getItem('token');
-        if (t) setToken(t);
-    }, []);
+    // Token logic removed (handled by useAuth)
 
     // Fetch Products
     useEffect(() => {
