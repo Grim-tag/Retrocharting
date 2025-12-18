@@ -1,5 +1,4 @@
 import 'server-only';
-import { getTranslations } from '@/lib/api';
 
 const dictionaries = {
     en: () => import('@/dictionaries/en.json').then((module) => module.default),
@@ -17,13 +16,31 @@ const setNestedValue = (obj: any, path: string, value: string) => {
     current[keys[keys.length - 1]] = value;
 };
 
+// Cached fetch to prevent API flood during build/deploy
+const fetchTranslations = async (locale: string) => {
+    try {
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+        // Ensure no double slash
+        const url = `${baseUrl.replace(/\/$/, '')}/api/v1/translations/${locale}`;
+
+        const res = await fetch(url, {
+            next: { revalidate: 60, tags: ['translations'] }
+        });
+        if (!res.ok) return {};
+        return res.json();
+    } catch (e) {
+        console.error("Failed to fetch translations:", e);
+        return {};
+    }
+};
+
 export const getDictionary = async (locale: string) => {
     const loadDict = locale === 'fr' ? dictionaries.fr : dictionaries.en;
 
     // Parallel fetch
     const [dict, dbTranslations] = await Promise.all([
         loadDict(),
-        getTranslations(locale)
+        fetchTranslations(locale)
     ]);
 
     // Deep merge / Overlay
@@ -31,7 +48,7 @@ export const getDictionary = async (locale: string) => {
     const result = JSON.parse(JSON.stringify(dict)); // Simple deep clone
 
     Object.entries(dbTranslations).forEach(([key, value]) => {
-        setNestedValue(result, key, value);
+        setNestedValue(result, key, value as string); // Type assertion safely
     });
 
     return result;
