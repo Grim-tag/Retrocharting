@@ -18,13 +18,20 @@ interface Listing {
     is_good_deal?: boolean;
 }
 
-export default function ListingsTable({ productId, dict }: { productId: number; dict: any }) {
+export default function ListingsTable({ productId, dict, genre }: { productId: number; dict: any; genre?: string }) {
     const [listings, setListings] = useState<Listing[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'games' | 'extras'>('games');
     const { currency } = useCurrency();
 
     const [isUpdating, setIsUpdating] = useState(false);
+
+    // Determine Main Tab Label based on Genre
+    const isConsole = genre && ['Systems', 'Console', 'Consoles'].includes(genre);
+    const mainTabLabel = isConsole
+        ? (dict.product.listings.tabs?.consoles || "Consoles")
+        : (dict.product.listings.tabs?.games || "Games");
+    const extrasTabLabel = dict.product.listings.tabs?.extras || "Extras";
 
     useEffect(() => {
         let timeoutId: NodeJS.Timeout;
@@ -115,7 +122,7 @@ export default function ListingsTable({ productId, dict }: { productId: number; 
                         : 'text-gray-500 hover:text-gray-300 hover:bg-[#252b3b]'
                         }`}
                 >
-                    {dict.product.listings.tabs.games} ({gameListings.length})
+                    {mainTabLabel} ({gameListings.length})
                 </button>
                 <button
                     onClick={() => setActiveTab('extras')}
@@ -124,7 +131,7 @@ export default function ListingsTable({ productId, dict }: { productId: number; 
                         : 'text-gray-500 hover:text-gray-300 hover:bg-[#252b3b]'
                         }`}
                 >
-                    {dict.product.listings.tabs.extras} ({extraListings.length})
+                    {extrasTabLabel} ({extraListings.length})
                 </button>
             </div>
 

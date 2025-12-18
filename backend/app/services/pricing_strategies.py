@@ -276,6 +276,69 @@ class ConsolesPricingStrategy(GamesPricingStrategy):
         
         return {"ebay": len(ebay_items), "amazon": 0}
 
+    def _process_results(self, items: List[Any], source: str, product: Product, target_region: str) -> List[Dict]:
+        """
+        STRICT Filtering for Consoles.
+        Eliminates accessories, games, and junk.
+        """
+        valid_items = []
+        check_term = ListingClassifier.clean_search_query(product.product_name, "")
+        
+        # Keywords that indicate an accessory or game, definitely NOT a console console
+        # Note: We must be careful with "Game" (Game Boy) or "Box" (Box Only is a valid 'Condition' for separate tab)
+        forbidden_terms = [
+            'manette', 'controller', 'remote', 'gamepad', 'joystick', 
+            'cable', 'câble', 'hdmi', 'adapter', 'adaptateur', 'supply', 'alim',
+            'stand', 'support', 'fan', 'ventilateur', 'skin', 'sticker', 'case', 'sacoche',
+            'replacement', 'remplacement', 'repair', 'reparation', 'parts', 'pièces', 'hs', 'broken',
+            'jeu', 'jeux', 'game cartridge', 'cartridge', 'disc', 'cd', 'dvd'
+        ]
+
+        for item in items:
+            normalized = self._normalize_item(item, source)
+            title = normalized['title']
+            title_lower = title.lower()
+
+            # 1. Region Check
+            item_region = ListingClassifier.detect_region(title) or target_region
+            if not ListingClassifier.is_region_compatible(item_region, target_region):
+                continue
+                
+            # 2. Strict Negative Keywords
+            is_forbidden = False
+            for term in forbidden_terms:
+                if term in title_lower:
+                    is_forbidden = True
+                    break
+            
+            # Special check for "Game" standalone (avoid banning "Game Boy")
+            # If title has "game" but product name doesn't have "game"? 
+            # Or if title has "video game"
+            if "video game" in title_lower or "jeu video" in title_lower:
+                is_forbidden = True
+
+            if is_forbidden:
+                continue
+
+            # 3. Junk Check
+            if ListingClassifier.is_junk(title, product.product_name, product.console_name, product.genre):
+                continue
+
+            # 4. Relevance (Must contain product name parts)
+            if not ListingClassifier.is_relevant(title, check_term):
+                continue
+
+            # 5. Price Sanity Check (Consoles are rarely $10 unless broken/accessory)
+            # If price is very low compared to loose price, suspect accessory
+            if product.loose_price and normalized['price'] < product.loose_price * 0.2:
+                 # Ensure it's not a "Box Only" or "Manual" which can be cheap?
+                 if normalized['condition'] not in ['BOX_ONLY', 'MANUAL_ONLY']:
+                     continue
+
+            normalized['is_good_deal'] = self._is_good_deal(normalized['price'], normalized['condition'], product)
+            valid_items.append(normalized)
+
+        return valid_items
     def _is_good_deal(self, price, condition, product):
         # Loose console deals are rare, usually looking for bundles.
         # Less aggressive discount threshold for consoles?

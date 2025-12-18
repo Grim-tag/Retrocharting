@@ -124,10 +124,6 @@
             "manual_only": "Notice d'origine seule. Sans jeu, sans boite."
         },
         "listings": {
-            "tabs": {
-                "games": "Jeux",
-                "extras": "Boites & Notices"
-            },
             "table": {
                 "image": "Image",
                 "title": "Titre",
@@ -142,6 +138,11 @@
                 "good_deal": "Bonne Affaire",
                 "manual_only": "Notice seule",
                 "box_only": "Boite seule"
+            },
+            "tabs": {
+                "games": "Jeux",
+                "consoles": "Consoles",
+                "extras": "Boîtes & Notices"
             }
         },
         "seo": {

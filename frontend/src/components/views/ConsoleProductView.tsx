@@ -212,7 +212,7 @@ export default async function ConsoleProductView({ slug, lang }: ConsoleProductV
 
                         <div className="mb-8">
                             <h2 className="text-white text-lg font-bold mb-3">{dict.product.market.title}</h2>
-                            <ListingsTable productId={product.id} dict={dict} />
+                            <ListingsTable productId={product.id} dict={dict} genre={product.genre} />
                         </div>
 
                         <div className="mb-8">

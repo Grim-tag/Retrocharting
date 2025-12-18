@@ -124,10 +124,6 @@
             "manual_only": "Original manual only. No game, no box."
         },
         "listings": {
-            "tabs": {
-                "games": "Games",
-                "extras": "Box & Manuals"
-            },
             "table": {
                 "image": "Image",
                 "title": "Title",
@@ -142,6 +138,11 @@
                 "good_deal": "Good Deal",
                 "manual_only": "Manual Only",
                 "box_only": "Box Only"
+            },
+            "tabs": {
+                "games": "Games",
+                "consoles": "Consoles",
+                "extras": "Box & Manuals"
             }
         },
         "seo": {
