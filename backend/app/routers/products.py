@@ -34,7 +34,10 @@ def read_products(
     query = db.query(ProductModel).options(defer(ProductModel.description))
     
     if search:
-        query = query.filter(ProductModel.product_name.ilike(f"%{search}%"))
+        if search.isdigit():
+            query = query.filter(or_(ProductModel.product_name.ilike(f"%{search}%"), ProductModel.id == int(search)))
+        else:
+            query = query.filter(ProductModel.product_name.ilike(f"%{search}%"))
     if console:
         query = query.filter(ProductModel.console_name == console)
     if genre:

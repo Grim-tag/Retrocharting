@@ -18,7 +18,9 @@ class ProductBase(BaseModel):
     publisher: Optional[str] = None
     developer: Optional[str] = None
     esrb_rating: Optional[str] = None
-    esrb_rating: Optional[str] = None
+    ean: Optional[str] = None
+    gtin: Optional[str] = None
+    asin: Optional[str] = None
     players: Optional[str] = None
     sales_count: Optional[int] = 0
 
