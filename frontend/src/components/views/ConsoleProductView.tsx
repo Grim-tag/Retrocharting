@@ -80,20 +80,31 @@ export default async function ConsoleProductView({ slug, lang }: ConsoleProductV
                 {/* 1. TITLE: Always Top (Full Width) */}
                 {/* User Request: PAL PS5 Call Of Duty ... Prices & Value */}
                 {(() => {
-                    const cleanName = product.product_name.replace(/[\[\]]/g, '').trim();
-                    // Determine Region Prefix
-                    let regionPrefix = "";
-                    if (product.console_name.includes("PAL") || cleanName.includes("PAL")) regionPrefix = "PAL";
-                    else if (product.console_name.includes("Japan") || product.console_name.includes("JP")) regionPrefix = "JP";
-
-                    // Determine Short System Name (e.g. PS5)
-                    // We try to find the base system name without region
+                    // Determine System Info first
                     let baseSystem = product.console_name.replace("PAL ", "").replace("JP ", "").replace("Japan ", "").trim();
-                    // Regex to map Playstation X -> PSX
                     let shortSystem = baseSystem.replace(/Playstation\s+(\d+)/i, "PS$1").replace("Playstation", "PS").replace("Nintendo", "Nintendo");
 
+                    // Clean Product Name
+                    // 1. Remove brackets
+                    let cleanName = product.product_name.replace(/[\[\]]/g, '');
+                    // 2. Remove "Console" word (orphaned)
+                    cleanName = cleanName.replace(/\bConsole\b/gi, '');
+                    // 3. Remove System Name to avoid repetition (e.g. "Playstation 5")
+                    // escaped for regex
+                    const escapedSystem = baseSystem.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    cleanName = cleanName.replace(new RegExp(escapedSystem, 'gi'), '');
+
+                    cleanName = cleanName.trim();
+
+                    // Determine Region Prefix
+                    let regionPrefix = "";
+                    if (product.console_name.includes("PAL") || product.product_name.includes("PAL")) regionPrefix = "PAL";
+                    else if (product.console_name.includes("Japan") || product.console_name.includes("JP")) regionPrefix = "JP";
+
                     // Construct H1
-                    const h1Text = `${regionPrefix} ${shortSystem} ${cleanName} ${dict.product.market.suffix}`.trim();
+                    // If cleanName is empty (e.g. "Playstation 5 Console"), avoiding H1 "PAL PS5 Prices..." is fine?
+                    // actually yes.
+                    const h1Text = `${regionPrefix} ${shortSystem} ${cleanName} ${dict.product.market.suffix}`.replace(/\s+/g, ' ').trim();
 
                     return (
                         <div className="flex items-start justify-between gap-4 mb-6">

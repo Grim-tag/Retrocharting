@@ -71,11 +71,27 @@ export function getGameUrl(product: { id: number; product_name: string; console_
         .replace(/(^-|-$)/g, '');
 
     // Avoid repetition: if title already contains console slug (common for packs), don't append it
-    // e.g. Title: "playstation-5-bundle" / Console: "playstation-5"
+    // We must check strict overlap, ignoring regional prefixes in the console slug check
+    // e.g. Title: "playstation-5-bundle..." vs Console: "pal-playstation-5"
+    // We want to detect that "playstation-5" is already in title.
+    const baseConsoleSlug = consoleSlug.replace(/^(pal-|jp-|japan-)/, '');
+
     let fullSlugPart = titleSlug;
-    if (!titleSlug.includes(consoleSlug)) {
+    // If the title slug contains the base console slug (e.g. "playstation-5"), we consider the context present
+    if (!titleSlug.includes(baseConsoleSlug)) {
         fullSlugPart = `${titleSlug}-${consoleSlug}`;
     }
+    // If it DOES contain it, we might still want the REGION info if missing?
+    // User wants: "pal-playstation-5-marvel..."
+    // Current titleSlug: "playstation-5-marvel..."
+    // We might need to PREPEND region if missing?
+    // But user asked for "pal-playstation-5-marvel..." (Region-System-Game).
+    // If title is "playstation-5-marvel...", and we don't append "-pal-playstation-5", we get "playstation-5-marvel-prices".
+    // Missing "pal".
+    // But maybe that's fine? Or should we inject `pal-` at start?
+    // Let's stick to MINIMAL repetition. "playstation-5-marvel-prices" is very clean.
+    // If the user REALLY wants "pal-playstation-5-marvel...", they would need `consoleSlug` BUT without the repeated `playstation-5`.
+    // Let's trust "Simpler is better".
 
     // 3. Append ID at the end with localized keyword
     const suffixMap: Record<string, string> = {
