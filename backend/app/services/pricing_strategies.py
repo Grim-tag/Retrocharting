@@ -272,15 +272,20 @@ class ConsolesPricingStrategy(GamesPricingStrategy):
         except Exception as e:
             print(f"[ConsolesStrategy] eBay Error: {e}")
 
-        # 3. Amazon (Skip for now or keep?)
-        # Consoles on Amazon are messy. Let's keep it but it might be rare.
+        # 3. Amazon
         amazon_items = []
+        try:
+            # Smart search uses ASIN or Product Name
+            raw_amz = amazon_client.search_product_smart(product, domain=config['amazon_domain'])
+            # STRICT FILTERING (Uses _process_results defined below)
+            amazon_items = self._process_results(raw_amz, 'Amazon', product, target_region)
+        except Exception as e:
+            print(f"[ConsolesStrategy] Amazon Error: {e}")
 
         loose_e, box_e, man_e = self._save_listings(product, ebay_items, 'eBay')
-        # Force cleanup of Amazon listings (we don't scrape Amazon for consoles currently)
-        self._save_listings(product, [], 'Amazon')
+        loose_a, box_a, man_a = self._save_listings(product, amazon_items, 'Amazon')
         
-        return {"ebay": len(ebay_items), "amazon": 0}
+        return {"ebay": len(ebay_items), "amazon": len(amazon_items)}
 
     def _process_results(self, items: List[Any], source: str, product: Product, target_region: str) -> List[Dict]:
         """
