@@ -313,10 +313,18 @@ def get_product_listings(
     product_id: int, 
     background_tasks: BackgroundTasks,
     response: Response,
+    force: bool = False,
     db: Session = Depends(get_db)
 ):
     product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
     if not product:
+        return []
+
+    if force:
+        from fastapi import status
+        print(f"Force refresh requested for {product_id}. Triggering background fetch.")
+        background_tasks.add_task(update_listings_background, product_id)
+        response.status_code = status.HTTP_202_ACCEPTED
         return []
 
     # Check for existing active listings in DB
