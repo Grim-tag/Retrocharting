@@ -127,9 +127,10 @@ export default function ProductCatalog({ type, title }: ProductCatalogProps) {
             } else {
                 alert("Failed to update product");
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error("Update failed", err);
-            alert("Update failed");
+            const msg = err.response?.data?.detail || err.message || "Unknown error";
+            alert(`Update failed: ${msg}`);
         }
     };
 
