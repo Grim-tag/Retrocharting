@@ -160,24 +160,37 @@ def _run_migration_background():
     """
     try:
         from app.db.session import engine, Base
+        from app.db.migrations import run_auto_migrations
+        from app.core.config import settings
+        
         print("Migration: Starting background schema check...")
+
+        # Optimize SQLite Concurrency (Crucial for avoiding 'Locked' errors)
+        if "sqlite" in str(settings.SQLALCHEMY_DATABASE_URI):
+            try:
+                with engine.connect() as conn:
+                    conn.execute(text("PRAGMA journal_mode=WAL;"))
+                    conn.execute(text("PRAGMA synchronous=NORMAL;"))
+                print("Migration: SQLite WAL mode enabled.")
+            except Exception as e:
+                print(f"Migration: Failed to set WAL mode: {e}")
         
         # 1. Create Tables (Safe fallback)
-        # Moving this here ensures app starts even if DB is unreachable temporarily.
         try:
             Base.metadata.create_all(bind=engine)
             print("Migration: Tables created/verified.")
         except Exception as e:
             print(f"Migration: Table creation failed (DB might be down): {e}")
-            return # Stop if we can't connect
+            return 
             
-        with engine.begin() as connection:
-            connection.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS ean VARCHAR"))
-            connection.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS asin VARCHAR"))
-            connection.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS gtin VARCHAR"))
-            connection.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS publisher VARCHAR"))
-            connection.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS developer VARCHAR"))
-            print("Migration: Success - Columns ensured.")
+        # 2. Add Missing Columns (Robust)
+        # Using the logic from migrations.py instead of manual queries
+        try:
+            run_auto_migrations(engine)
+            print("Migration: Auto-migrations completed.")
+        except Exception as e:
+            print(f"Migration: Auto-migration failed: {e}")
+
     except Exception as e:
         print(f"Migration Error (Background): {e}")
 
@@ -212,16 +225,9 @@ async def startup_event():
         print(f"Failed to start scheduler: {e}")
 
     # 3. Quick Schema Check (Minimal)
-    # Rely on manual migration mainly.
-    # We remove the heavy introspection here to ensure fast boot.
-    # If columns are missing, we expect 'run_auto_migrations' (from migrations.py) to handle it if called,
-    # OR we trust previous deploys.
-    # Let's call the optimized run_auto_migrations ONCE.
-    try:
-        from app.db.migrations import run_auto_migrations
-        run_auto_migrations(engine)
-    except Exception as e:
-         print(f"Auto-migration skipped due to error: {e}")
+    # Removed synchronous call to prevent startup timeout/lock. 
+    # Handled by background thread now.
+    pass
 
     print("Startup complete.")
     # ---------------------------------------------------------------------
