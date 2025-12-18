@@ -35,10 +35,10 @@ export default function ConsoleSeoStats({ products, systemName, region = 'NTSC',
 
     if (!stats) return null;
 
-    // Translation Dictionary
+    // Updated Translation Dictionary
     const t = {
         fr: {
-            title: "Analyse du Marché",
+            titleSuffix: "Prix et Cote : Analyse du Marché", // Replaces "Analyse du Marché"
             avg: "Prix Moyen",
             min: "Prix Minimum",
             max: "Prix Maximum",
@@ -58,7 +58,7 @@ export default function ConsoleSeoStats({ products, systemName, region = 'NTSC',
             }
         },
         en: {
-            title: "Market Analysis",
+            titleSuffix: "Prices and Value : Market Analysis", // Replaces "Market Analysis"
             avg: "Average Price",
             min: "Lowest Price",
             max: "Highest Price",
@@ -93,12 +93,12 @@ export default function ConsoleSeoStats({ products, systemName, region = 'NTSC',
 
     return (
         <div className="bg-[#1f2533] border border-[#2a3142] rounded-lg p-6 mb-8">
-            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-bold text-white mb-4 flex items-center gap-2">
                 <ChartBarIcon className="w-6 h-6 text-[#ff6600]" />
-                {dict.title} : {systemName}
+                {systemName} {dict.titleSuffix}
                 {region === 'PAL' && <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded ml-2">EUR / PAL</span>}
                 {(region === 'JP' || region === 'NTSC-J') && <span className="text-xs bg-red-600 text-white px-2 py-1 rounded ml-2">{lang === 'fr' ? 'JAPON' : 'JAPAN'} / IMPORT</span>}
-            </h2>
+            </h1>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 {/* Average Price Card */}

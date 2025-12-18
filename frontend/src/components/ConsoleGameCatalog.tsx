@@ -294,13 +294,13 @@ export default function ConsoleGameCatalog({
             {/* Header Area */}
             <div className="mb-6">
                 <div className="mt-4">
-                    {/* Dynamic H1 based on Client-Side Filters */}
-                    <h1 className="text-3xl font-bold text-white mb-2">
-                        {dynamicSeo.h1}
-                    </h1>
+                    {/* Dynamic H2 (Was H1) based on Client-Side Filters or Props */}
+                    <h2 className="text-2xl font-bold text-white mb-2">
+                        {initialH1 || dynamicSeo.h1}
+                    </h2>
                     {/* Dynamic Intro */}
                     <p className="text-gray-400 text-sm max-w-3xl">
-                        {dynamicSeo.intro}
+                        {initialIntro || dynamicSeo.intro}
                     </p>
                 </div>
             </div>
