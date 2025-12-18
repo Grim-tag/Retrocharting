@@ -152,10 +152,14 @@ class GamesPricingStrategy(PricingStrategy):
         if not amazon_items and product.asin:
              print(f"[GamesStrategy] No Amazon items found. Generating fallback for ASIN {product.asin}")
              link = amazon_client.generate_affiliate_link(product.asin, config['amazon_domain'])
+             
+             # Determine Fallback Price (User Manual Input)
+             fallback_price = product.new_price or product.cib_price or product.loose_price or 0.0
+             
              amazon_items.append({
                  'external_id': product.asin,
                  'title': f"{product.product_name} (Voir sur Amazon)",
-                 'price': 0.0,
+                 'price': fallback_price,
                  'currency': 'EUR',
                  'condition': 'New',
                  'url': link,
@@ -302,10 +306,14 @@ class ConsolesPricingStrategy(GamesPricingStrategy):
         if not amazon_items and product.asin:
              print(f"[ConsolesStrategy] No Amazon items found. Generating fallback for ASIN {product.asin}")
              link = amazon_client.generate_affiliate_link(product.asin, config['amazon_domain'])
+             
+             # Determine Fallback Price (User Manual Input)
+             fallback_price = product.new_price or product.cib_price or product.loose_price or 0.0
+             
              amazon_items.append({
                  'external_id': product.asin,
                  'title': f"{product.product_name} (Voir sur Amazon)",
-                 'price': 0.0,
+                 'price': fallback_price,
                  'currency': 'EUR',
                  'condition': 'New',
                  'url': link,
