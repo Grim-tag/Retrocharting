@@ -113,15 +113,13 @@ class AmazonClient:
             # Search by ASIN is extremely precise
             # checks both 'asin' field and standard search with ASIN kw
             print(f"Amazon Smart Search: Using ASIN {product.asin} on {domain}")
-            results = self.search_items(product.asin, limit=1, domain=domain)
-            # If ASIN search yields result, trustworthy.
-            if results: return results
+            return self.search_items(product.asin, limit=1, domain=domain)
             
         if hasattr(product, 'ean') and product.ean:
             # Search by EAN is also very precise on Amazon
             print(f"Amazon Smart Search: Using EAN {product.ean} on {domain}")
-            results = self.search_items(product.ean, limit=1, domain=domain)
-            if results: return results
+            # If EAN provided, also prioritize it.
+            return self.search_items(product.ean, limit=1, domain=domain)
 
         # Fallback to Text Search
         # Use cleaning logic to remove PAL/NTSC noise (which kills results on FR/JP marketplaces)
