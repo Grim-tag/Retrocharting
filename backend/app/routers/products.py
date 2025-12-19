@@ -339,12 +339,44 @@ def enrich_product_with_igdb(product_id: int):
         if 'cover' in details and 'url' in details['cover']:
              cover_url = details['cover']['url']
              # Format: //images.igdb.com/igdb/image/upload/t_thumb/co123.jpg
-             # We want better quality: t_cover_big or t_720p
+             # We want better quality: t_cover_big or t_720p or t_1080p
              cover_url = f"https:{cover_url}".replace("t_thumb", "t_cover_big")
              
              if not product.image_url or "pricecharting" in product.image_url or product.image_url == "":
-                 product.image_url = cover_url
-                 updated = True
+                 try:
+                     # Download and Store BLOB
+                     import requests
+                     from io import BytesIO
+                     from PIL import Image
+                     from app.core.config import settings
+                     import re
+                     
+                     img_resp = requests.get(cover_url, timeout=10)
+                     if img_resp.status_code == 200:
+                         # Process to WebP
+                         image = Image.open(BytesIO(img_resp.content))
+                         if image.mode in ("RGBA", "P"): image = image.convert("RGB")
+                         buffer = BytesIO()
+                         image.save(buffer, "WEBP", quality=80)
+                         product.image_blob = buffer.getvalue()
+                         
+                         # Generate SEO naming
+                         def clean_slug(text):
+                            return re.sub(r'[^a-z0-9]+', '-', text.lower()).strip('-')
+                         
+                         slug = clean_slug(f"{product.product_name} {product.console_name}")
+                         product.image_url = f"{settings.API_BASE_URL}/api/v1/products/{product.id}/image/{slug}.webp"
+                         updated = True
+                         print(f"IGDB: Downloaded and stored image for {product.product_name}")
+                     else:
+                         # Fallback to URL if download fails
+                         product.image_url = cover_url
+                         updated = True
+                 except Exception as e:
+                     print(f"IGDB Image Download Error: {e}")
+                     # Fallback
+                     product.image_url = cover_url
+                     updated = True
 
         if updated:
             db.commit()
