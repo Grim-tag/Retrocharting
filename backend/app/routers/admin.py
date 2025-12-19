@@ -11,7 +11,7 @@ router = APIRouter()
 # In production, this should be in .env
 # Simple secret key check
 # In production, this should be in .env
-from app.routers.auth import get_current_user, get_current_user_silent
+from app.routers.auth import get_current_user, get_current_user_silent, get_current_admin_user
 from app.models.user import User
 
 ADMIN_SECRET_KEY = os.getenv("ADMIN_SECRET_KEY", "admin_secret_123")
@@ -35,6 +35,71 @@ async def get_admin_access(
     
     # Fail
     raise HTTPException(status_code=403, detail="Admin Access Required")
+
+@router.get("/maintenance/fix-genres")
+def fix_pc_genres_endpoint(
+    current_user: 'User' = Depends(get_current_admin_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Standardize PC Games genres to match Console taxonomy.
+    Examples: "Action, Adventure" -> "Action & Adventure", "Shooter" -> "FPS".
+    """
+    products = db.query(Product).filter(Product.console_name == "PC Games").all()
+    updated_count = 0
+    
+    for p in products:
+        original = p.genre
+        if not original or original == "Unknown":
+            continue
+            
+        new_genre = original
+        
+        # Comma separated list from previous enrichment?
+        if "," in original:
+             parts = [x.strip() for x in original.split(",")]
+             
+             if "Action" in parts or "Adventure" in parts:
+                 new_genre = "Action & Adventure"
+             elif "Role-playing (RPG)" in parts or "RPG" in parts:
+                 new_genre = "RPG"
+             elif "Shooter" in parts or "FPS" in parts:
+                 new_genre = "FPS"
+             elif "Platform" in parts:
+                 new_genre = "Platformer"
+             elif "Strategy" in parts:
+                 new_genre = "Strategy"
+             elif "Fighting" in parts:
+                 new_genre = "Fighting"
+             elif "Racing" in parts:
+                 new_genre = "Racing"
+             else:
+                 new_genre = parts[0]
+        
+        # Simple mappings
+        mapping = {
+            "Shooter": "FPS",
+            "Role-playing (RPG)": "RPG",
+            "Platform": "Platformer",
+            "Adventure": "Action & Adventure",
+            "Action": "Action & Adventure",
+            "Real Time Strategy (RTS)": "Strategy",
+            "Turn-based strategy (TBS)": "Strategy",
+            "Fighting": "Fighting",
+            "Racing": "Racing",
+            "Sport": "Sports",
+            "Simulator": "Simulation"
+        }
+        
+        if new_genre in mapping:
+            new_genre = mapping[new_genre]
+
+        if new_genre != original:
+            p.genre = new_genre
+            updated_count += 1
+            
+    db.commit()
+    return {"status": "success", "fixed_count": updated_count}
 
 @router.get("/stats", dependencies=[Depends(get_admin_access)])
 def get_admin_stats(db: Session = Depends(get_db)):

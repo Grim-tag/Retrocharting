@@ -246,9 +246,39 @@ def enrich_product_with_igdb(product_id: int):
             updated = True
             
         if (not product.genre or product.genre == 'Unknown') and 'genres' in details:
-            # "Action, Adventure"
-            genre_list = [g['name'] for g in details['genres']]
-            product.genre = ", ".join(genre_list)
+            # "Action, Adventure" -> "Action & Adventure"
+            genre_names = [g['name'] for g in details['genres']]
+            
+            final_genre = "Unknown"
+            
+            # Taxonomy Mapping (IGDB -> PriceCharting)
+            if "Role-playing (RPG)" in genre_names:
+                final_genre = "RPG"
+            elif "Action" in genre_names or "Adventure" in genre_names:
+                 final_genre = "Action & Adventure"
+            elif "Fighting" in genre_names:
+                 final_genre = "Fighting"
+            elif "Platform" in genre_names:
+                 final_genre = "Platformer"
+            elif "Shooter" in genre_names:
+                 final_genre = "FPS"
+            elif "Racing" in genre_names:
+                 final_genre = "Racing"
+            elif "Sport" in genre_names:
+                 final_genre = "Sports"
+            elif "Strategy" in genre_names or "Real Time Strategy (RTS)" in genre_names or "Turn-based strategy (TBS)" in genre_names:
+                 final_genre = "Strategy"
+            elif "Simulator" in genre_names:
+                 final_genre = "Simulation"
+            elif "Puzzle" in genre_names:
+                 final_genre = "Puzzle"
+            elif "Arcade" in genre_names:
+                 final_genre = "Arcade"
+            else:
+                 # Fallback to first available or standard join
+                 final_genre = genre_names[0] if genre_names else "Unknown"
+
+            product.genre = final_genre
             updated = True
             
         # Developer / Publisher
