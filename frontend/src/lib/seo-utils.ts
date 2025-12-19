@@ -114,12 +114,17 @@ export function generateConsoleSeo(
             });
         }
     } else {
+        // Fix for "PC Games games" -> "PC Games"
+        // If system name already ends in "Games" (case insensitive), don't append " games".
+        const endsWithGames = cleanSystemName.toLowerCase().endsWith('games');
+        const systemNoun = endsWithGames ? cleanSystemName : `${cleanSystemName} games`;
+
         faq.push({
-            question: `How much are ${cleanSystemName} games worth?`,
-            answer: `The value of ${cleanSystemName} games depends heavily on condition. We track specific prices for Loose, CIB (Complete in Box), and New copies. Check the list above for real-time market values.`
+            question: `How much are ${systemNoun} worth?`,
+            answer: `The value of ${systemNoun} depends heavily on condition. We track specific prices for Loose, CIB (Complete in Box), and New copies. Check the list above for real-time market values.`
         });
         faq.push({
-            question: `What are the most expensive ${cleanSystemName} games?`,
+            question: `What are the most expensive ${systemNoun}?`,
             answer: `Rare titles on ${cleanSystemName} can be very valuable. Use the "Sort by Price: High to Low" filter to see the current most expensive games on the platform.`
         });
         if (cleanSystemName === "PC Games") {
