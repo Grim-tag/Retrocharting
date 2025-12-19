@@ -31,8 +31,9 @@ export function formatConsoleName(name: string): string {
     return name;
 }
 
-export function getRegion(name: string): "NTSC" | "PAL" | "JP" {
+export function getRegion(name: string): "NTSC" | "PAL" | "JP" | "GLOBAL" {
     const lower = name.toLowerCase();
+    if (name === "PC Games" || lower.includes("pc games")) return "GLOBAL";
     if (name.startsWith("PAL ")) return "PAL";
     if (name.startsWith("JP ") || lower.includes("famicom") || lower.includes("asian") || lower.includes("japan")) return "JP";
     return "NTSC";

@@ -96,7 +96,7 @@ export default async function GamesPage({ params }: { params: Promise<{ lang: st
                                                 {showSeparator && (
                                                     <div className="col-span-full h-px bg-[#2a3142] my-2 relative">
                                                         <span className="absolute left-0 -top-2 bg-[#0f121e] text-[10px] text-gray-500 px-2 uppercase tracking-widest font-bold">
-                                                            {region === "JP" ? "Japan & Asia" : region === "PAL" ? "Europe (PAL)" : "North America (NTSC)"}
+                                                            {region === "JP" ? "Japan & Asia" : region === "PAL" ? "Europe (PAL)" : region === "GLOBAL" ? "Global / PC" : "North America (NTSC)"}
                                                         </span>
                                                     </div>
                                                 )}
