@@ -33,6 +33,9 @@ export const systems = [
 ];
 
 export const groupedSystems: Record<string, string[]> = {
+    "PC": [
+        "PC Games"
+    ],
     "Nintendo": [
         "NES", "Super Nintendo", "Nintendo 64", "Gamecube", "Wii", "Wii U", "Nintendo Switch", "Nintendo Switch 2",
         "GameBoy", "GameBoy Color", "GameBoy Advance", "Nintendo DS", "Nintendo 3DS", "Virtual Boy", "Game & Watch",
@@ -65,9 +68,6 @@ export const groupedSystems: Record<string, string[]> = {
     "Atari": [
         "Atari 2600", "Atari 2800", "Atari 5200", "Atari 7800", "Atari 400", "Atari 800", "Atari XE", "Atari ST", "Atari Lynx", "Jaguar", "Jaguar CD",
         "PAL Atari 2600", "PAL Atari 7800"
-    ],
-    "PC": [
-        "PC Games"
     ],
     "Other": [
         "3DO", "Neo Geo AES", "Neo Geo CD", "Neo Geo MVS", "Neo Geo Pocket Color",

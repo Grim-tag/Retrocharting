@@ -47,7 +47,7 @@
         },
         "games_page": {
             "title": "Video Game Price Guide & Market Values",
-            "intro": "Currently tracking {{game_count}} games across {{console_count}} platforms. Our complete video game price guide helps collectors track market values and manage their collections. Explore detailed price lists for Nintendo, PlayStation, Xbox, and Sega systems. Whether you are buying or selling, use our value guide to stay updated on the latest trends and ensure you get the best deal.",
+            "intro": "Currently tracking {{game_count}} games across {{console_count}} platforms. Our complete video game price guide helps collectors track market values and manage their collections. Explore detailed price lists for PC, Nintendo, PlayStation, Xbox, and Sega systems. Whether you are buying or selling, use our value guide to stay updated on the latest trends and ensure you get the best deal.",
             "sections": {
                 "Nintendo": "Nintendo Consoles Price Index",
                 "PlayStation": "PlayStation Value Charts",
