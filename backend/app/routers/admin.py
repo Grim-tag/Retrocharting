@@ -287,3 +287,23 @@ def populate_pc_games(limit: int = 50, background_tasks: BackgroundTasks = None,
         # Sync mode for small batches (immediate feedback)
         result = scrape_pc_games_service(db, limit)
         return result
+
+@router.get("/smart-import-pc-games", dependencies=[Depends(get_admin_access)])
+def smart_import_pc_games_endpoint(
+    limit: int = 50000, 
+    background_tasks: BackgroundTasks = None
+):
+    """
+    Triggers the Full 'Smart Import' workflow:
+    1. Scrapes PriceCharting (recursive)
+    2. Enriches with IGDB (Images, Guidelines, Desc)
+    All in one background sequence.
+    """
+    from app.services.smart_import import smart_import_pc_games
+    
+    background_tasks.add_task(smart_import_pc_games, limit=limit)
+    return {
+        "status": "success", 
+        "message": f"Smart Import started for up to {limit} items. This will Scrape AND Enrich sequentially in the background."
+    }
+

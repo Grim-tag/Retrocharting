@@ -335,6 +335,17 @@ def enrich_product_with_igdb(product_id: int):
                     product.players = "1"
                     updated = True
 
+        # 4. Update Image if missing or generic
+        if 'cover' in details and 'url' in details['cover']:
+             cover_url = details['cover']['url']
+             # Format: //images.igdb.com/igdb/image/upload/t_thumb/co123.jpg
+             # We want better quality: t_cover_big or t_720p
+             cover_url = f"https:{cover_url}".replace("t_thumb", "t_cover_big")
+             
+             if not product.image_url or "pricecharting" in product.image_url or product.image_url == "":
+                 product.image_url = cover_url
+                 updated = True
+
         if updated:
             db.commit()
             print(f"IGDB: Successfully enriched {product.product_name}")
