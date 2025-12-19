@@ -194,7 +194,7 @@ def migrate_db_schema(db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/populate-pc-games", dependencies=[Depends(get_admin_access)])
+@router.get("/populate-pc-games", dependencies=[Depends(get_admin_access)])
 def populate_pc_games(limit: int = 50, db: Session = Depends(get_db)):
     """
     Triggers scraping of PC Games from PriceCharting to populate the database.
