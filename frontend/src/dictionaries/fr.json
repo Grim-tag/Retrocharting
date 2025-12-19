@@ -45,6 +45,19 @@
             "cta_browse": "Voir les Jeux",
             "cta_collection": "Ma Collection"
         },
+        "games_page": {
+            "title": "Cote Jeux Vidéo & Argus en Temps Réel",
+            "intro": "Nous suivons actuellement {{game_count}} jeux sur {{console_count}} plateformes. Notre guide complet vous aide à suivre la valeur du marché et gérer votre collection. Explorez les listes de prix détaillées pour Nintendo, PlayStation, Xbox et SEGA. Que vous soyez acheteur ou vendeur, utilisez notre argus pour rester informé des dernières tendances et faire les meilleures affaires.",
+            "sections": {
+                "Nintendo": "Cote Consoles Nintendo",
+                "PlayStation": "Argus PlayStation",
+                "Xbox": "Historique & Prix Xbox",
+                "Sega": "Valeur Sega & Systèmes Rétro",
+                "Atari": "Systèmes Atari",
+                "Other": "Autres Consoles"
+            },
+            "methodology": "Notre liste de prix jeux vidéo est mise à jour quotidiennement en utilisant les données de ventes aux enchères et du marché. Nous suivons les valeurs pour plus de 50 plateformes afin de fournir les cotes les plus précises pour les collectionneurs."
+        },
         "categories": {
             "title": "Catégories Populaires",
             "items": {

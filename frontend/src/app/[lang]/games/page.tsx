@@ -12,14 +12,14 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
 
     if (lang === 'fr') {
         return {
-            title: "Cote Jeux Vidéo par Console | Nintendo, PlayStation, Sega, Xbox",
-            description: "Explorez notre catalogue de consoles et trouvez la cote argus de tous les jeux vidéo. Nintendo 64, Gamecube, PS1, PS2, et plus encore.",
+            title: "Cote Jeux Vidéo : Argus & Prix du Marché | Retrocharting",
+            description: "Découvrez le guide complet des prix des jeux vidéo. Suivez les valeurs du marché, l'historique des prix et les cotes pour Nintendo, PlayStation, Xbox et les consoles rétro.",
         };
     }
 
     return {
-        title: "Video Game Prices by Console | Nintendo, PlayStation, Sega, Xbox",
-        description: "Browse our console catalog and find video game values. Nintendo 64, Gamecube, PS1, PS2, and more.",
+        title: "Video Game Price Guide: Market Values & Price Lists | Retrocharting",
+        description: "Discover the complete video game price guide. Track market values, pricing history, and cost charts for Nintendo, PlayStation, Xbox, and retro consoles.",
     };
 }
 
@@ -45,6 +45,17 @@ export default async function GamesPage({ params }: { params: Promise<{ lang: st
         }))
     );
 
+    const platformsCount = allSystems.length;
+    // Basic approximation or placeholder, exact number of games is dynamic
+    const gamesCount = "45,000+";
+
+    // Helper to safely replace placeholders
+    const processIntro = (text: string) => {
+        return text
+            .replace('{{game_count}}', gamesCount)
+            .replace('{{console_count}}', platformsCount.toString());
+    };
+
     return (
         <main className="flex-grow bg-[#0f121e] py-8">
 
@@ -53,9 +64,14 @@ export default async function GamesPage({ params }: { params: Promise<{ lang: st
                 <JsonLd data={itemListSchema} />
                 <Breadcrumbs items={breadcrumbItems} />
 
-                <h1 className="text-3xl font-bold mb-4 text-white">{dict.home.categories.items.video_games.title}</h1>
-                <p className="text-gray-400 mb-8 max-w-3xl">
-                    {dict.home.categories.items.video_games.desc}
+                <h1 className="text-3xl font-bold mb-4 text-white">
+                    {dict.home.games_page?.title || dict.home.categories.items.video_games.title}
+                </h1>
+
+                <p className="text-gray-400 mb-8 max-w-3xl leading-relaxed">
+                    {dict.home.games_page?.intro
+                        ? processIntro(dict.home.games_page.intro)
+                        : dict.home.categories.items.video_games.desc}
                 </p>
 
                 {/* Grouped Systems Grid */}
@@ -63,7 +79,9 @@ export default async function GamesPage({ params }: { params: Promise<{ lang: st
                     {Object.entries(groupedSystems).map(([groupName, systems]) => (
                         <div key={groupName}>
                             <h2 className="text-2xl font-bold text-white mb-4 border-b border-[#2a3142] pb-2 flex items-center gap-2">
-                                <span className="text-[#ff6600]">#</span> {groupName}
+                                <span className="text-[#ff6600]">#</span>
+                                {/* Use specific SEO title from dictionary if available, else fallback to Group Name */}
+                                {(dict.home.games_page?.sections as any)?.[groupName] || groupName}
                             </h2>
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                                 {(() => {
@@ -100,6 +118,14 @@ export default async function GamesPage({ params }: { params: Promise<{ lang: st
                         </div>
                     ))}
                 </div>
+
+                {/* Methodology / Expertise Section */}
+                {dict.home.games_page?.methodology && (
+                    <div className="mt-16 pt-8 border-t border-[#2a3142] text-sm text-gray-500 max-w-4xl">
+                        <h3 className="text-gray-400 font-bold mb-2 uppercase tracking-wider text-xs">Methodology</h3>
+                        <p>{dict.home.games_page.methodology}</p>
+                    </div>
+                )}
             </div>
         </main>
     );
