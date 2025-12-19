@@ -101,6 +101,19 @@ def fix_pc_genres_endpoint(
     db.commit()
     return {"status": "success", "fixed_count": updated_count}
 
+@router.get("/enrich-pc-games")
+def enrich_pc_games_endpoint(
+    background_tasks: BackgroundTasks,
+    limit: int = 500,
+    auth_check: bool = Depends(get_admin_access)
+):
+    """
+    Trigger IGDB enrichment specifically for PC Games.
+    """
+    from app.services.enrichment import enrichment_job
+    background_tasks.add_task(enrichment_job, max_duration=1200, limit=limit, console_filter="PC Games")
+    return {"status": "success", "message": f"Started IGDB enrichment for {limit} PC games (background)."}
+
 @router.get("/stats", dependencies=[Depends(get_admin_access)])
 def get_admin_stats(db: Session = Depends(get_db)):
     """

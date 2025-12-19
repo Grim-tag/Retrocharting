@@ -8,7 +8,7 @@ from app.models.scraper_log import ScraperLog
 from app.services.igdb import igdb_service
 from app.routers.products import enrich_product_with_igdb
 
-def enrichment_job(max_duration: int = 600, limit: int = 50):
+def enrichment_job(max_duration: int = 600, limit: int = 50, console_filter: str = None):
     """
     Robust background job to enrich products via IGDB.
     Logs progress to ScraperLog (source='igdb').
@@ -20,14 +20,14 @@ def enrichment_job(max_duration: int = 600, limit: int = 50):
     # Max concurrency not needed as much here, synchronous is safer for API rate limits
     # IGDB limit is 4 req/s. We do sequential.
     
-    print(f"Starting IGDB Enrichment Job (Duration: {max_duration}s, Limit: {limit})")
+    print(f"Starting IGDB Enrichment Job (Duration: {max_duration}s, Limit: {limit}, Console: {console_filter})")
     
     # Create Log Entry
     log_entry = ScraperLog(
         status="running", 
         items_processed=0, 
         start_time=datetime.utcnow(),
-        source="igdb" 
+        source=f"igdb_{console_filter}" if console_filter else "igdb" 
     )
     db.add(log_entry)
     db.commit()
@@ -44,13 +44,19 @@ def enrichment_job(max_duration: int = 600, limit: int = 50):
                 break
                 
             # Fetch batch
-            products = db.query(Product).filter(
+            query = db.query(Product).filter(
                 or_(
                     Product.description == None, 
                     Product.description == "",
-                ),
-                Product.console_name != None
-            ).limit(limit).all()
+                )
+            )
+            
+            if console_filter:
+                query = query.filter(Product.console_name == console_filter)
+            else:
+                query = query.filter(Product.console_name != None)
+                
+            products = query.limit(limit).all()
             
             if not products:
                 print("IGDB Job: No missing descriptions found.")
