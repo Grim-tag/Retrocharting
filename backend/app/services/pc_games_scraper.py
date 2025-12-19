@@ -26,7 +26,10 @@ def scrape_pc_games_service(db: Session, limit: int = 50):
     page_count = 0
     total_added = 0
     
-    # 1. Initial GET
+    # Pre-fetch existing PC games logic restored
+    existing_names = {
+        name for name, in db.query(Product.product_name).filter(Product.console_name == "PC Games").all()
+    }
     try:
         session = requests.Session()
         session.headers.update(headers)
