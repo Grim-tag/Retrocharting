@@ -38,7 +38,7 @@ async def get_admin_access(
 
 @router.get("/maintenance/fix-genres")
 def fix_pc_genres_endpoint(
-    current_user: 'User' = Depends(get_current_admin_user),
+    auth_check: bool = Depends(get_admin_access),
     db: Session = Depends(get_db)
 ):
     """
