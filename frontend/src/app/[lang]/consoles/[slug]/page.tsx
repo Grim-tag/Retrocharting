@@ -3,7 +3,8 @@ import { getDictionary } from "@/lib/get-dictionary";
 import { getProductById } from "@/lib/cached-api";
 import { formatConsoleName, getGameUrl } from "@/lib/utils";
 import { groupedSystems } from "@/data/systems";
-import { redirect } from "next/navigation";
+import { redirect, permanentRedirect } from "next/navigation";
+import { routeMap } from "@/lib/route-config";
 
 import ConsoleCategoryView from "@/components/views/ConsoleCategoryView";
 import ConsoleProductView from "@/components/views/ConsoleProductView";
@@ -25,6 +26,13 @@ function isSystemSlug(slug: string): string | null {
 
 export async function generateMetadata({ params, searchParams }: { params: Promise<{ slug: string; lang: string }>; searchParams: Promise<{ genre?: string }> }): Promise<Metadata> {
     const { slug, lang } = await params;
+
+    // Redirect "PC Games" console page to the Games List page
+    if (slug === 'pc-games') {
+        const gamesSlug = routeMap['games']?.[lang] || 'games';
+        permanentRedirect(`/${lang}/${gamesSlug}/pc-games`);
+    }
+
     const dict = await getDictionary(lang);
 
     // 1. Check if it's a Console Category Page (e.g. /consoles/nintendo-64)
@@ -77,6 +85,12 @@ export default async function Page({
     searchParams: Promise<{ genre?: string }>
 }) {
     const { slug, lang } = await params;
+
+    // Redirect "PC Games" console page to the Games List page
+    if (slug === 'pc-games') {
+        const gamesSlug = routeMap['games']?.[lang] || 'games';
+        permanentRedirect(`/${lang}/${gamesSlug}/pc-games`);
+    }
 
     // 1. Dispatcher Logic
     const systemName = isSystemSlug(slug);

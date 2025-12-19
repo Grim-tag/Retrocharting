@@ -2,6 +2,13 @@ import csv
 import os
 from sqlalchemy.orm import Session
 from app.db.session import SessionLocal, engine, Base
+from app.models.user import User
+from app.models.price_history import PriceHistory
+from app.models.listing import Listing
+from app.models.collection_item import CollectionItem
+from app.models.comment import Comment
+from app.models.sniper import SniperResult
+from app.models.sales_transaction import SalesTransaction
 from app.models.product import Product
 
 def import_csv_dump():
@@ -20,17 +27,21 @@ def import_csv_dump():
     
     db: Session = SessionLocal()
     
-    # Check if DB is empty to avoid duplicates or overwriting
-    count = db.query(Product).count()
-    if count > 0:
-        print(f"Database already has {count} products. Skipping import.")
-        return
+    # Batch fetch existing IDs to avoid N+1 and allow incremental updates
+    existing_ids = {id_[0] for id_ in db.query(Product.id).all()}
+    print(f"Database contains {len(existing_ids)} products. Checking for new items...")
 
     try:
         with open(csv_path, 'r', encoding='utf-8') as f:
             reader = csv.DictReader(f)
             batch = []
+            new_count = 0
+            
             for row in reader:
+                p_id = int(row['id'])
+                if p_id in existing_ids:
+                    continue
+                    
                 # Convert empty strings to None for nullable fields if needed
                 # But DictReader gives strings.
                 
@@ -40,7 +51,7 @@ def import_csv_dump():
                 new_price = float(row['new_price']) if row['new_price'] else None
                 
                 product = Product(
-                    id=row['id'], # Preserve ID
+                    id=p_id, # Preserve ID
                     pricecharting_id=row['pricecharting_id'],
                     console_name=row['console_name'],
                     product_name=row['product_name'],
@@ -56,6 +67,7 @@ def import_csv_dump():
                     players=row['players']
                 )
                 batch.append(product)
+                new_count += 1
                 
                 if len(batch) >= 1000:
                     db.bulk_save_objects(batch)
@@ -67,7 +79,7 @@ def import_csv_dump():
                 db.bulk_save_objects(batch)
                 db.commit()
                 
-        print("\nImport complete.")
+        print(f"\nImport complete. Added {new_count} new products.")
         
     except Exception as e:
         print(f"Error importing CSV: {e}")

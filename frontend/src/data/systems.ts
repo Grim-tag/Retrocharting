@@ -66,6 +66,9 @@ export const groupedSystems: Record<string, string[]> = {
         "Atari 2600", "Atari 2800", "Atari 5200", "Atari 7800", "Atari 400", "Atari 800", "Atari XE", "Atari ST", "Atari Lynx", "Jaguar", "Jaguar CD",
         "PAL Atari 2600", "PAL Atari 7800"
     ],
+    "PC": [
+        "PC Games"
+    ],
     "Other": [
         "3DO", "Neo Geo AES", "Neo Geo CD", "Neo Geo MVS", "Neo Geo Pocket Color",
         "PC Engine", "TurboGrafx-16", "TurboGrafx CD", "PC FX",
@@ -73,7 +76,7 @@ export const groupedSystems: Record<string, string[]> = {
         "Colecovision", "Intellivision", "Vectrex", "Magnavox Odyssey", "Magnavox Odyssey 2",
         "WonderSwan", "WonderSwan Color", "N-Gage", "Gizmondo", "Tapwave Zodiac",
         "Evercade", "Polymega", "Nuon", "LaserActive",
-        "PC Games", "PC Gamer Magazine", "Game Informer", "Electronic Gaming Monthly", "GamePro", "Strategy Guide",
+        "PC Gamer Magazine", "Game Informer", "Electronic Gaming Monthly", "GamePro", "Strategy Guide",
         "Skylanders", "Disney Infinity", "Lego Dimensions", "Starlink", "UB Funkeys",
         "Action Max", "Amstrad CPC", "Amstrad GX4000", "Apple II", "Arcadia 2001",
         "Bally Astrocade", "CD-i", "Casio Loopy", "Entex Adventure Vision", "FM Towns Marty", "Fairchild Channel F",
