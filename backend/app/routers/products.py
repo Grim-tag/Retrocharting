@@ -632,8 +632,8 @@ def get_scraper_status(
     # Check if 'running' but too old (stuck/crashed)
     import datetime
     
-    # If currently running but started > 10 minutes ago (limit is 5m), assume crashed
-    timeout_threshold = datetime.timedelta(minutes=10)
+    # If currently running but started > 24 hours ago, assume crashed
+    timeout_threshold = datetime.timedelta(hours=24)
     if latest.status == "running" and (datetime.datetime.utcnow() - latest.start_time) > timeout_threshold:
         # We can auto-update it to error in DB? Or just report 'error' to frontend?
         # Let's report 'error' so frontend enables the button.

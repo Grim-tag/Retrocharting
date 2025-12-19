@@ -59,6 +59,7 @@ def fix_pc_genres_endpoint(
         if "," in original:
              parts = [x.strip() for x in original.split(",")]
              
+
              if "Action" in parts or "Adventure" in parts:
                  new_genre = "Action & Adventure"
              elif "Role-playing (RPG)" in parts or "RPG" in parts:
