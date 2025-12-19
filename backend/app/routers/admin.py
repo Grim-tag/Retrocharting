@@ -193,3 +193,13 @@ def migrate_db_schema(db: Session = Depends(get_db)):
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/populate-pc-games", dependencies=[Depends(get_admin_access)])
+def populate_pc_games(limit: int = 50, db: Session = Depends(get_db)):
+    """
+    Triggers scraping of PC Games from PriceCharting to populate the database.
+    Useful if the initial CSV import missed them.
+    """
+    from app.services.pc_games_scraper import scrape_pc_games_service
+    result = scrape_pc_games_service(db, limit)
+    return result
