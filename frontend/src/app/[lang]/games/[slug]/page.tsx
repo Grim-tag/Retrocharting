@@ -146,6 +146,7 @@ export default async function Page({
                         systemSlug={slug}
                         h1Title={seo.h1}
                         introText={seo.intro}
+                        faq={seo.faq}
                         productType="game" // Explicitly fetch games
                     />
                 </div>

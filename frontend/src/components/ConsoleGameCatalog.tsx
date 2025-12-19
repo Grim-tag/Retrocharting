@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Product, getProductsByConsole } from '@/lib/api';
 import { getGameUrl } from '@/lib/utils';
 import JsonLd, { generateItemListSchema } from '@/components/seo/JsonLd';
-import { generateConsoleSeo } from '@/lib/seo-utils';
+import { generateConsoleSeo, FaqItem } from '@/lib/seo-utils';
 import {
     MagnifyingGlassIcon,
     Squares2X2Icon,
@@ -27,6 +27,7 @@ interface ConsoleGameCatalogProps {
     systemSlug: string;
     h1Title?: string;
     introText?: string;
+    faq?: FaqItem[];
     productType?: 'game' | 'console' | 'accessory'; // NEW PROP
 }
 
@@ -42,6 +43,7 @@ export default function ConsoleGameCatalog({
     systemSlug,
     h1Title: initialH1,
     introText: initialIntro,
+    faq: initialFaq,
     productType = 'game' // Default to game for backward compatibility
 }: ConsoleGameCatalogProps) {
     const router = useRouter();
@@ -508,6 +510,39 @@ export default function ConsoleGameCatalog({
                     >
                         Load More ({filteredProducts.length - displayedProducts.length} remaining)
                     </button>
+                </div>
+            )}
+
+            {/* FAQ Section */}
+            {(initialFaq || dynamicSeo.faq) && (initialFaq || dynamicSeo.faq).length > 0 && (
+                <div className="mt-16 border-t border-[#2a3142] pt-8">
+                    <h3 className="text-xl font-bold text-white mb-6">Frequently Asked Questions</h3>
+                    <div className="grid gap-6 md:grid-cols-2">
+                        {(initialFaq || dynamicSeo.faq).map((item, idx) => (
+                            <div key={idx} className="bg-[#151922] p-6 rounded border border-[#2a3142]">
+                                <h4 className="font-bold text-white mb-2">{item.question}</h4>
+                                <p className="text-gray-400 text-sm leading-relaxed">{item.answer}</p>
+                            </div>
+                        ))}
+                    </div>
+                    {/* FAQ Schema */}
+                    <script
+                        type="application/ld+json"
+                        dangerouslySetInnerHTML={{
+                            __html: JSON.stringify({
+                                "@context": "https://schema.org",
+                                "@type": "FAQPage",
+                                "mainEntity": (initialFaq || dynamicSeo.faq).map(item => ({
+                                    "@type": "Question",
+                                    "name": item.question,
+                                    "acceptedAnswer": {
+                                        "@type": "Answer",
+                                        "text": item.answer
+                                    }
+                                }))
+                            })
+                        }}
+                    />
                 </div>
             )}
         </div>
