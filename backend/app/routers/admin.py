@@ -195,11 +195,17 @@ def migrate_db_schema(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/populate-pc-games", dependencies=[Depends(get_admin_access)])
-def populate_pc_games(limit: int = 50, db: Session = Depends(get_db)):
+def populate_pc_games(limit: int = 50, background_tasks: BackgroundTasks = None, db: Session = Depends(get_db)):
     """
-    Triggers scraping of PC Games from PriceCharting to populate the database.
-    Useful if the initial CSV import missed them.
+    Triggers scraping of PC Games.
+    If limit > 50, runs in background to prevent timeout.
     """
-    from app.services.pc_games_scraper import scrape_pc_games_service
-    result = scrape_pc_games_service(db, limit)
-    return result
+    from app.services.pc_games_scraper import scrape_pc_games_service, scrape_pc_games_bg_wrapper
+    
+    if limit > 50:
+        background_tasks.add_task(scrape_pc_games_bg_wrapper, limit)
+        return {"status": "success", "message": f"Background job started to scrape {limit} items. Operations will continue in the background."}
+    else:
+        # Sync mode for small batches (immediate feedback)
+        result = scrape_pc_games_service(db, limit)
+        return result
