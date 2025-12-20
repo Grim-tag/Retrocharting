@@ -7,6 +7,15 @@ from datetime import datetime, timedelta
 from typing import List
 
 # Add backend to path so we can import app modules
+# Robust fix for Render deployment: Try to find 'backend' dir relative to this file
+try:
+    current_dir = os.path.dirname(os.path.abspath(__file__)) # .../backend/app/workers
+    backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(current_dir))) # .../backend
+    if backend_dir not in sys.path:
+        sys.path.append(backend_dir)
+except Exception:
+    pass
+
 from sqlalchemy.orm import configure_mappers
 
 from app.db.session import SessionLocal
