@@ -94,8 +94,8 @@ class AmazonScraper:
     def _parse_item(self, item: BeautifulSoup, domain: str) -> Optional[Dict[str, Any]]:
         """Parses a single search result item."""
         try:
-            # Title
-            title_el = item.select_one("h2 a span")
+            # Title with Fallbacks
+            title_el = item.select_one("h2 a span") or item.select_one("h2 span") or item.select_one("h2")
             if not title_el: return None
             title = title_el.get_text(strip=True)
 
