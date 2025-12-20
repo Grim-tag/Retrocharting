@@ -34,6 +34,9 @@ export const systems = [
 
 export const groupedSystems: Record<string, string[]> = {
 
+    "PC": [
+        "PC Games"
+    ],
     "Nintendo": [
         "NES", "Super Nintendo", "Nintendo 64", "Gamecube", "Wii", "Wii U", "Nintendo Switch", "Nintendo Switch 2",
         "GameBoy", "GameBoy Color", "GameBoy Advance", "Nintendo DS", "Nintendo 3DS", "Virtual Boy", "Game & Watch",
