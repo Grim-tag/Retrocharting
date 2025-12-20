@@ -84,31 +84,67 @@ services:
     startCommand: python -m app.workers.amazon_worker --type PAL
     envVars:
       - key: DATABASE_URL
-        sync: false
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: DATABASE_URL
       - key: PYTHON_VERSION
         value: 3.10.0
       - key: PRICECHARTING_API_TOKEN
-        sync: false
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: PRICECHARTING_API_TOKEN
       - key: SERPAPI_KEY
-        sync: false
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: SERPAPI_KEY
       - key: CLOUDINARY_CLOUD_NAME
-        sync: false
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: CLOUDINARY_CLOUD_NAME
       - key: CLOUDINARY_API_KEY
-        sync: false
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: CLOUDINARY_API_KEY
       - key: CLOUDINARY_API_SECRET
-        sync: false
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: CLOUDINARY_API_SECRET
       - key: EBAY_CLIENT_ID
-        sync: false
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: EBAY_CLIENT_ID
       - key: EBAY_CLIENT_SECRET
-        sync: false
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: EBAY_CLIENT_SECRET
       - key: EBAY_USER_TOKEN
-        sync: false
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: EBAY_USER_TOKEN
       - key: GOOGLE_CLIENT_ID
-        sync: false
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: GOOGLE_CLIENT_ID
       - key: GOOGLE_CLIENT_SECRET
-        sync: false
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: GOOGLE_CLIENT_SECRET
       - key: GOOGLE_CALLBACK_URL
-        sync: false
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: GOOGLE_CALLBACK_URL
     autoDeploy: true
 
   # Amazon Worker - NTSC (US/CA)
@@ -121,31 +157,67 @@ services:
     startCommand: python -m app.workers.amazon_worker --type NTSC
     envVars:
       - key: DATABASE_URL
-        sync: false
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: DATABASE_URL
       - key: PYTHON_VERSION
         value: 3.10.0
       - key: PRICECHARTING_API_TOKEN
-        sync: false
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: PRICECHARTING_API_TOKEN
       - key: SERPAPI_KEY
-        sync: false
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: SERPAPI_KEY
       - key: CLOUDINARY_CLOUD_NAME
-        sync: false
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: CLOUDINARY_CLOUD_NAME
       - key: CLOUDINARY_API_KEY
-        sync: false
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: CLOUDINARY_API_KEY
       - key: CLOUDINARY_API_SECRET
-        sync: false
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: CLOUDINARY_API_SECRET
       - key: EBAY_CLIENT_ID
-        sync: false
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: EBAY_CLIENT_ID
       - key: EBAY_CLIENT_SECRET
-        sync: false
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: EBAY_CLIENT_SECRET
       - key: EBAY_USER_TOKEN
-        sync: false
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: EBAY_USER_TOKEN
       - key: GOOGLE_CLIENT_ID
-        sync: false
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: GOOGLE_CLIENT_ID
       - key: GOOGLE_CLIENT_SECRET
-        sync: false
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: GOOGLE_CLIENT_SECRET
       - key: GOOGLE_CALLBACK_URL
-        sync: false
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: GOOGLE_CALLBACK_URL
     autoDeploy: true
 
   # Amazon Worker - JP (Japan)
@@ -158,29 +230,65 @@ services:
     startCommand: python -m app.workers.amazon_worker --type JP
     envVars:
       - key: DATABASE_URL
-        sync: false
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: DATABASE_URL
       - key: PYTHON_VERSION
         value: 3.10.0
       - key: PRICECHARTING_API_TOKEN
-        sync: false
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: PRICECHARTING_API_TOKEN
       - key: SERPAPI_KEY
-        sync: false
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: SERPAPI_KEY
       - key: CLOUDINARY_CLOUD_NAME
-        sync: false
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: CLOUDINARY_CLOUD_NAME
       - key: CLOUDINARY_API_KEY
-        sync: false
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: CLOUDINARY_API_KEY
       - key: CLOUDINARY_API_SECRET
-        sync: false
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: CLOUDINARY_API_SECRET
       - key: EBAY_CLIENT_ID
-        sync: false
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: EBAY_CLIENT_ID
       - key: EBAY_CLIENT_SECRET
-        sync: false
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: EBAY_CLIENT_SECRET
       - key: EBAY_USER_TOKEN
-        sync: false
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: EBAY_USER_TOKEN
       - key: GOOGLE_CLIENT_ID
-        sync: false
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: GOOGLE_CLIENT_ID
       - key: GOOGLE_CLIENT_SECRET
-        sync: false
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: GOOGLE_CLIENT_SECRET
       - key: GOOGLE_CALLBACK_URL
-        sync: false
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: GOOGLE_CALLBACK_URL
     autoDeploy: true
