@@ -10,30 +10,35 @@ class ListingClassifier:
     """
 
     @staticmethod
-    def detect_region(console_name: str) -> str:
+    def detect_region(console_name: str, product_name: str = "") -> str:
         """
-        Returns: 'PAL', 'NTSC-U', 'JP', or 'Unknown'
+        Returns: 'PAL', 'NTSC', 'JP', or None
         """
         c = console_name.upper()
+        p = product_name.upper()
         
-        # 1. Explicit PAL
+        # 1. Product Name Explicit Region (PriceCharting format: [PAL], [JP], etc)
+        if "[PAL]" in p or " (PAL)" in p: return "PAL"
+        if "[JP]" in p or "[JAPAN]" in p or " (JP)" in p: return "JP"
+        if "[NTSC]" in p or "[USA]" in p: return "NTSC" # or NTSC-U
+
+        # 2. Console Name Explicit PAL
         if c.startswith("PAL "):
             return "PAL"
             
-        # 2. Japan Specifics (Based on analysis)
+        # 3. Japan Specifics (Based on analysis)
         jp_keywords = ["FAMICOM", "PC ENGINE", "SATURN", "WONDERSWAN", "NEO GEO", "PC-FX"]
         # Excludes "Super Nintendo" (US) vs "Super Famicom" (JP)
         if any(k in c for k in jp_keywords):
             return "JP"
             
-        # 3. USA Specifics
+        # 4. USA Specifics
         us_keywords = ["GENESIS", "TURBOGRAFX", "NINTENDO ENTERTAINMENT SYSTEM", "SUPER NINTENDO"]
         if any(k in c for k in us_keywords):
-            return "NTSC-U"
+            return "NTSC" # Simplified to NTSC
             
-        # 4. Default Fallback
-        # Return None for ambiguous titles so the caller (PricingService) can decide 
-        # based on context (e.g. if searching on Amazon FR, assume PAL).
+        # 5. Default Fallback
+        # If no explicit marker, we return None (Ambiguous / Global)
         return None
 
     @staticmethod

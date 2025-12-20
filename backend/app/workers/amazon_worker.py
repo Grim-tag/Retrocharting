@@ -107,7 +107,7 @@ class AmazonWorker:
         valid_batch = []
         for p in candidates:
             # Check region compatibility using the classifier logic
-            region = ListingClassifier.detect_region(p.console_name)
+            region = ListingClassifier.detect_region(p.console_name, p.product_name)
             
             # Smart Logic: 
             # If region is None (e.g. just "Playstation 5"), it fits any worker (PAL/NTSC/JP) 
