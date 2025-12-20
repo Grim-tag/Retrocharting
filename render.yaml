@@ -73,14 +73,15 @@ services:
         sync: false
 
 
+
   # Amazon Worker - PAL (Europe)
   - type: worker
     name: worker-amazon-pal
     region: oregon
     env: python
-    rootDir: .
-    buildCommand: pip install -r backend/requirements.txt
-    startCommand: python -m backend.app.workers.amazon_worker --type PAL
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m app.workers.amazon_worker --type PAL
     envVars:
       - key: DATABASE_URL
         sync: false
@@ -97,9 +98,9 @@ services:
     name: worker-amazon-ntsc
     region: oregon
     env: python
-    rootDir: .
-    buildCommand: pip install -r backend/requirements.txt
-    startCommand: python -m backend.app.workers.amazon_worker --type NTSC
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m app.workers.amazon_worker --type NTSC
     envVars:
       - key: DATABASE_URL
         sync: false
@@ -116,9 +117,9 @@ services:
     name: worker-amazon-jp
     region: oregon
     env: python
-    rootDir: .
-    buildCommand: pip install -r backend/requirements.txt
-    startCommand: python -m backend.app.workers.amazon_worker --type JP
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m app.workers.amazon_worker --type JP
     envVars:
       - key: DATABASE_URL
         sync: false
