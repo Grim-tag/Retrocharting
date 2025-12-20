@@ -229,6 +229,24 @@ async def startup_event():
     # Handled by background thread now.
     pass
 
+    # 4. Start Amazon Workers (Free Tier Hack: Run inside Main Process)
+    try:
+        from app.workers.amazon_worker import AmazonWorker
+        
+        def start_worker(region, console_filter=None):
+            worker = AmazonWorker(region, console_filter)
+            worker.run()
+
+        # Start 3 threads for PAL, NTSC, JP targeting Playstation 5 initially
+        threading.Thread(target=start_worker, args=("PAL", "Playstation 5"), daemon=True).start()
+        threading.Thread(target=start_worker, args=("NTSC", "Playstation 5"), daemon=True).start()
+        threading.Thread(target=start_worker, args=("JP", "Playstation 5"), daemon=True).start()
+        
+        print("Startup: Amazon Workers (PAL/NTSC/JP) started in background threads.")
+    except Exception as e:
+        print(f"Startup: Failed to start Amazon Workers: {e}")
+
+
     print("Startup complete.")
     # ---------------------------------------------------------------------
 
