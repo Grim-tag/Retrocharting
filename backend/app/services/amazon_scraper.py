@@ -75,6 +75,22 @@ class AmazonScraper:
             print(f"[{domain}] Error searching: {e}")
             return None
 
+    # Affiliate Tags Configuration
+    # You should update these with your specific IDs per region if you have them.
+    # Amazon OneLink may allow using one ID (e.g. US) that redirects, but direct IDs are safer.
+    AFFILIATE_TAGS = {
+        "amazon.fr": "retrocharting-21",
+        "amazon.de": "retrocharting-21", # Often same for EU
+        "amazon.it": "retrocharting-21",
+        "amazon.es": "retrocharting-21",
+        "amazon.co.uk": "retrocharting-21", # Verify this
+        "amazon.com": "retrocharting-20", # Placeholder for US
+        "amazon.ca": "retrocharting-20",
+        "amazon.co.jp": "retrocharting-22", # Placeholder for JP
+        # Default fallback
+        "default": "retrocharting-21"
+    }
+
     def _parse_item(self, item: BeautifulSoup, domain: str) -> Optional[Dict[str, Any]]:
         """Parses a single search result item."""
         try:
@@ -113,8 +129,9 @@ class AmazonScraper:
             }
             currency = currency_map.get(domain, "EUR")
 
-            # Link
-            link = f"https://www.{domain}/dp/{asin}?tag=retrocharting-21" # Add affiliate tag by default
+            # Link with Dynamic Affiliate Tag
+            tag = self.AFFILIATE_TAGS.get(domain, self.AFFILIATE_TAGS["default"])
+            link = f"https://www.{domain}/dp/{asin}?tag={tag}"
 
             # Image
             img_el = item.select_one("img.s-image")
