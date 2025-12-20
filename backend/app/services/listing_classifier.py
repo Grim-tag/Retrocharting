@@ -23,7 +23,8 @@ class ListingClassifier:
         if "[NTSC]" in p or "[USA]" in p: return "NTSC" # or NTSC-U
 
         # 2. Console Name Explicit PAL
-        if c.startswith("PAL "):
+        # Check for "PAL " prefix or "(PAL)" / "[PAL]" suffix
+        if c.startswith("PAL ") or " (PAL)" in c or "[PAL]" in c:
             return "PAL"
             
         # 3. Japan Specifics (Based on analysis)
@@ -38,8 +39,9 @@ class ListingClassifier:
             return "NTSC" # Simplified to NTSC
             
         # 5. Default Fallback
-        # If no explicit marker, we return None (Ambiguous / Global)
-        return None
+        # If no explicit marker, we assume NTSC (US/Canada) as per user rules.
+        # "sur les jeux sans pal, et san jp il ne doit y avoir que les prix amazon.ca, et amazon.us"
+        return "NTSC"
 
     @staticmethod
     def get_marketplaces(region: str):

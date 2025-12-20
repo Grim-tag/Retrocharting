@@ -109,10 +109,11 @@ class AmazonWorker:
             # Check region compatibility using the classifier logic
             region = ListingClassifier.detect_region(p.console_name, p.product_name)
             
-            # Smart Logic: 
-            # If region is None (e.g. just "Playstation 5"), it fits any worker (PAL/NTSC/JP) 
-            # because PS5 is region free, but we stick to the worker's assigned region.
-            # If region is explicit (e.g. "PAL Super Nintendo"), only PAL worker takes it.
+            # Strict Logic:
+            # We enforce region compatibility. 
+            # Default fallback in classifier is now NTSC for unmarked consoles.
+            # So generic "Playstation 5" -> NTSC, which prevents PAL worker from scraping it.
+            # PAL games must be explicitly marked or have PAL console name.
             
             is_compatible = True
             if region and region != self.region_type:
