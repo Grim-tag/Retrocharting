@@ -72,3 +72,60 @@ services:
       - key: CLOUDINARY_API_SECRET
         sync: false
 
+
+  # Amazon Worker - PAL (Europe)
+  - type: worker
+    name: worker-amazon-pal
+    region: oregon
+    env: python
+    rootDir: .
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: python -m backend.app.workers.amazon_worker --type PAL
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: PYTHON_VERSION
+        value: 3.10.0
+      - key: PRICECHARTING_API_TOKEN
+        sync: false
+      - key: SERPAPI_KEY
+        sync: false
+    autoDeploy: true
+
+  # Amazon Worker - NTSC (US/CA)
+  - type: worker
+    name: worker-amazon-ntsc
+    region: oregon
+    env: python
+    rootDir: .
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: python -m backend.app.workers.amazon_worker --type NTSC
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: PYTHON_VERSION
+        value: 3.10.0
+      - key: PRICECHARTING_API_TOKEN
+        sync: false
+      - key: SERPAPI_KEY
+        sync: false
+    autoDeploy: true
+
+  # Amazon Worker - JP (Japan)
+  - type: worker
+    name: worker-amazon-jp
+    region: oregon
+    env: python
+    rootDir: .
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: python -m backend.app.workers.amazon_worker --type JP
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: PYTHON_VERSION
+        value: 3.10.0
+      - key: PRICECHARTING_API_TOKEN
+        sync: false
+      - key: SERPAPI_KEY
+        sync: false
+    autoDeploy: true
