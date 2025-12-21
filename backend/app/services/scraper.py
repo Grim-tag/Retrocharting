@@ -559,3 +559,53 @@ def _scrape_html_logic(db: Session, product: "Product") -> bool:
     except Exception as e:
         print(f"  Error processing item: {e}")
         return False
+
+def backfill_history(limit: int = 20):
+    """
+    Specific job to backfill historical price data (charts) for products that only have current prices.
+    Forces HTML scraping by bypassing the API check temporarily.
+    """
+    db: Session = SessionLocal()
+    try:
+        from app.models.product import Product
+        from app.models.price_history import PriceHistory
+        
+        # Find products that have a pricecharting_id (so we know they exist on PC)
+        # But have very few history points (e.g., < 2, meaning only today's snapshot)
+        # This determines they need a full history scrape.
+        # Optimized query: Find products with ID but no history older than 7 days?
+        # Simpler: Find products where we haven't successfully scraped history yet.
+        # We can use a flag or just random sample of those with valid IDs.
+        
+        # Let's target products with pricecharting_id but NO history or count < 5
+        # Doing a count for every product is slow.
+        # Let's iterate products that have not been scraped in a while, and force HTML.
+        
+        print(f"Backfill History: Starting batch of {limit}...")
+        
+        # Get candidates: Valid PC ID, haven't been scraped recently (older than 24h or null)
+        # We assume if we scrape via HTML we get history.
+        products = db.query(Product).filter(
+            Product.pricecharting_id != None
+        ).order_by(Product.last_scraped.asc().nullsfirst()).limit(limit).all()
+        
+        count = 0
+        for p in products:
+            print(f"  Backfilling history for: {p.product_name}...")
+            # FORCE HTML SCRAPE
+            # We call _scrape_html_logic directly
+            success = _scrape_html_logic(db, p)
+            
+            p.last_scraped = datetime.utcnow()
+            db.commit()
+            
+            if success:
+                count += 1
+                time.sleep(2) # Polite delay for HTML scraping
+                
+        print(f"Backfill History: Completed {count}/{len(products)}.")
+        
+    except Exception as e:
+        print(f"Backfill History Error: {e}")
+    finally:
+        db.close()

@@ -208,16 +208,21 @@ async def startup_event():
     # 2. Initialize Scheduler (Crucial)
     try:
         from apscheduler.schedulers.background import BackgroundScheduler
-        from app.services.scraper import scrape_missing_data
+        from app.services.scraper import scrape_missing_data, backfill_history
         from app.services.enrichment import enrichment_job, refresh_prices_job
+        from app.services.pc_games_scraper import scrape_pc_games_bg_wrapper
 
         scheduler = BackgroundScheduler()
         # SCRAPER: 2 workers max (defined in scraper.py), run every 1 min
         scheduler.add_job(scrape_missing_data, 'interval', minutes=1, args=[110, 200], id='auto_scrape', replace_existing=True)
-        # PRICE REFRESH: Every 10 mins
+        # PRICE REFRESH: Every 10 mins (Fast API)
         scheduler.add_job(refresh_prices_job, 'interval', minutes=10, args=[300], id='price_refresh', replace_existing=True)
+        # HISTORY BACKFILL: Every 5 mins (Slow HTML)
+        scheduler.add_job(backfill_history, 'interval', minutes=5, args=[10], id='history_backfill', replace_existing=True)
         # ENRICHMENT: Every 2 mins
         scheduler.add_job(enrichment_job, 'interval', minutes=2, args=[110, 50], id='auto_enrich', replace_existing=True)
+        # PC GAMES: Every 12 hours
+        scheduler.add_job(scrape_pc_games_bg_wrapper, 'interval', hours=12, args=[200], id='pc_games_scrape', replace_existing=True)
         
         scheduler.start()
         print("APScheduler started.")
