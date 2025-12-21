@@ -139,6 +139,19 @@ class AmazonWorker:
     def _process_product(self, db, product, domain):
         print(f"🔎 Scanning [{domain}] for: {product.product_name} ({product.console_name})")
         
+        # STRICT SAFETY CHECK: Re-verify region compatibility at processing time
+        # This prevents cases where a product might have been fetched but is actually incompatible
+        # or if the classification logic changed/is ambiguous.
+        detected_region = ListingClassifier.detect_region(product.console_name, product.product_name)
+        
+        # If product is explicitly detected as a DIFFERENT region, abort.
+        # Note: If detected_region is None (ambiguous), it typically defaults to NTSC in classifier,
+        # so we must trust the classifier's default or handle it.
+        # Here we trust the classifier completely.
+        if detected_region and detected_region != self.region_type:
+             print(f"⚠️ [Worker {self.region_type}] Skipping {product.product_name} (Detected as {detected_region}) - Region Mismatch")
+             return
+
         # Generate sanitized query
         query = ListingClassifier.clean_search_query(product.product_name, product.console_name)
         
@@ -155,6 +168,21 @@ class AmazonWorker:
         db.commit()
 
     def _save_listing(self, db, product_id, data):
+        # STRICT SAFETY CHECK: Verify Domain/URL validity for this worker
+        # Prevents writing "amazon.fr" links if this is the NTSC worker etc.
+        # Extract domain from URL or use logic
+        url = data.get('url', '').lower()
+        
+        is_valid_domain = False
+        for valid_domain in self.domains:
+            if valid_domain in url:
+                is_valid_domain = True
+                break
+        
+        if not is_valid_domain:
+             print(f"🛑 [Worker {self.region_type}] BLOCKED SAVING: URL {url} does not match allowed domains {self.domains}")
+             return
+
         # Check if active listing exists for this source/domain
         existing = db.query(Listing).filter(
             Listing.product_id == product_id,
