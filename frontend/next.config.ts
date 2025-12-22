@@ -20,6 +20,21 @@ const nextConfig: NextConfig = {
 
   // Experimental: Restrict CPU usage? No official config for that in Next.js directly
 
+  async redirects() {
+    return [
+      {
+        source: '/fr/jeux-video/dogz-pc-games-cote-prix-119314',
+        destination: '/fr/jeux-video/dogz-pal-gameboy-color-cote-prix-45260',
+        permanent: true,
+      },
+      {
+        source: '/games/dogz-pc-games-prices-119314',
+        destination: '/games/dogz-gameboy-color-prices-12265',
+        permanent: true,
+      },
+    ]
+  },
+
   async rewrites() {
     return [
       {
