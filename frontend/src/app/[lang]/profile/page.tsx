@@ -13,7 +13,7 @@ export default function ProfilePage() {
     const { token, isAuthenticated } = useAuth();
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState<any>(null);
-    const [activeTab, setActiveTab] = useState<'COLLECTION' | 'WISHLIST'>('COLLECTION');
+    const [activeTab, setActiveTab] = useState<'COLLECTION' | 'WISHLIST' | 'ANALYTICS'>('COLLECTION');
     const params = useParams();
     const lang = (params?.lang as string) || 'en';
 
@@ -56,6 +56,12 @@ export default function ProfilePage() {
         );
     }
 
+    const copyPublicLink = () => {
+        const url = `${window.location.origin}/u/${data.user.username}`;
+        navigator.clipboard.writeText(url);
+        alert("Public profile link copied to clipboard!");
+    };
+
     return (
         <main className="min-h-screen bg-[#0f121e] py-8 pb-20">
             <div className="max-w-[1400px] mx-auto px-4">
@@ -76,8 +82,8 @@ export default function ProfilePage() {
                             <button
                                 onClick={() => setActiveTab('COLLECTION')}
                                 className={`px-6 py-3 font-bold text-sm uppercase tracking-wide border-b-2 transition-colors ${activeTab === 'COLLECTION'
-                                        ? 'border-[#ff6600] text-white'
-                                        : 'border-transparent text-gray-500 hover:text-gray-300'
+                                    ? 'border-[#ff6600] text-white'
+                                    : 'border-transparent text-gray-500 hover:text-gray-300'
                                     }`}
                             >
                                 Collection
@@ -85,23 +91,35 @@ export default function ProfilePage() {
                             <button
                                 onClick={() => setActiveTab('WISHLIST')}
                                 className={`px-6 py-3 font-bold text-sm uppercase tracking-wide border-b-2 transition-colors ${activeTab === 'WISHLIST'
-                                        ? 'border-[#ff6600] text-white'
-                                        : 'border-transparent text-gray-500 hover:text-gray-300'
+                                    ? 'border-[#ff6600] text-white'
+                                    : 'border-transparent text-gray-500 hover:text-gray-300'
                                     }`}
                             >
                                 Wishlist
                             </button>
-                            {/* Placeholder for future tabs */}
-                            <button className="px-6 py-3 font-bold text-sm uppercase tracking-wide border-b-2 border-transparent text-gray-600 cursor-not-allowed">
+                            <button
+                                onClick={() => setActiveTab('ANALYTICS')}
+                                className={`px-6 py-3 font-bold text-sm uppercase tracking-wide border-b-2 transition-colors ${activeTab === 'ANALYTICS'
+                                    ? 'border-[#ff6600] text-white'
+                                    : 'border-transparent text-gray-500 hover:text-gray-300'
+                                    }`}
+                            >
                                 Analytics
                             </button>
                         </div>
 
-                        {/* Grid Content */}
-                        <CollectionGrid
-                            items={activeTab === 'COLLECTION' ? data.collection : data.wishlist}
-                            type={activeTab}
-                        />
+                        {/* Content Switcher */}
+                        {activeTab === 'ANALYTICS' ? (
+                            <div className="bg-[#1f2533] rounded-xl border border-[#2a3142] p-8 text-center">
+                                <h3 className="text-2xl font-bold text-white mb-4">Analytics Dashboard</h3>
+                                <p className="text-gray-400">Detailed charts coming soon in Phase 3!</p>
+                            </div>
+                        ) : (
+                            <CollectionGrid
+                                items={activeTab === 'COLLECTION' ? data.collection : data.wishlist}
+                                type={activeTab}
+                            />
+                        )}
                     </div>
 
                     {/* Sidebar */}
@@ -112,7 +130,10 @@ export default function ProfilePage() {
                         <div className="mt-6 bg-[#1f2533] p-6 rounded-xl border border-[#2a3142]">
                             <h3 className="font-bold text-white mb-2">Share Profile</h3>
                             <p className="text-xs text-gray-500 mb-4">Show off your collection to the world.</p>
-                            <button className="w-full bg-[#2a3142] hover:bg-[#353e54] text-white font-bold py-2 px-4 rounded border border-[#3a4152] transition-colors flex items-center justify-center gap-2">
+                            <button
+                                onClick={copyPublicLink}
+                                className="w-full bg-[#2a3142] hover:bg-[#353e54] text-white font-bold py-2 px-4 rounded border border-[#3a4152] transition-colors flex items-center justify-center gap-2"
+                            >
                                 <span>🔗</span> Copy Public Link
                             </button>
                         </div>
