@@ -14,6 +14,7 @@ export default function ProfilePage() {
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState<any>(null);
     const [activeTab, setActiveTab] = useState<'COLLECTION' | 'WISHLIST' | 'ANALYTICS'>('COLLECTION');
+    const [groupByConsole, setGroupByConsole] = useState(false);
     const params = useParams();
     const lang = (params?.lang as string) || 'en';
 
@@ -77,35 +78,56 @@ export default function ProfilePage() {
                     {/* Main Content (Tabs + Grid) */}
                     <div className="lg:col-span-9">
 
-                        {/* Tabs */}
-                        <div className="flex items-center gap-1 mb-6 border-b border-[#2a3142]">
-                            <button
-                                onClick={() => setActiveTab('COLLECTION')}
-                                className={`px-6 py-3 font-bold text-sm uppercase tracking-wide border-b-2 transition-colors ${activeTab === 'COLLECTION'
-                                    ? 'border-[#ff6600] text-white'
-                                    : 'border-transparent text-gray-500 hover:text-gray-300'
-                                    }`}
-                            >
-                                Collection
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('WISHLIST')}
-                                className={`px-6 py-3 font-bold text-sm uppercase tracking-wide border-b-2 transition-colors ${activeTab === 'WISHLIST'
-                                    ? 'border-[#ff6600] text-white'
-                                    : 'border-transparent text-gray-500 hover:text-gray-300'
-                                    }`}
-                            >
-                                Wishlist
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('ANALYTICS')}
-                                className={`px-6 py-3 font-bold text-sm uppercase tracking-wide border-b-2 transition-colors ${activeTab === 'ANALYTICS'
-                                    ? 'border-[#ff6600] text-white'
-                                    : 'border-transparent text-gray-500 hover:text-gray-300'
-                                    }`}
-                            >
-                                Analytics
-                            </button>
+                        {/* Tabs & Toggles */}
+                        <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 border-b border-[#2a3142]">
+                            <div className="flex items-center gap-1">
+                                <button
+                                    onClick={() => setActiveTab('COLLECTION')}
+                                    className={`px-6 py-3 font-bold text-sm uppercase tracking-wide border-b-2 transition-colors ${activeTab === 'COLLECTION'
+                                            ? 'border-[#ff6600] text-white'
+                                            : 'border-transparent text-gray-500 hover:text-gray-300'
+                                        }`}
+                                >
+                                    Collection
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('WISHLIST')}
+                                    className={`px-6 py-3 font-bold text-sm uppercase tracking-wide border-b-2 transition-colors ${activeTab === 'WISHLIST'
+                                            ? 'border-[#ff6600] text-white'
+                                            : 'border-transparent text-gray-500 hover:text-gray-300'
+                                        }`}
+                                >
+                                    Wishlist
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('ANALYTICS')}
+                                    className={`px-6 py-3 font-bold text-sm uppercase tracking-wide border-b-2 transition-colors ${activeTab === 'ANALYTICS'
+                                            ? 'border-[#ff6600] text-white'
+                                            : 'border-transparent text-gray-500 hover:text-gray-300'
+                                        }`}
+                                >
+                                    Analytics
+                                </button>
+                            </div>
+
+                            {/* Options */}
+                            {activeTab !== 'ANALYTICS' && (
+                                <div className="flex items-center gap-2 px-4 py-2">
+                                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                                        <div className="relative">
+                                            <input
+                                                type="checkbox"
+                                                className="sr-only"
+                                                checked={groupByConsole}
+                                                onChange={(e) => setGroupByConsole(e.target.checked)}
+                                            />
+                                            <div className={`w-10 h-6 bg-[#2a3142] rounded-full shadow-inner transition-colors ${groupByConsole ? 'bg-[#ff6600]' : ''}`}></div>
+                                            <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${groupByConsole ? 'translate-x-4' : ''}`}></div>
+                                        </div>
+                                        <span className="text-sm text-gray-400 font-medium">Group by Console</span>
+                                    </label>
+                                </div>
+                            )}
                         </div>
 
                         {/* Content Switcher */}
@@ -118,6 +140,7 @@ export default function ProfilePage() {
                             <CollectionGrid
                                 items={activeTab === 'COLLECTION' ? data.collection : data.wishlist}
                                 type={activeTab}
+                                groupBy={groupByConsole ? 'CONSOLE' : 'NONE'}
                             />
                         )}
                     </div>

@@ -19,9 +19,10 @@ interface Item {
 interface CollectionGridProps {
     items: Item[];
     type: 'COLLECTION' | 'WISHLIST';
+    groupBy?: 'NONE' | 'CONSOLE';
 }
 
-export default function CollectionGrid({ items, type }: CollectionGridProps) {
+export default function CollectionGrid({ items, type, groupBy = 'NONE' }: CollectionGridProps) {
     const { currency } = useCurrency();
 
     if (!items || items.length === 0) {
@@ -41,56 +42,87 @@ export default function CollectionGrid({ items, type }: CollectionGridProps) {
                 <Link href="/games" className="bg-[#ff6600] text-white px-6 py-2 rounded-full font-bold hover:bg-[#ff8533] transition-colors">
                     Browse Games
                 </Link>
-            </div >
+            </div>
         );
     }
 
-    return (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-            {items.map((item) => {
-                const valueLoc = convertPrice(item.value, currency);
-
-                return (
-                    <div key={item.id} className="group relative bg-[#1f2533] rounded-lg overflow-hidden border border-[#2a3142] hover:border-[#ff6600] transition-all hover:shadow-lg hover:shadow-orange-900/20">
-                        {/* Image */}
-                        <div className="aspect-[3/4] relative">
-                            {item.image_url ? (
-                                <img
-                                    src={item.image_url}
-                                    alt={item.product_name}
-                                    className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                                />
-                            ) : (
-                                <div className="w-full h-full bg-[#111] flex items-center justify-center text-gray-700 font-bold text-xs">
-                                    NO IMAGE
-                                </div>
-                            )}
-
-                            {/* Badge */}
-                            <div className="absolute top-2 right-2 bg-black/80 backdrop-blur text-white text-[10px] font-bold px-2 py-0.5 rounded border border-gray-700">
-                                {item.condition}
-                            </div>
+    // Helper to render a single card
+    const renderCard = (item: Item) => {
+        const valueLoc = convertPrice(item.value, currency);
+        return (
+            <div key={item.id} className="group relative bg-[#1f2533] rounded-lg overflow-hidden border border-[#2a3142] hover:border-[#ff6600] transition-all hover:shadow-lg hover:shadow-orange-900/20">
+                {/* Image */}
+                <div className="aspect-[3/4] relative">
+                    {item.image_url ? (
+                        <img
+                            src={item.image_url}
+                            alt={item.product_name}
+                            className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                        />
+                    ) : (
+                        <div className="w-full h-full bg-[#111] flex items-center justify-center text-gray-700 font-bold text-xs">
+                            NO IMAGE
                         </div>
+                    )}
 
-                        {/* Info */}
-                        <div className="p-3">
-                            <div className="text-xs text-gray-500 mb-1 truncate">{item.console_name}</div>
-                            <Link href={`/${item.console_name.toLowerCase().replace(/ /g, '-')}/${item.product_name.toLowerCase().replace(/ /g, '-')}-${item.product_id}`} className="block">
-                                <h3 className="font-bold text-white text-sm leading-tight line-clamp-2 h-10 mb-2 group-hover:text-[#ff6600] transition-colors">
-                                    {item.product_name}
-                                </h3>
-                            </Link>
+                    {/* Badge */}
+                    <div className="absolute top-2 right-2 bg-black/80 backdrop-blur text-white text-[10px] font-bold px-2 py-0.5 rounded border border-gray-700">
+                        {item.condition}
+                    </div>
+                </div>
 
-                            <div className="flex items-center justify-between mt-auto">
-                                <div className="text-[#22c55e] font-bold text-sm">
-                                    {formatPrice(valueLoc, currency)}
-                                </div>
-                                {/* If paid price exists and logic matches */}
-                            </div>
+                {/* Info */}
+                <div className="p-3">
+                    <div className="text-xs text-gray-500 mb-1 truncate">{item.console_name}</div>
+                    <Link href={`/${item.console_name.toLowerCase().replace(/ /g, '-')}/${item.product_name.toLowerCase().replace(/ /g, '-')}-${item.product_id}`} className="block">
+                        <h3 className="font-bold text-white text-sm leading-tight line-clamp-2 h-10 mb-2 group-hover:text-[#ff6600] transition-colors">
+                            {item.product_name}
+                        </h3>
+                    </Link>
+
+                    <div className="flex items-center justify-between mt-auto">
+                        <div className="text-[#22c55e] font-bold text-sm">
+                            {formatPrice(valueLoc, currency)}
                         </div>
                     </div>
-                );
-            })}
+                </div>
+            </div>
+        );
+    };
+
+    if (groupBy === 'CONSOLE') {
+        // Group items
+        const groups: Record<string, Item[]> = {};
+        items.forEach(item => {
+            if (!groups[item.console_name]) groups[item.console_name] = [];
+            groups[item.console_name].push(item);
+        });
+
+        const sortedConsoles = Object.keys(groups).sort();
+
+        return (
+            <div className="space-y-8">
+                {sortedConsoles.map(consoleName => (
+                    <div key={consoleName}>
+                        <h3 className="text-xl font-bold text-white mb-4 border-l-4 border-[#ff6600] pl-3 flex items-center gap-2">
+                            {consoleName}
+                            <span className="text-sm font-normal text-gray-500 bg-[#2a3142] px-2 py-0.5 rounded-full">
+                                {groups[consoleName].length}
+                            </span>
+                        </h3>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                            {groups[consoleName].map(renderCard)}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        );
+    }
+
+    // Default Grid
+    return (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+            {items.map(renderCard)}
         </div>
     );
 }
