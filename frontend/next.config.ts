@@ -32,6 +32,17 @@ const nextConfig: NextConfig = {
         destination: '/games/dogz-gameboy-color-prices-12265',
         permanent: true,
       },
+      // Phase 2: Redirect Legacy Collection/Analytics to New Profile Hub
+      {
+        source: '/collection',
+        destination: '/profile',
+        permanent: false, // Temporary while testing
+      },
+      {
+        source: '/collection/analytics',
+        destination: '/profile',
+        permanent: false,
+      },
     ]
   },
 

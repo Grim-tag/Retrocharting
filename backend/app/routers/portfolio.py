@@ -13,6 +13,119 @@ from app.routers.auth import get_current_user
 
 router = APIRouter()
 
+@router.get("/dashboard")
+def get_portfolio_dashboard(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Unified Dashboard Endpoint (Phase 2).
+    Returns all necessary data for the /profile page in one shot.
+    """
+    # 1. Fetch User Stats (Rank is calculated dynamically or stored?)
+    # For now, let's use the stored rank/xp
+    user_stats = {
+        "username": current_user.username,
+        "avatar_url": current_user.avatar_url,
+        "rank": current_user.rank,
+        "xp": current_user.xp,
+        "next_level_xp": 1000, # TODO: Dynamic
+        "progress": (current_user.xp % 1000) / 10 # Simple placeholder logic
+    }
+
+    # 2. Fetch Collection Items (Owned)
+    collection_items = db.query(CollectionItem, Product)\
+        .join(Product, CollectionItem.product_id == Product.id)\
+        .filter(CollectionItem.user_id == current_user.id, CollectionItem.condition != 'WISHLIST')\
+        .all()
+        
+    # 3. Fetch Wishlist Items
+    wishlist_items = db.query(CollectionItem, Product)\
+        .join(Product, CollectionItem.product_id == Product.id)\
+        .filter(CollectionItem.user_id == current_user.id, CollectionItem.condition == 'WISHLIST')\
+        .all()
+
+    # 4. Calculate KPIs
+    total_value = 0.0
+    total_invested = 0.0
+    for item, product in collection_items:
+        val = 0.0
+        if item.condition == 'LOOSE': val = product.loose_price or 0
+        elif item.condition == 'CIB': val = product.cib_price or 0
+        elif item.condition == 'NEW': val = product.new_price or 0
+        elif item.condition == 'GRADED': val = product.new_price or 0
+        total_value += val
+        total_invested += (item.paid_price or 0)
+
+    wishlist_cost = 0.0
+    for item, product in wishlist_items:
+        # Wishlist usually implies CIB goal, but could be loose. Default CIB for value estimation?
+        # Or check if user specified condition in future.
+        wishlist_cost += (product.cib_price or 0)
+
+    kpis = {
+        "total_value": round(total_value, 2),
+        "invested": round(total_invested, 2),
+        "item_count": len(collection_items),
+        "wishlist_cost": round(wishlist_cost, 2),
+        "wishlist_count": len(wishlist_items)
+    }
+
+    # 5. Top Movers (Reuse logic or simplify?)
+    # Let's call the specific movers logic separately if complex, or simplify it here.
+    # For speed, let's just return empty list for now, client calls dedicated endpoint if sticky?
+    # No, "One Shot" means we should include it.
+    # Let's perform a lightweight mover check on top 10 valuable items only?
+    # Or just return the top valuable items for the carousel.
+    
+    top_items = []
+    for item, product in collection_items:
+        val = 0.0
+        if item.condition == 'LOOSE': val = product.loose_price or 0
+        elif item.condition == 'CIB': val = product.cib_price or 0
+        elif item.condition == 'NEW': val = product.new_price or 0
+        top_items.append({
+            "name": product.product_name,
+            "console": product.console_name,
+            "value": val,
+            "image": product.image_url
+        })
+    top_items.sort(key=lambda x: x["value"], reverse=True)
+
+    # Format items for response
+    def format_item(item, product):
+        val = 0.0
+        if item.condition == 'LOOSE': val = product.loose_price or 0
+        elif item.condition == 'CIB': val = product.cib_price or 0
+        elif item.condition == 'NEW': val = product.new_price or 0
+        elif item.condition == 'GRADED': val = product.new_price or 0
+        
+        return {
+            "id": item.id,
+            "product_id": product.id,
+            "product_name": product.product_name,
+            "console_name": product.console_name,
+            "image_url": product.image_url,
+            "condition": item.condition,
+            "value": val,
+            "paid_price": item.paid_price,
+            "added_at": item.added_at
+        }
+
+    formatted_collection = [format_item(i, p) for i, p in collection_items]
+    # Sort by recent add?
+    formatted_collection.sort(key=lambda x: x['added_at'] if x['added_at'] else datetime.min, reverse=True)
+
+    formatted_wishlist = [format_item(i, p) for i, p in wishlist_items]
+
+    return {
+        "user": user_stats,
+        "kpis": kpis,
+        "top_items": top_items[:5],
+        "collection": formatted_collection, 
+        "wishlist": formatted_wishlist
+    }
+
 @router.get("/summary")
 def get_portfolio_summary(
     db: Session = Depends(get_db),

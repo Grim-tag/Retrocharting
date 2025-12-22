@@ -349,6 +349,16 @@ export async function getPortfolioDebug(token: string): Promise<any> {
     }
 }
 
+export async function getPortfolioDashboard(token: string): Promise<any> {
+    try {
+        const response = await apiClient.get(`/portfolio/dashboard`);
+        return response.data;
+    } catch (error) {
+        console.error("Failed to fetch portfolio dashboard", error);
+        return null;
+    }
+}
+
 // --- Import APIs ---
 
 export interface CSVMatchResult {
