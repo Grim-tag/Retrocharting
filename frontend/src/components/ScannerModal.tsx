@@ -18,6 +18,9 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [hasPermission, setHasPermission] = useState(false);
 
+    // Debug Logs
+    const [debugLogs, setDebugLogs] = useState<string[]>([]);
+
     // Search State
     const [searchQuery, setSearchQuery] = useState("");
     const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -28,6 +31,13 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
     const router = useRouter();
     const scannerRef = useRef<Html5Qrcode | null>(null);
     const mountedRef = useRef(false);
+
+    // Helper logging
+    const addLog = (msg: string) => {
+        const time = new Date().toLocaleTimeString();
+        setDebugLogs(prev => [...prev, `[${time}] ${msg}`]);
+        console.log(`[ScannerLog] ${msg}`);
+    };
 
     // Reset when opening
     useEffect(() => {
@@ -53,27 +63,38 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
         setSearchQuery("");
         setSearchResults([]);
         setCreateForm({ name: '', console: '' });
+        setDebugLogs([]); // optional: keep logs? no clear them
+        addLog("State reset. Scanner opening.");
     };
 
     const startScanner = async () => {
         // Wait a bit for UI to mount
-        await new Promise(r => setTimeout(r, 100));
+        await new Promise(r => setTimeout(r, 200));
 
         const elem = document.getElementById("reader");
         if (!elem) {
-            console.error("Scanner element not found");
+            addLog("ERROR: #reader element not found in DOM");
             return;
         }
 
         try {
             if (scannerRef.current) {
-                // Remove existing if any?
-                // return; 
+                addLog("Scanner instance already exists. Checking state...");
+                try {
+                    // If it's running, stop it first?
+                    if (scannerRef.current.isScanning) {
+                        await scannerRef.current.stop();
+                        addLog("Stopped existing scan.");
+                    }
+                } catch (e) {
+                    addLog("Error checking/stopping existing: " + e);
+                }
+            } else {
+                addLog("Creating new Html5Qrcode instance.");
+                scannerRef.current = new Html5Qrcode("reader");
             }
 
-            // Create instance
-            const html5QrCode = new Html5Qrcode("reader");
-            scannerRef.current = html5QrCode;
+            const html5QrCode = scannerRef.current;
 
             // Config
             const config = {
@@ -84,8 +105,8 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
                     Html5QrcodeSupportedFormats.EAN_13,
                     Html5QrcodeSupportedFormats.EAN_8,
                     Html5QrcodeSupportedFormats.UPC_A,
-                    Html5QrcodeSupportedFormats.UPC_E,
-                    Html5QrcodeSupportedFormats.CODE_128,
+                    // Html5QrcodeSupportedFormats.UPC_E,
+                    // Html5QrcodeSupportedFormats.CODE_128,
                     Html5QrcodeSupportedFormats.QR_CODE
                 ]
             };
@@ -93,26 +114,35 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
             // 1. Try to get cameras
             let cameraIdToUse = null;
             try {
+                addLog("Enumerating cameras...");
                 const cameras = await Html5Qrcode.getCameras();
+                addLog(`Found ${cameras.length} cameras.`);
+
                 if (cameras && cameras.length > 0) {
-                    // Try to find back camera (regex on label) or use last one
+                    cameras.forEach((c, i) => addLog(`[${i}] ${c.label} (id: ${c.id.slice(0, 5)}...)`));
+
+                    // Priority: Environment/Back > Last Camera > First Camera
                     const backCam = cameras.find(c => c.label.toLowerCase().includes('back') || c.label.toLowerCase().includes('environment'));
                     if (backCam) {
                         cameraIdToUse = backCam.id;
+                        addLog(`Selected Back Cam: ${backCam.label}`);
                     } else if (cameras.length > 1) {
-                        // Usually the last one is the back camera on mobile if 2 exist
                         cameraIdToUse = cameras[cameras.length - 1].id;
+                        addLog(`Selected Last Cam (Fallback): ${cameras[cameras.length - 1].label}`);
                     } else {
                         cameraIdToUse = cameras[0].id;
+                        addLog(`Selected First Cam: ${cameras[0].label}`);
                     }
+                } else {
+                    addLog("Warning: getCameras returned empty list.");
                 }
-            } catch (e) {
-                console.warn("Could not list cameras, falling back to constraint", e);
+            } catch (e: any) {
+                addLog(`Enumeration Error: ${e.message || e}`);
+                // Proceed to try generic config
             }
 
             const startConfig = cameraIdToUse ? { deviceId: { exact: cameraIdToUse } } : { facingMode: "environment" };
-
-            console.log("Starting scanner with:", startConfig);
+            addLog(`Calling start() with config: ${JSON.stringify(startConfig)}`);
 
             await html5QrCode.start(
                 startConfig,
@@ -121,24 +151,28 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
                     handleScanSuccess(decodedText);
                 },
                 (errorMessage) => {
-                    // console.log(errorMessage);
+                    // Ignore transient
                 }
             );
 
+            addLog("Scanner started successfully!");
             if (mountedRef.current) {
                 setHasPermission(true);
             }
 
         } catch (err: any) {
+            addLog(`START FAIL: ${err.message || err}`);
             console.error("Start Scanner Error", err);
+
             let msg = "Could not start camera.";
             if (err?.name === "NotAllowedError" || err?.message?.includes("permission")) {
-                msg = "Camera permission denied.";
+                msg = "Permission denied. Check browser settings.";
             } else if (err?.name === "NotFoundError") {
                 msg = "No camera found.";
             } else if (typeof err === 'string') {
                 msg = err;
             }
+
             // If it's the "Unable to query supported devices" error, it might be persistent
             if (mountedRef.current) {
                 setErrorMsg(msg);
@@ -150,20 +184,23 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
     const stopScanner = async () => {
         if (scannerRef.current) {
             try {
+                // Check if running before stop? html5-qrcode throws if not running
                 await scannerRef.current.stop();
                 scannerRef.current.clear();
             } catch (ignore) {
-                // Ignore stop errors (e.g. not running)
+                // Ignore stop errors
             }
+            // Do NOT nullify ref immediately if we want to reuse? 
+            // Actually best to recreate instance to avoid state issues
             scannerRef.current = null;
         }
     };
 
     const handleScanSuccess = async (code: string) => {
         if (!mountedRef.current) return;
+        addLog(`Barcode found: ${code}`);
 
-        // Pause scanning logic implicitly by unmounting scanner via view change?
-        // Actually, let's stop scanner temporarily
+        // Stop scanning
         await stopScanner();
 
         setScannedCode(code);
@@ -173,21 +210,24 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
 
     const processCode = async (code: string) => {
         try {
-            // Search API for this code
+            addLog(`Searching API for: ${code}`);
             const res = await apiClient.get(`/products?search=${code}`);
             const products = res.data;
 
             if (products && products.length > 0) {
+                addLog("Product found! Redirecting.");
                 const product = products[0];
                 onClose();
                 router.push(`/products/${product.id}`);
             } else {
+                addLog("Product not found via scan.");
                 setErrorMsg(`Unknown Game (Code: ${code})`);
                 setView('error');
                 setLoading(false);
             }
         } catch (e) {
             console.error("Scan Error", e);
+            addLog("API Error: " + e);
             setErrorMsg("Network Error checking code.");
             setView('error');
             setLoading(false);
@@ -244,9 +284,43 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
         }
     };
 
+    // File Upload Handler (Fallback)
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        addLog(`File selected: ${file.name} (${file.size} bytes)`);
+
+        if (scannerRef.current) {
+            addLog("Scanning file with existing instance...");
+            scannerRef.current.scanFile(file, true)
+                .then(decodedText => {
+                    addLog("File scan success: " + decodedText);
+                    handleScanSuccess(decodedText);
+                })
+                .catch(err => {
+                    addLog("File scan error: " + err);
+                    setErrorMsg("Could not read barcode from image.");
+                });
+        } else {
+            // Need instance
+            const tempScanner = new Html5Qrcode("reader"); // Re-use element or headless? 
+            // "reader" might be hidden if not in scan view
+            addLog("Creating temp scanner for file...");
+            tempScanner.scanFile(file, true)
+                .then(decodedText => {
+                    addLog("File scan success: " + decodedText);
+                    handleScanSuccess(decodedText);
+                })
+                .catch(err => {
+                    addLog("File scan error: " + err);
+                    setErrorMsg("Could not read barcode from image.");
+                });
+        }
+    };
+
     const requestPermissionManual = () => {
-        // html5-qrcode doesn't have a simple "request permission" independent of start
-        // But re-calling startScanner might trigger it
+        addLog("User requested manual restart.");
         resetState();
         startScanner();
     };
@@ -269,18 +343,19 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
                 {/* 1. SCAN VIEW */}
                 {view === 'scan' && (
                     <div className="relative flex-1 bg-black flex flex-col">
-
                         {/* Reader Container */}
                         <div id="reader" className="w-full h-full bg-black"></div>
 
                         {/* Fallback msg if taking too long */}
                         {!hasPermission && !errorMsg && (
                             <div className="absolute inset-0 flex items-center justify-center text-white text-sm pointer-events-none">
-                                <p className="bg-black/50 p-2 rounded">Initializing Camera...</p>
+                                <div className="bg-black/80 p-4 rounded text-center">
+                                    <p className="mb-2">Initializing Camera...</p>
+                                    <div className="text-xs text-gray-400">If this takes long, check permissions.</div>
+                                </div>
                             </div>
                         )}
 
-                        {/* Overlay Text */}
                         <div className="absolute inset-x-0 bottom-4 text-center pointer-events-none">
                             <p className="text-white/90 font-bold bg-black/60 inline-block px-3 py-1 rounded text-sm animate-pulse">
                                 SCANNING...
@@ -299,7 +374,7 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
 
                         {errorMsg && !scannedCode && (
                             <div className="bg-red-900/20 border border-red-900/50 p-3 rounded mb-6">
-                                <p className="text-red-200 text-sm">{errorMsg}</p>
+                                <p className="text-red-200 text-sm break-words">{errorMsg}</p>
                             </div>
                         )}
 
@@ -333,28 +408,17 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
                                         onClick={requestPermissionManual}
                                         className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded font-bold shadow-lg"
                                     >
-                                        🔓 Request Camera Access
+                                        🔄 Retry Camera
                                     </button>
-                                    {/* Keep Image Input as absolute fallback but hidden/secondary */}
+
                                     <label className="block w-full bg-gray-700 hover:bg-gray-600 text-white py-3 rounded font-bold mt-2 border border-gray-500 cursor-pointer">
                                         📷 Upload Photo
                                         <input
                                             type="file"
                                             accept="image/*"
+                                            id="scanner-upload-file"
                                             className="hidden"
-                                            onChange={(e) => {
-                                                const file = e.target.files?.[0];
-                                                if (file) {
-                                                    const html5QrCode = new Html5Qrcode("reader");
-                                                    html5QrCode.scanFile(file, true)
-                                                        .then(decodedText => {
-                                                            handleScanSuccess(decodedText);
-                                                        })
-                                                        .catch(err => {
-                                                            setErrorMsg("Could not read image.");
-                                                        });
-                                                }
-                                            }}
+                                            onChange={handleFileUpload}
                                         />
                                     </label>
                                 </>
@@ -367,13 +431,13 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
                                 onClick={() => { resetState(); startScanner(); }}
                                 className="w-full bg-gray-800 hover:bg-gray-700 text-white py-3 rounded font-bold border border-gray-600"
                             >
-                                Try Scanning Again
+                                Restart
                             </button>
                         </div>
                     </div>
                 )}
 
-                {/* 3. SEARCH RESULTS & 4. CREATE VIEW (Simplified for brevity, same as before) */}
+                {/* 3. SEARCH RESULTS & CREATE VIEW (Abbreviated) */}
                 {view === 'search' && (
                     <div className="p-4 flex flex-col h-full bg-gray-900">
                         <h3 className="text-white font-bold mb-4">Select Game to Link</h3>
@@ -400,9 +464,13 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
                 )}
             </div>
 
-            <p className="text-gray-500 mt-8 text-sm text-center max-w-xs">
-                Powered by HTML5-QRCode
-            </p>
+            {/* Debug Logs Section */}
+            <details className="mt-4 w-full max-w-sm text-center">
+                <summary className="text-gray-500 text-xs cursor-pointer select-none">Show Debug Logs 🛠️</summary>
+                <div className="bg-black/80 text-green-400 text-[10px] font-mono p-2 mt-2 h-32 overflow-y-auto whitespace-pre-wrap text-left rounded border border-gray-800">
+                    {debugLogs.length === 0 ? "No logs yet..." : debugLogs.join('\n')}
+                </div>
+            </details>
         </div>
     );
 }
