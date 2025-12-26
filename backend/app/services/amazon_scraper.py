@@ -147,7 +147,55 @@ class AmazonScraper:
                 "source": "Amazon",
                 "seller_name": f"Amazon ({domain})"
             }
-
         except Exception as e:
             # print(f"Parse error: {e}")
+            return None
+
+    def get_product_details(self, url: str, domain: str = "amazon.fr") -> Optional[Dict[str, Any]]:
+        """
+        Visits the product detail page to extract more data (EAN, UPC, Description).
+        """
+        headers = self._get_headers(domain)
+        try:
+            time.sleep(random.uniform(1.0, 3.0)) # Polite delay
+            response = self.session.get(url, headers=headers, timeout=12)
+            
+            if response.status_code != 200:
+                print(f"[{domain}] Details fetch failed: {response.status_code}")
+                return None
+                
+            soup = BeautifulSoup(response.content, "html.parser")
+            
+            details = {}
+            
+            # 1. Technical Details Table (prodDetails)
+            # Look for th/td pairs
+            tables = soup.select("table.a-keyvalue, table#productDetails_techSpec_section_1")
+            for table in tables:
+                rows = table.select("tr")
+                for row in rows:
+                    th = row.select_one("th")
+                    td = row.select_one("td")
+                    if th and td:
+                        key = th.get_text(strip=True).lower()
+                        val = td.get_text(strip=True)
+                        
+                        if "ean" in key or "upc" in key or "barcode" in key:
+                             # Clean value (remove invisible chars)
+                             val = "".join([c for c in val if c.isdigit()])
+                             if len(val) >= 8: # Min length for EAN/UPC
+                                 details['ean'] = val
+                        
+                        if "asin" in key:
+                            details['asin'] = val
+
+            # 2. Description (if needed)
+            desc_el = soup.select_one("#productDescription")
+            if desc_el:
+                details['description'] = desc_el.get_text("\n", strip=True)
+
+            return details
+
+        except Exception as e:
+            print(f"Error fetching details: {e}")
             return None

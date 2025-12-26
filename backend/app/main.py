@@ -208,7 +208,7 @@ async def startup_event():
     # 2. Initialize Scheduler (Crucial)
     try:
         from apscheduler.schedulers.background import BackgroundScheduler
-        from app.services.scraper import scrape_missing_data, backfill_history
+        from app.services.scraper import scrape_missing_data, backfill_history, backfill_ean_job
         from app.services.enrichment import enrichment_job, refresh_prices_job
         from app.services.pc_games_scraper import scrape_pc_games_bg_wrapper
         from app.services.image_migration import migrate_images_job
@@ -220,6 +220,8 @@ async def startup_event():
         scheduler.add_job(refresh_prices_job, 'interval', minutes=10, args=[300], id='price_refresh', replace_existing=True)
         # HISTORY BACKFILL: Every 5 mins (Slow HTML)
         scheduler.add_job(backfill_history, 'interval', minutes=5, args=[10], id='history_backfill', replace_existing=True)
+        # EAN BACKFILL: Every 2 mins (Mass Enrichment)
+        scheduler.add_job(backfill_ean_job, 'interval', minutes=2, args=[20], id='ean_backfill', replace_existing=True)
         # ENRICHMENT: Every 2 mins
         scheduler.add_job(enrichment_job, 'interval', minutes=2, args=[110, 50], id='auto_enrich', replace_existing=True)
         # PC GAMES: Every 12 hours

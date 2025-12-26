@@ -638,3 +638,54 @@ def backfill_history(limit: int = 20):
         print(f"Backfill History Error: {e}")
     finally:
         db.close()
+
+def backfill_ean_job(limit: int = 50):
+    """
+    Background job to re-scrape products that are missing EAN/UPC codes.
+    Prioritizes products that have a PriceCharting ID but no EAN.
+    """
+    db: Session = SessionLocal()
+    try:
+        from app.models.product import Product
+        
+        # Find products with PC ID but NO EAN
+        # Sorted by last_scraped (oldest first) so we cycle through
+        products = db.query(Product).filter(
+            Product.pricecharting_id != None,
+            or_(Product.ean == None, Product.ean == ""),
+            # Verify we don't loop on ones that definitely don't have it forever?
+            # We trust last_scraped rotation.
+        ).order_by(Product.last_scraped.asc().nullsfirst()).limit(limit).all()
+        
+        if not products:
+            print("No products need EAN backfill.")
+            return
+
+        print(f"EAN Backfill: Processing {len(products)} items...")
+        count = 0
+        
+        for p in products:
+            # Force HTML Logic (since API is used for prices usually, and API handles EAN too if available, 
+            # but HTML might have it in "Details" text not returned by API?)
+            # Actually our API logic (lines 411+) DOES check for EAN.
+            # So if API failed to give it, maybe HTML has it in the user-contributed details table.
+            
+            success = _scrape_html_logic(db, p)
+            
+            # Update timestamp regardless to rotate
+            p.last_scraped = datetime.utcnow()
+            db.commit()
+            
+            if success and p.ean:
+                count += 1
+                print(f"  [FOUND EAN] {p.product_name}: {p.ean}")
+            
+            if success:
+                time.sleep(1.5) # Rate limit
+                
+        print(f"EAN Backfill: Found {count} new EANs in this batch.")
+
+    except Exception as e:
+        print(f"EAN Backfill Error: {e}")
+    finally:
+        db.close()
