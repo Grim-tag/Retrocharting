@@ -96,3 +96,23 @@ def migrate_product_images(db: Session, limit: int = 50):
         "attempted": len(candidates),
         "errors": errors
     }
+
+def migrate_images_job(limit: int = 50):
+    """
+    Wrapper for background scheduler.
+    Creates its own DB session.
+    """
+    from app.db.session import SessionLocal
+    db = SessionLocal()
+    try:
+        # Check if we have work to do first to avoid log noise?
+        # The service function checks `if not candidates` and returns.
+        
+        result = migrate_product_images(db, limit)
+        
+        if result["migrated"] > 0:
+            logger.info(f"Auto-Migration: {result['migrated']} images migrated.")
+    except Exception as e:
+        logger.error(f"Auto-Migration Job Error: {e}")
+    finally:
+        db.close()

@@ -211,6 +211,7 @@ async def startup_event():
         from app.services.scraper import scrape_missing_data, backfill_history
         from app.services.enrichment import enrichment_job, refresh_prices_job
         from app.services.pc_games_scraper import scrape_pc_games_bg_wrapper
+        from app.services.image_migration import migrate_images_job
 
         scheduler = BackgroundScheduler()
         # SCRAPER: 2 workers max (defined in scraper.py), run every 1 min
@@ -223,6 +224,8 @@ async def startup_event():
         scheduler.add_job(enrichment_job, 'interval', minutes=2, args=[110, 50], id='auto_enrich', replace_existing=True)
         # PC GAMES: Every 12 hours
         scheduler.add_job(scrape_pc_games_bg_wrapper, 'interval', hours=12, args=[200], id='pc_games_scrape', replace_existing=True)
+        # IMAGE MIGRATION: Every 5 mins
+        scheduler.add_job(migrate_images_job, 'interval', minutes=5, args=[50], id='auto_image_migrate', replace_existing=True)
         
         scheduler.start()
         print("APScheduler started.")
