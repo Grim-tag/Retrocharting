@@ -35,7 +35,13 @@ def read_products(
     
     if search:
         if search.isdigit():
-            query = query.filter(or_(ProductModel.product_name.ilike(f"%{search}%"), ProductModel.id == int(search)))
+            query = query.filter(
+                or_(
+                    ProductModel.product_name.ilike(f"%{search}%"), 
+                    ProductModel.id == int(search),
+                    ProductModel.ean == search
+                )
+            )
         else:
             query = query.filter(
                 or_(
