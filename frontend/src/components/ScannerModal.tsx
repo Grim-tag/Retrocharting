@@ -54,15 +54,29 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
         }
     };
 
+    const handleError = (err: any) => {
+        console.error("Scanner Error:", err);
+        let msg = "Camera error.";
+        if (err?.name === "NotAllowedError" || err?.message?.includes("permission")) {
+            msg = "Camera permission denied. Please allow access in your browser settings.";
+        } else if (err?.name === "NotFoundError") {
+            msg = "No camera found on this device.";
+        } else if (err?.message) {
+            msg = err.message;
+        }
+        setError(msg);
+        setLoading(false);
+    };
+
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-4">
 
             {/* Close Button */}
             <button
                 onClick={onClose}
-                className="absolute top-4 right-4 text-white p-2 bg-gray-800/50 rounded-full hover:bg-gray-700"
+                className="absolute top-4 right-4 text-white p-2 bg-gray-800/80 rounded-full hover:bg-gray-700 z-50"
             >
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -72,17 +86,20 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
             <div className="w-full max-w-sm bg-black rounded-xl overflow-hidden relative border border-gray-700 shadow-2xl">
                 {/* Camera View */}
                 {!loading && !error && (
-                    <div className="relative aspect-[4/3]">
+                    <div className="relative aspect-[4/3] bg-black">
                         <BarcodeScannerComponent
                             width="100%"
                             height="100%"
                             onUpdate={handleScan}
-                            videoConstraints={{ facingMode: 'environment' }}
+                            onError={handleError}
+                            videoConstraints={{
+                                facingMode: 'environment'
+                            }}
                         />
                         {/* Overlay Box */}
-                        <div className="absolute inset-0 border-2 border-red-500/50 m-12 rounded"></div>
-                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                            <p className="text-white/80 font-bold bg-black/50 px-2 rounded">SCAN BARCODE</p>
+                        <div className="absolute inset-0 border-2 border-red-500/50 m-12 rounded pointer-events-none"></div>
+                        <div className="absolute inset-x-0 bottom-4 text-center pointer-events-none transition-opacity duration-1000 animate-pulse">
+                            <p className="text-white/90 font-bold bg-black/60 inline-block px-3 py-1 rounded text-sm">SCANNING...</p>
                         </div>
                     </div>
                 )}
@@ -98,22 +115,22 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
 
                 {/* Error State */}
                 {error && (
-                    <div className="p-8 text-center bg-gray-900">
+                    <div className="p-8 text-center bg-gray-900 border-t border-red-900/30">
                         <div className="text-red-500 text-4xl mb-4">⚠️</div>
-                        <h3 className="text-white text-lg font-bold mb-2">Not Found</h3>
-                        <p className="text-gray-400 mb-6">{error}</p>
+                        <h3 className="text-white text-lg font-bold mb-2">Scanner Issue</h3>
+                        <p className="text-gray-400 mb-6 text-sm">{error}</p>
                         <button
                             onClick={() => { setData(null); setError(null); setLoading(false); }}
-                            className="bg-white text-black px-6 py-2 rounded font-bold hover:bg-gray-200"
+                            className="bg-white text-black px-6 py-2 rounded font-bold hover:bg-gray-200 w-full"
                         >
-                            Scan Again
+                            Retry Camera
                         </button>
                     </div>
                 )}
             </div>
 
             <p className="text-gray-500 mt-8 text-sm text-center max-w-xs">
-                Point any retro game barcode at the camera. Works best with good lighting.
+                Ensure you are on <strong>HTTPS</strong> and have allowed camera access.
             </p>
         </div>
     );
