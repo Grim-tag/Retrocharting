@@ -67,14 +67,15 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
 
         try {
             if (scannerRef.current) {
-                // Already running?
-                return;
+                // Remove existing if any?
+                // return; 
             }
 
+            // Create instance
             const html5QrCode = new Html5Qrcode("reader");
             scannerRef.current = html5QrCode;
 
-            // Optional: formats
+            // Config
             const config = {
                 fps: 10,
                 qrbox: { width: 250, height: 250 },
@@ -89,18 +90,44 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
                 ]
             };
 
+            // 1. Try to get cameras
+            let cameraIdToUse = null;
+            try {
+                const cameras = await Html5Qrcode.getCameras();
+                if (cameras && cameras.length > 0) {
+                    // Try to find back camera (regex on label) or use last one
+                    const backCam = cameras.find(c => c.label.toLowerCase().includes('back') || c.label.toLowerCase().includes('environment'));
+                    if (backCam) {
+                        cameraIdToUse = backCam.id;
+                    } else if (cameras.length > 1) {
+                        // Usually the last one is the back camera on mobile if 2 exist
+                        cameraIdToUse = cameras[cameras.length - 1].id;
+                    } else {
+                        cameraIdToUse = cameras[0].id;
+                    }
+                }
+            } catch (e) {
+                console.warn("Could not list cameras, falling back to constraint", e);
+            }
+
+            const startConfig = cameraIdToUse ? { deviceId: { exact: cameraIdToUse } } : { facingMode: "environment" };
+
+            console.log("Starting scanner with:", startConfig);
+
             await html5QrCode.start(
-                { facingMode: "environment" },
+                startConfig,
                 config,
                 (decodedText) => {
                     handleScanSuccess(decodedText);
                 },
                 (errorMessage) => {
-                    // Ignore transient scan errors
                     // console.log(errorMessage);
                 }
             );
-            setHasPermission(true);
+
+            if (mountedRef.current) {
+                setHasPermission(true);
+            }
 
         } catch (err: any) {
             console.error("Start Scanner Error", err);
@@ -112,8 +139,11 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
             } else if (typeof err === 'string') {
                 msg = err;
             }
-            setErrorMsg(msg);
-            setView('error');
+            // If it's the "Unable to query supported devices" error, it might be persistent
+            if (mountedRef.current) {
+                setErrorMsg(msg);
+                setView('error');
+            }
         }
     };
 
