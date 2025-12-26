@@ -372,7 +372,19 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
                             {scannedCode ? "Unknown Barcode" : "Scanner Issue"}
                         </h3>
 
-                        {errorMsg && !scannedCode && (
+                        {errorMsg?.includes("permission") && (
+                            <div className="bg-orange-900/40 border border-orange-500/50 p-4 rounded mb-6 text-left">
+                                <p className="text-orange-200 font-bold mb-2">How to unblock camera: 🔓</p>
+                                <ol className="text-gray-300 text-xs space-y-2 list-decimal list-inside">
+                                    <li>Tap the <strong>Lock Icon 🔒</strong> in the URL bar (top left).</li>
+                                    <li>Tap <strong>Permissions</strong> or <strong>Site Settings</strong>.</li>
+                                    <li>Find <strong>Camera</strong> and set to <strong>Allow</strong>.</li>
+                                    <li>Refresh this page.</li>
+                                </ol>
+                            </div>
+                        )}
+
+                        {errorMsg && !errorMsg.includes("permission") && !scannedCode && (
                             <div className="bg-red-900/20 border border-red-900/50 p-3 rounded mb-6">
                                 <p className="text-red-200 text-sm break-words">{errorMsg}</p>
                             </div>
