@@ -372,7 +372,7 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
                             {scannedCode ? "Unknown Barcode" : "Scanner Issue"}
                         </h3>
 
-                        {errorMsg?.includes("permission") && (
+                        {errorMsg?.toLowerCase().includes("permission") && (
                             <div className="bg-orange-900/40 border border-orange-500/50 p-4 rounded mb-6 text-left">
                                 <p className="text-orange-200 font-bold mb-2">How to unblock camera: 🔓</p>
                                 <ol className="text-gray-300 text-xs space-y-2 list-decimal list-inside">
