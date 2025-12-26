@@ -300,13 +300,23 @@ def smart_import_pc_games_endpoint(
     2. Enriches with IGDB (Images, Guidelines, Desc)
     All in one background sequence.
     """
-    from app.services.smart_import import smart_import_pc_games
-    
     background_tasks.add_task(smart_import_pc_games, limit=limit)
     return {
         "status": "success", 
         "message": f"Smart Import started for up to {limit} items. This will Scrape AND Enrich sequentially in the background."
     }
+
+@router.post("/enrich/ean-backfill", dependencies=[Depends(get_admin_access)])
+def trigger_ean_backfill(
+    limit: int = 50, 
+    background_tasks: BackgroundTasks = None
+):
+    """
+    Manually triggers the EAN Backfill job.
+    """
+    from app.services.scraper import backfill_ean_job
+    background_tasks.add_task(backfill_ean_job, limit=limit)
+    return {"message": f"EAN Backfill started for {limit} items."}
 
 @router.get("/amazon-stats", dependencies=[Depends(get_admin_access)])
 def get_amazon_stats(db: Session = Depends(get_db)):

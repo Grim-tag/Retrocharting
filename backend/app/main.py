@@ -220,8 +220,7 @@ async def startup_event():
         scheduler.add_job(refresh_prices_job, 'interval', minutes=10, args=[300], id='price_refresh', replace_existing=True)
         # HISTORY BACKFILL: Every 5 mins (Slow HTML)
         scheduler.add_job(backfill_history, 'interval', minutes=5, args=[10], id='history_backfill', replace_existing=True)
-        # EAN BACKFILL: Every 2 mins (Mass Enrichment)
-        scheduler.add_job(backfill_ean_job, 'interval', minutes=2, args=[20], id='ean_backfill', replace_existing=True)
+        scheduler.add_job(backfill_ean_job, 'interval', minutes=2, args=[50], id='ean_backfill', replace_existing=True)
         # ENRICHMENT: Every 2 mins
         scheduler.add_job(enrichment_job, 'interval', minutes=2, args=[110, 50], id='auto_enrich', replace_existing=True)
         # PC GAMES: Every 12 hours

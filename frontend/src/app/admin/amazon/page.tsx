@@ -116,12 +116,25 @@ export default function AmazonStatsPage() {
             <div className="bg-[#1f2533] border border-[#2a3142] rounded-lg overflow-hidden">
                 <div className="p-6 border-b border-[#2a3142] flex justify-between items-center">
                     <h2 className="text-xl font-bold text-white">Recent Amazon Updates</h2>
-                    <button
-                        onClick={loadData}
-                        className="px-4 py-2 text-sm bg-[#2a3142] hover:bg-[#343b4d] text-gray-300 rounded transition-colors"
-                    >
-                        Refresh
-                    </button>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={async () => {
+                                try {
+                                    await apiClient.post('/admin/enrich/ean-backfill', {}, { params: { limit: 100 } });
+                                    alert("Turbo Backfill Started (100 items). Refresh stats in a moment.");
+                                } catch (e) { alert("Failed to start backfill"); }
+                            }}
+                            className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
+                        >
+                            ⚡ Turbo Backfill EAN
+                        </button>
+                        <button
+                            onClick={loadData}
+                            className="px-4 py-2 text-sm bg-[#2a3142] hover:bg-[#343b4d] text-gray-300 rounded transition-colors"
+                        >
+                            Refresh
+                        </button>
+                    </div>
                 </div>
 
                 <div className="overflow-x-auto">
