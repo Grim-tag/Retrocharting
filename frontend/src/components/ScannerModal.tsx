@@ -139,6 +139,22 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
         }
     };
 
+    const requestCameraPermission = async () => {
+        try {
+            setLoading(true);
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            // Permission granted! Stop stream immediately (scanner will restart it)
+            stream.getTracks().forEach(track => track.stop());
+            setErrorMsg(null);
+            setView('scan'); // Retry scan view
+            setLoading(false);
+        } catch (err: any) {
+            console.error("Manual Permission Error:", err);
+            setErrorMsg("Permission still denied. Please check browser settings (Lock icon > Site Settings > Camera).");
+            setLoading(false);
+        }
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -174,6 +190,7 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
                         ) : (
                             <div className="flex items-center justify-center h-full">
                                 <div className="animate-spin w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+                                <p className="absolute mt-16 text-white text-xs">Checking permission...</p>
                             </div>
                         )}
                     </div>
@@ -184,10 +201,18 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
                     <div className="p-6 flex flex-col h-full bg-gray-900 text-center overflow-y-auto">
                         <div className="text-red-500 text-4xl mb-4 mx-auto">⚠️</div>
                         <h3 className="text-white text-lg font-bold mb-2">
-                            {scannedCode ? "Unknown Barcode" : "Scanner Issue"}
+                            {scannedCode ? "Unknown Barcode" : "Camera Access Needed"}
                         </h3>
+
+                        {/* Error Message */}
+                        {errorMsg && !scannedCode && (
+                            <div className="bg-red-900/20 border border-red-900/50 p-3 rounded mb-6">
+                                <p className="text-red-200 text-sm">{errorMsg}</p>
+                            </div>
+                        )}
+
+                        {/* Scanner Code Display */}
                         {scannedCode && <p className="text-gray-400 font-mono text-xs mb-6 select-all bg-gray-800 p-2 rounded">{scannedCode}</p>}
-                        {errorMsg && !scannedCode && <p className="text-gray-400 mb-6">{errorMsg}</p>}
 
                         {scannedCode && (
                             <div className="space-y-4 text-left">
@@ -216,6 +241,15 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
                         )}
 
                         <div className="mt-auto pt-6 space-y-3">
+                            {!scannedCode && (
+                                <button
+                                    onClick={requestCameraPermission}
+                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded font-bold shadow-lg"
+                                >
+                                    🔓 Request Camera Access
+                                </button>
+                            )}
+
                             {scannedCode && (
                                 <button
                                     onClick={() => setView('create')}
