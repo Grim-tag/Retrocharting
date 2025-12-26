@@ -520,7 +520,36 @@ def _scrape_html_logic(db: Session, product: "Product") -> bool:
                         except:
                             pass
 
-            # 5. Price History
+            # 6. Details (UPC / EAN / Publisher / Genre)
+            # Find all rows in the details table (usually #gametoolbox but we scan all to be safe)
+            rows = soup.select("tr")
+            for row in rows:
+                text_content = row.get_text(" ", strip=True) 
+                # Format is usually "Genre: Platformer" or "UPC: 123456"
+                
+                if "UPC:" in text_content and not product.ean:
+                    # extract value
+                    val = text_content.replace("UPC:", "").strip()
+                    if val and val.lower() not in ["n/a", "none", "unknown"]:
+                        product.ean = val # Map UPC -> EAN column
+                
+                elif "EAN:" in text_content and not product.ean:
+                    val = text_content.replace("EAN:", "").strip()
+                    if val and val.lower() not in ["n/a", "none", "unknown"]:
+                        product.ean = val
+                
+                elif "PAL UPC:" in text_content and not product.ean:
+                    val = text_content.replace("PAL UPC:", "").strip()
+                    if val and val.lower() not in ["n/a", "none", "unknown"]:
+                        product.ean = val
+                
+                elif "Publisher:" in text_content and not product.publisher:
+                     val = text_content.replace("Publisher:", "").strip()
+                     product.publisher = val
+                     
+                elif "Developer:" in text_content and not product.developer:
+                     val = text_content.replace("Developer:", "").strip()
+                     product.developer = val
             scripts = soup.find_all('script')
             for script in scripts:
                 if script.string and "VGPC.chart_data" in script.string:
