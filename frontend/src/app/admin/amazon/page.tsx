@@ -31,15 +31,18 @@ export default function AmazonStatsPage() {
     const { token } = useAuth();
     const [stats, setStats] = useState<AmazonStats | null>(null);
     const [loading, setLoading] = useState(true);
+    const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
     const loadData = async () => {
         if (!token) return;
         setLoading(true);
+        setErrorMsg(null);
         try {
             const res = await apiClient.get('/admin/amazon-stats');
             setStats(res.data);
-        } catch (error) {
+        } catch (error: any) {
             console.error("Failed to load amazon stats", error);
+            setErrorMsg(error.response?.data?.detail || error.message || "Unknown error");
         } finally {
             setLoading(false);
         }
@@ -53,7 +56,19 @@ export default function AmazonStatsPage() {
         return <div className="text-white p-8 animate-pulse">Loading Amazon data...</div>;
     }
 
-    if (!stats) return <div className="text-red-400 p-8">Failed to load data.</div>;
+    if (errorMsg) {
+        return (
+            <div className="p-8">
+                <div className="bg-red-500/10 border border-red-500 text-red-500 p-4 rounded">
+                    <h3 className="font-bold">Failed to load data</h3>
+                    <p className="font-mono text-sm mt-2">{errorMsg}</p>
+                    <button onClick={loadData} className="mt-4 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">Retry</button>
+                </div>
+            </div>
+        );
+    }
+
+    if (!stats) return <div className="text-red-400 p-8">No data available.</div>;
 
     const total = stats.total_products_with_amazon;
     const palPercent = total > 0 ? ((stats.region_counts.PAL / total) * 100).toFixed(1) : 0;
