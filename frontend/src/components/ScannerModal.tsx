@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import BarcodeScannerComponent from "react-qr-barcode-scanner";
 import { apiClient } from "@/lib/client";
 import { useRouter } from 'next/navigation';
+import { BrowserMultiFormatReader } from '@zxing/browser';
 
 interface ScannerModalProps {
     isOpen: boolean;
@@ -46,31 +47,35 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
     const handleScan = async (err: any, result: any) => {
         if (result && !scannedCode && !loading && view === 'scan') {
             const code = result.text;
-            setScannedCode(code);
-            setLoading(true);
+            processCode(code);
+        }
+    };
 
-            try {
-                // Search API for this code
-                const res = await apiClient.get(`/products?search=${code}`);
-                const products = res.data;
+    const processCode = async (code: string) => {
+        setScannedCode(code);
+        setLoading(true);
 
-                if (products && products.length > 0) {
-                    // Match found! Redirect
-                    const product = products[0];
-                    onClose();
-                    router.push(`/products/${product.id}`);
-                } else {
-                    // Not found -> Go to custom Error/Link view
-                    setErrorMsg(`Unknown Game (Code: ${code})`);
-                    setView('error');
-                    setLoading(false);
-                }
-            } catch (e) {
-                console.error("Scan Error", e);
-                setErrorMsg("Network Error checking code.");
+        try {
+            // Search API for this code
+            const res = await apiClient.get(`/products?search=${code}`);
+            const products = res.data;
+
+            if (products && products.length > 0) {
+                // Match found! Redirect
+                const product = products[0];
+                onClose();
+                router.push(`/products/${product.id}`);
+            } else {
+                // Not found -> Go to custom Error/Link view
+                setErrorMsg(`Unknown Game (Code: ${code})`);
                 setView('error');
                 setLoading(false);
             }
+        } catch (e) {
+            console.error("Scan Error", e);
+            setErrorMsg("Network Error checking code.");
+            setView('error');
+            setLoading(false);
         }
     };
 
@@ -87,6 +92,45 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
         setErrorMsg(msg);
         setView('error');
         setLoading(false);
+    };
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setLoading(true);
+        setErrorMsg(null);
+
+        try {
+            const reader = new BrowserMultiFormatReader();
+            const imageUrl = URL.createObjectURL(file);
+            const result = await reader.decodeFromImageUrl(imageUrl);
+
+            // Success!
+            const code = result.getText();
+            processCode(code);
+
+        } catch (err) {
+            console.error("Decode Error", err);
+            setErrorMsg("Could not read barcode from image. Try another photo.");
+            setView('error');
+            setLoading(false);
+        }
+    };
+
+    const requestCameraPermission = async () => {
+        try {
+            setLoading(true);
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            stream.getTracks().forEach(track => track.stop());
+            setErrorMsg(null);
+            setView('scan');
+            setLoading(false);
+        } catch (err: any) {
+            console.error("Manual Permission Error:", err);
+            setErrorMsg("Permission still denied. Please check browser settings (Lock icon > Site Settings > Camera).");
+            setLoading(false);
+        }
     };
 
     // Actions
@@ -139,22 +183,6 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
         }
     };
 
-    const requestCameraPermission = async () => {
-        try {
-            setLoading(true);
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-            // Permission granted! Stop stream immediately (scanner will restart it)
-            stream.getTracks().forEach(track => track.stop());
-            setErrorMsg(null);
-            setView('scan'); // Retry scan view
-            setLoading(false);
-        } catch (err: any) {
-            console.error("Manual Permission Error:", err);
-            setErrorMsg("Permission still denied. Please check browser settings (Lock icon > Site Settings > Camera).");
-            setLoading(false);
-        }
-    };
-
     if (!isOpen) return null;
 
     return (
@@ -201,7 +229,7 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
                     <div className="p-6 flex flex-col h-full bg-gray-900 text-center overflow-y-auto">
                         <div className="text-red-500 text-4xl mb-4 mx-auto">⚠️</div>
                         <h3 className="text-white text-lg font-bold mb-2">
-                            {scannedCode ? "Unknown Barcode" : "Camera Access Needed"}
+                            {scannedCode ? "Unknown Barcode" : "Scanner Issue"}
                         </h3>
 
                         {/* Error Message */}
@@ -214,6 +242,7 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
                         {/* Scanner Code Display */}
                         {scannedCode && <p className="text-gray-400 font-mono text-xs mb-6 select-all bg-gray-800 p-2 rounded">{scannedCode}</p>}
 
+                        {/* ... Linking UI (Existing) ... */}
                         {scannedCode && (
                             <div className="space-y-4 text-left">
                                 <div className="p-4 bg-gray-800 rounded border border-gray-700">
@@ -242,12 +271,29 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
 
                         <div className="mt-auto pt-6 space-y-3">
                             {!scannedCode && (
-                                <button
-                                    onClick={requestCameraPermission}
-                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded font-bold shadow-lg"
-                                >
-                                    🔓 Request Camera Access
-                                </button>
+                                <>
+                                    <button
+                                        onClick={requestCameraPermission}
+                                        className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded font-bold shadow-lg"
+                                    >
+                                        🔓 Request Camera Access
+                                    </button>
+
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        capture="environment"
+                                        id="scanner-upload"
+                                        className="hidden"
+                                        onChange={handleFileUpload}
+                                    />
+                                    <button
+                                        onClick={() => document.getElementById('scanner-upload')?.click()}
+                                        className="w-full bg-gray-700 hover:bg-gray-600 text-white py-3 rounded font-bold mt-2 border border-gray-500"
+                                    >
+                                        📷 Take Photo / Upload
+                                    </button>
+                                </>
                             )}
 
                             {scannedCode && (
