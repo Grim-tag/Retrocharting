@@ -71,6 +71,7 @@ function AdminGuard({ children }: { children: React.ReactNode }) {
 
                 <nav className="flex-1 overflow-y-auto p-4 space-y-2">
                     <NavItem href="/admin/dashboard" label="Dashboard" />
+                    <NavItem href="/admin/amazon" label="Amazon Pricing" />
                     <NavItem href="/admin/games" label="Games Catalog" />
                     <NavItem href="/admin/consoles" label="Consoles Catalog" />
                     <NavItem href="/admin/accessories" label="Accessories Catalog" />

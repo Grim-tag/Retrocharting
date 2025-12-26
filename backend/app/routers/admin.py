@@ -308,3 +308,73 @@ def smart_import_pc_games_endpoint(
         "message": f"Smart Import started for up to {limit} items. This will Scrape AND Enrich sequentially in the background."
     }
 
+@router.get("/amazon-stats", dependencies=[Depends(get_admin_access)])
+def get_amazon_stats(db: Session = Depends(get_db)):
+    """
+    Returns statistics about Amazon listings coverage:
+    - Total products with Amazon prices
+    - Breakdown by Region (PAL, NTSC, JP) based on domain
+    """
+    from app.models.listing import Listing
+    
+    try:
+        # 1. Total Products with Amazon Listings
+        # We count distinct product_ids to know how many "pages" have at least one Amazon offer
+        total_covered = db.query(Listing.product_id).filter(Listing.source == "Amazon").distinct().count()
+        
+        # 2. Regional Breakdown
+        # We fetch all Amazon listing URLs to classify them
+        # (Doing this in Python for simplicity regex vs complex SQL Case)
+        listings = db.query(Listing.url).filter(Listing.source == "Amazon").all()
+        
+        counts = {"PAL": 0, "NTSC": 0, "JP": 0}
+        
+        for l in listings:
+            if not l.url: continue
+            url = l.url.lower()
+            
+            if "amazon.co.jp" in url:
+                counts["JP"] += 1
+            elif "amazon.com" in url or "amazon.ca" in url:
+                counts["NTSC"] += 1
+            else:
+                # Assuming everything else is European/PAL (fr, de, uk, it, es, nl, se, pl, be)
+                counts["PAL"] += 1
+                
+        # 3. Recent 50 Listings for Table
+        # specific fields to avoid heavy load
+        recent = db.query(Listing.product_id, Listing.title, Listing.price, Listing.currency, Listing.url, Product.console_name, Product.product_name)\
+            .join(Product, Listing.product_id == Product.id)\
+            .filter(Listing.source == "Amazon")\
+            .order_by(Listing.last_updated.desc())\
+            .limit(50)\
+            .all()
+            
+        recent_data = []
+        for r in recent:
+            # Determine region for UI
+            region = "PAL"
+            if "amazon.co.jp" in r.url: region = "JP"
+            elif "amazon.com" in r.url or "amazon.ca" in r.url: region = "NTSC"
+            
+            recent_data.append({
+                "product_id": r.product_id,
+                "product_name": r.product_name,
+                "console_name": r.console_name,
+                "amazon_title": r.title,
+                "price": r.price,
+                "currency": r.currency,
+                "url": r.url,
+                "region": region
+            })
+
+        return {
+            "total_products_with_amazon": total_covered,
+            "region_counts": counts,
+            "recent_listings": recent_data
+        }
+
+    except Exception as e:
+        print(f"Error fetching amazon stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
