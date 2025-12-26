@@ -9,25 +9,44 @@ interface ScannerModalProps {
     onClose: () => void;
 }
 
+type ViewState = 'scan' | 'error' | 'search' | 'create';
+
 export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
-    const [data, setData] = useState<string | null>(null);
+    const [view, setView] = useState<ViewState>('scan');
+    const [scannedCode, setScannedCode] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+    // Search State
+    const [searchQuery, setSearchQuery] = useState("");
+    const [searchResults, setSearchResults] = useState<any[]>([]);
+
+    // Create State
+    const [createForm, setCreateForm] = useState({ name: '', console: '' });
+
     const router = useRouter();
 
     // Reset when opening
     useEffect(() => {
         if (isOpen) {
-            setData(null);
-            setError(null);
-            setLoading(false);
+            resetState();
         }
     }, [isOpen]);
 
+    const resetState = () => {
+        setView('scan');
+        setScannedCode(null);
+        setErrorMsg(null);
+        setLoading(false);
+        setSearchQuery("");
+        setSearchResults([]);
+        setCreateForm({ name: '', console: '' });
+    };
+
     const handleScan = async (err: any, result: any) => {
-        if (result && !data && !loading) {
+        if (result && !scannedCode && !loading && view === 'scan') {
             const code = result.text;
-            setData(code);
+            setScannedCode(code);
             setLoading(true);
 
             try {
@@ -36,19 +55,20 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
                 const products = res.data;
 
                 if (products && products.length > 0) {
-                    // Match found! Redirect to first match
+                    // Match found! Redirect
                     const product = products[0];
                     onClose();
                     router.push(`/products/${product.id}`);
                 } else {
-                    setError(`Unknown Game (Code: ${code}). Coming soon: Add it manually!`);
+                    // Not found -> Go to custom Error/Link view
+                    setErrorMsg(`Unknown Game (Code: ${code})`);
+                    setView('error');
                     setLoading(false);
-                    // Clear data after delay to allow rescan?
-                    setTimeout(() => setData(null), 3000);
                 }
             } catch (e) {
                 console.error("Scan Error", e);
-                setError("Network Error checking code.");
+                setErrorMsg("Network Error checking code.");
+                setView('error');
                 setLoading(false);
             }
         }
@@ -58,14 +78,65 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
         console.error("Scanner Error:", err);
         let msg = "Camera error.";
         if (err?.name === "NotAllowedError" || err?.message?.includes("permission")) {
-            msg = "Camera permission denied. Please allow access in your browser settings.";
+            msg = "Camera permission denied. Check settings.";
         } else if (err?.name === "NotFoundError") {
-            msg = "No camera found on this device.";
+            msg = "No camera found.";
         } else if (err?.message) {
             msg = err.message;
         }
-        setError(msg);
+        setErrorMsg(msg);
+        setView('error');
         setLoading(false);
+    };
+
+    // Actions
+    const performSearch = async () => {
+        if (searchQuery.length < 2) return;
+        setLoading(true);
+        try {
+            const res = await apiClient.get(`/products?search=${searchQuery}&limit=5`);
+            setSearchResults(res.data);
+            setView('search');
+        } catch (e) {
+            alert("Search failed");
+        }
+        setLoading(false);
+    };
+
+    const linkProduct = async (productId: number) => {
+        if (!scannedCode) return;
+        if (!confirm("Link this barcode to this game?")) return;
+
+        setLoading(true);
+        try {
+            await apiClient.post(`/products/${productId}/ean`, null, { params: { ean: scannedCode } });
+            alert("Linked! Redirecting...");
+            onClose();
+            router.push(`/products/${productId}`);
+        } catch (e) {
+            alert("Link failed");
+            setLoading(false);
+        }
+    };
+
+    const createProduct = async () => {
+        if (!scannedCode || !createForm.name || !createForm.console) return;
+        setLoading(true);
+        try {
+            const res = await apiClient.post(`/products/contribute`, null, {
+                params: {
+                    product_name: createForm.name,
+                    console_name: createForm.console,
+                    ean: scannedCode
+                }
+            });
+            alert("Created & Linked! Redirecting...");
+            onClose();
+            router.push(`/products/${res.data.id}`);
+        } catch (e) {
+            alert("Creation failed: " + ((e as any).response?.data?.detail || "Unknown error"));
+            setLoading(false);
+        }
     };
 
     if (!isOpen) return null;
@@ -78,55 +149,167 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
                 onClick={onClose}
                 className="absolute top-4 right-4 text-white p-2 bg-gray-800/80 rounded-full hover:bg-gray-700 z-50"
             >
-                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                ✕
             </button>
 
-            <div className="w-full max-w-sm bg-black rounded-xl overflow-hidden relative border border-gray-700 shadow-2xl">
-                {/* Camera View */}
-                {!loading && !error && (
-                    <div className="relative aspect-[4/3] bg-black">
-                        <BarcodeScannerComponent
-                            width="100%"
-                            height="100%"
-                            onUpdate={handleScan}
-                            onError={handleError}
-                            videoConstraints={{
-                                facingMode: 'environment'
-                            }}
-                        />
-                        {/* Overlay Box */}
-                        <div className="absolute inset-0 border-2 border-red-500/50 m-12 rounded pointer-events-none"></div>
-                        <div className="absolute inset-x-0 bottom-4 text-center pointer-events-none transition-opacity duration-1000 animate-pulse">
-                            <p className="text-white/90 font-bold bg-black/60 inline-block px-3 py-1 rounded text-sm">SCANNING...</p>
+            <div className="w-full max-w-sm bg-black rounded-xl overflow-hidden relative border border-gray-700 shadow-2xl min-h-[400px] flex flex-col">
+
+                {/* 1. SCAN VIEW */}
+                {view === 'scan' && (
+                    <div className="relative flex-1 bg-black">
+                        {!loading ? (
+                            <>
+                                <BarcodeScannerComponent
+                                    width="100%"
+                                    height="100%"
+                                    onUpdate={handleScan}
+                                    onError={handleError}
+                                    videoConstraints={{ facingMode: 'environment' }}
+                                />
+                                <div className="absolute inset-0 border-2 border-red-500/50 m-12 rounded pointer-events-none"></div>
+                                <div className="absolute inset-x-0 bottom-4 text-center pointer-events-none">
+                                    <p className="text-white/90 font-bold bg-black/60 inline-block px-3 py-1 rounded text-sm animate-pulse">SCANNING...</p>
+                                </div>
+                            </>
+                        ) : (
+                            <div className="flex items-center justify-center h-full">
+                                <div className="animate-spin w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* 2. ERROR / NOT FOUND VIEW */}
+                {view === 'error' && (
+                    <div className="p-6 flex flex-col h-full bg-gray-900 text-center overflow-y-auto">
+                        <div className="text-red-500 text-4xl mb-4 mx-auto">⚠️</div>
+                        <h3 className="text-white text-lg font-bold mb-2">
+                            {scannedCode ? "Unknown Barcode" : "Scanner Issue"}
+                        </h3>
+                        {scannedCode && <p className="text-gray-400 font-mono text-xs mb-6 select-all bg-gray-800 p-2 rounded">{scannedCode}</p>}
+                        {errorMsg && !scannedCode && <p className="text-gray-400 mb-6">{errorMsg}</p>}
+
+                        {scannedCode && (
+                            <div className="space-y-4 text-left">
+                                <div className="p-4 bg-gray-800 rounded border border-gray-700">
+                                    <p className="text-gray-300 text-sm mb-2 font-bold"> Help us build the database! 🤝</p>
+                                    <p className="text-gray-400 text-xs mb-4">Link this barcode to a game so the next person finds it instantly.</p>
+
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            placeholder="Search game (e.g. Mario)"
+                                            className="bg-gray-900 border border-gray-600 text-white text-sm rounded px-3 py-2 flex-1 outline-none focus:border-blue-500"
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && performSearch()}
+                                        />
+                                        <button
+                                            onClick={performSearch}
+                                            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded font-bold text-sm"
+                                        >
+                                            Search
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="mt-auto pt-6 space-y-3">
+                            {scannedCode && (
+                                <button
+                                    onClick={() => setView('create')}
+                                    className="text-gray-500 text-xs underline hover:text-gray-300"
+                                >
+                                    Game not found? Create it manually
+                                </button>
+                            )}
+                            <button
+                                onClick={resetState}
+                                className="w-full bg-gray-800 hover:bg-gray-700 text-white py-3 rounded font-bold border border-gray-600"
+                            >
+                                Try Scanning Again
+                            </button>
                         </div>
                     </div>
                 )}
 
-                {/* Loading State */}
-                {loading && !error && (
-                    <div className="p-12 text-center">
-                        <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                        <h3 className="text-white text-lg font-bold">Checking Database...</h3>
-                        <p className="text-gray-400 font-mono mt-2">{data}</p>
+                {/* 3. SEARCH RESULTS VIEW */}
+                {view === 'search' && (
+                    <div className="p-4 flex flex-col h-full bg-gray-900">
+                        <h3 className="text-white font-bold mb-4">Select Game to Link</h3>
+                        <div className="flex-1 overflow-y-auto space-y-2">
+                            {searchResults.length === 0 ? (
+                                <p className="text-gray-400 text-center py-8">No results found.</p>
+                            ) : (
+                                searchResults.map(p => (
+                                    <button
+                                        key={p.id}
+                                        onClick={() => linkProduct(p.id)}
+                                        className="w-full text-left p-3 bg-gray-800 hover:bg-gray-700 rounded border border-gray-700 flex justify-between items-center group"
+                                    >
+                                        <div>
+                                            <div className="text-white font-bold text-sm">{p.product_name}</div>
+                                            <div className="text-gray-400 text-xs">{p.console_name}</div>
+                                        </div>
+                                        <span className="text-blue-400 opacity-0 group-hover:opacity-100 font-bold text-xs">LINK →</span>
+                                    </button>
+                                ))
+                            )}
+                        </div>
+                        <div className="pt-4 flex gap-2">
+                            <button onClick={() => setView('error')} className="flex-1 bg-gray-800 text-white py-2 rounded">Back</button>
+                            <button onClick={() => setView('create')} className="flex-1 bg-gray-800 text-white py-2 rounded">Create New</button>
+                        </div>
                     </div>
                 )}
 
-                {/* Error State */}
-                {error && (
-                    <div className="p-8 text-center bg-gray-900 border-t border-red-900/30">
-                        <div className="text-red-500 text-4xl mb-4">⚠️</div>
-                        <h3 className="text-white text-lg font-bold mb-2">Scanner Issue</h3>
-                        <p className="text-gray-400 mb-6 text-sm">{error}</p>
-                        <button
-                            onClick={() => { setData(null); setError(null); setLoading(false); }}
-                            className="bg-white text-black px-6 py-2 rounded font-bold hover:bg-gray-200 w-full"
-                        >
-                            Retry Camera
-                        </button>
+                {/* 4. CREATE VIEW */}
+                {view === 'create' && (
+                    <div className="p-6 flex flex-col h-full bg-gray-900">
+                        <h3 className="text-white font-bold mb-2">Create New Entry</h3>
+                        <p className="text-gray-400 text-xs mb-6">Double check! Only create if the game truly doesn't exist.</p>
+
+                        <div className="space-y-4 flex-1">
+                            <div>
+                                <label className="text-gray-500 text-xs block mb-1">Barcode (EAN)</label>
+                                <input type="text" value={scannedCode || ''} disabled className="w-full bg-gray-800 text-gray-400 px-3 py-2 rounded border border-gray-700" />
+                            </div>
+                            <div>
+                                <label className="text-gray-500 text-xs block mb-1">Game Name</label>
+                                <input
+                                    type="text"
+                                    className="w-full bg-gray-800 text-white px-3 py-2 rounded border border-gray-700 focus:border-blue-500 outline-none"
+                                    placeholder="e.g. Zelda Ocarina of Time"
+                                    value={createForm.name}
+                                    onChange={e => setCreateForm({ ...createForm, name: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="text-gray-500 text-xs block mb-1">Console</label>
+                                <input
+                                    type="text"
+                                    className="w-full bg-gray-800 text-white px-3 py-2 rounded border border-gray-700 focus:border-blue-500 outline-none"
+                                    placeholder="e.g. Nintendo 64"
+                                    value={createForm.console}
+                                    onChange={e => setCreateForm({ ...createForm, console: e.target.value })}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="pt-6 flex gap-2">
+                            <button onClick={() => setView('error')} className="flex-1 bg-gray-800 text-white py-2 rounded">Cancel</button>
+                            <button
+                                onClick={createProduct}
+                                disabled={!createForm.name || !createForm.console || loading}
+                                className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded font-bold disabled:opacity-50"
+                            >
+                                {loading ? "Creating..." : "Create & Link"}
+                            </button>
+                        </div>
                     </div>
                 )}
+
             </div>
 
             <p className="text-gray-500 mt-8 text-sm text-center max-w-xs">

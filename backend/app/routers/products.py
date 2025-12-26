@@ -448,11 +448,61 @@ def get_product_listings(
     
     response.status_code = status.HTTP_202_ACCEPTED
     return []
-
 @router.get("/{product_id}/history")
 def get_product_history(product_id: int, db: Session = Depends(get_db)):
     history = db.query(PriceHistory).filter(PriceHistory.product_id == product_id).order_by(PriceHistory.date).all()
     return history
+
+@router.post("/{product_id}/ean", response_model=ProductSchema)
+def link_ean_to_product(
+    product_id: int, 
+    ean: str = Query(..., min_length=8, max_length=13),
+    db: Session = Depends(get_db),
+    # current_user: 'User' = Depends(get_current_user) # Enable later for auth
+):
+    """
+    Associate an EAN/UPC with an existing product.
+    Crowdsourcing feature.
+    """
+    product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    # Validation: Don't overwrite if different EAN already exists?
+    # For now, allow overwrite or simple update.
+    product.ean = ean
+    db.commit()
+    db.refresh(product)
+    return product
+
+@router.post("/contribute", response_model=ProductSchema)
+def contribute_new_product(
+    product_name: str,
+    console_name: str,
+    ean: str,
+    db: Session = Depends(get_db)
+):
+    """
+    User creates a new product from scanner (Fallback).
+    Marked as user contributed for review.
+    """
+    # Check if EAN exists
+    existing = db.query(ProductModel).filter(ProductModel.ean == ean).first()
+    if existing:
+         raise HTTPException(status_code=400, detail=f"Product with EAN {ean} already exists: {existing.product_name}")
+
+    new_prod = ProductModel(
+        product_name=product_name,
+        console_name=console_name,
+        ean=ean,
+        genre="Unknown",
+        description="User Contributed via Scanner",
+        # is_user_contributed=True # TODO: Add column to DB
+    )
+    db.add(new_prod)
+    db.commit()
+    db.refresh(new_prod)
+    return new_prod
 
 from app.schemas.product import ProductUpdate
 
