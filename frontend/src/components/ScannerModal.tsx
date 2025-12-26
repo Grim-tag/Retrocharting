@@ -376,11 +376,14 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
                             <div className="bg-orange-900/40 border border-orange-500/50 p-4 rounded mb-6 text-left">
                                 <p className="text-orange-200 font-bold mb-2">How to unblock camera: 🔓</p>
                                 <ol className="text-gray-300 text-xs space-y-2 list-decimal list-inside">
-                                    <li>Tap the <strong>Lock Icon 🔒</strong> in the URL bar (top left).</li>
-                                    <li>Tap <strong>Permissions</strong> or <strong>Site Settings</strong>.</li>
+                                    <li>Tap the <strong>icon left of the URL</strong> (🔒 Lock or ⚙️ Settings).</li>
+                                    <li>Tap <strong>Permissions</strong>.</li>
                                     <li>Find <strong>Camera</strong> and set to <strong>Allow</strong>.</li>
-                                    <li>Refresh this page.</li>
+                                    <li>Reload the page.</li>
                                 </ol>
+                                <p className="text-orange-300/80 text-[10px] mt-2 italic">
+                                    Or go to: Browser Menu (⋮) &gt; Settings &gt; Site Settings &gt; Camera
+                                </p>
                             </div>
                         )}
 
