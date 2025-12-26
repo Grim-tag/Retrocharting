@@ -368,9 +368,16 @@ def get_amazon_stats(db: Session = Depends(get_db)):
                 "region": region
             })
 
+        # 4. Total products with EAN/UPC (Global)
+        # Allows monitoring enrichment progress
+        products_with_ean = db.query(Product).filter(
+            or_(Product.ean != None, Product.ean != "")
+        ).count()
+
         return {
             "total_products_with_amazon": total_covered,
             "region_counts": counts,
+            "products_with_ean": products_with_ean,
             "recent_listings": recent_data
         }
 

@@ -159,6 +159,19 @@ class AmazonWorker:
         
         if result:
             print(f"   ✅ Found: {result['title']} - {result['price']} {result['currency']}")
+            
+            # DEEP SCRAPE: Fetch Details (EAN/UPC)
+            # This makes the process slower but enriches data
+            try:
+                details = self.scraper.get_product_details(result['url'], domain)
+                if details:
+                    print(f"     🧩 Details Extracted: EAN={details.get('ean')} ASIN={details.get('asin')}")
+                    # Update local result with deep details
+                    if details.get('ean'): result['ean'] = details['ean']
+                    if details.get('description'): result['description'] = details['description']
+            except Exception as e:
+                print(f"     ⚠️ Deep Scrape Failed: {e}")
+            
             self._save_listing(db, product.id, result)
         else:
             print("   ❌ No result found.")
@@ -183,7 +196,18 @@ class AmazonWorker:
              print(f"🛑 [Worker {self.region_type}] BLOCKED SAVING: URL {url} does not match allowed domains {self.domains}")
              return
 
-        # Check if active listing exists for this source/domain
+        # 1. Update Product Enrichment (EAN/UPC/ASIN)
+        # If we found an EAN, save it to the product
+        if data.get('ean'):
+            product = db.query(Product).get(product_id)
+            if product:
+                if not product.ean: # Only if missing
+                    product.ean = data['ean']
+                    print(f"     Save EAN to Product: {data['ean']}")
+                if not product.asin and data.get('asin'):
+                    product.asin = data['asin']
+        
+        # 2. Check if active listing exists for this source/domain
         existing = db.query(Listing).filter(
             Listing.product_id == product_id,
             Listing.seller_name == data['seller_name']

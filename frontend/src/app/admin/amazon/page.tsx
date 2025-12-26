@@ -13,6 +13,7 @@ type RegionCounts = {
 type AmazonStats = {
     total_products_with_amazon: number;
     region_counts: RegionCounts;
+    products_with_ean: number;
     recent_listings: ListingRef[];
 };
 
@@ -78,12 +79,18 @@ export default function AmazonStatsPage() {
     return (
         <div className="space-y-8 animate-fade-in">
             {/* Header Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
                 <StatCard
                     label="Total Covered"
                     value={total.toLocaleString()}
                     subtext="Products with at least 1 Amazon listing"
                     highlight
+                />
+                <StatCard
+                    label="Barcodes (EAN)"
+                    value={stats.products_with_ean.toLocaleString()}
+                    subtext="Products with verified EAN/UPC"
+                    status="blue"
                 />
                 <StatCard
                     label="PAL Coverage"
