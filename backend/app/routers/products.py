@@ -1,7 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks, Response, File, UploadFile, Form
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, exists, text
 from typing import List, Optional
+from PIL import Image
+from io import BytesIO
 
 from app.db.session import get_db
 from app.models.product import Product as ProductModel
@@ -11,12 +13,23 @@ from app.schemas.product import Product as ProductSchema, ProductList
 
 
 from app.models.user import User
-from app.routers.auth import get_current_admin_user
+from app.routers.auth import get_current_admin_user, get_current_user
 from app.routers.admin import get_admin_access
 from app.services.igdb import igdb_service
 from datetime import datetime
 
 router = APIRouter()
+
+# ... (Previous code remains, but I need to be careful with replace_file_content target)
+# Actually, I should just update the imports at the top and the function at the bottom.
+# But replace_file_content works on chunks. I'll split this into two edits if needed or just one big valid chunk?
+# The tool allow Replacing a block.
+# Let's do imports first, then the function.
+
+# WAIT. I can't easily edit imports at the top AND function in one go if they are far apart.
+# I will use two replace_file_content calls.
+# First call: Imports.
+
 
 @router.get("/", response_model=List[ProductList])
 def read_products(
@@ -475,21 +488,41 @@ def link_ean_to_product(
     db.refresh(product)
     return product
 
-@router.post("/contribute", response_model=ProductSchema)
+@router.post("/contribute")
 def contribute_new_product(
-    product_name: str,
-    console_name: str,
-    ean: str,
-    db: Session = Depends(get_db)
+    product_name: str = Form(...),
+    console_name: str = Form(...),
+    ean: str = Form(...),
+    front_image: Optional[UploadFile] = File(None),
+    back_image: Optional[UploadFile] = File(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
-    User creates a new product from scanner (Fallback).
-    Marked as user contributed for review.
+    User creates a new product from scanner (Fallback) with Images & Gamification.
     """
     # Check if EAN exists
     existing = db.query(ProductModel).filter(ProductModel.ean == ean).first()
     if existing:
          raise HTTPException(status_code=400, detail=f"Product with EAN {ean} already exists: {existing.product_name}")
+
+    # Process Images
+    def process_image(upload_file: UploadFile) -> Optional[bytes]:
+        if not upload_file: return None
+        try:
+            image = Image.open(upload_file.file)
+            if image.mode in ("RGBA", "P"): image = image.convert("RGB")
+            # Resize logic (Max 1000px width/height to save space)
+            image.thumbnail((1000, 1000)) 
+            buffer = BytesIO()
+            image.save(buffer, "WEBP", quality=80)
+            return buffer.getvalue()
+        except Exception as e:
+            print(f"Error processing image upload: {e}")
+            return None
+
+    front_blob = process_image(front_image)
+    back_blob = process_image(back_image)
 
     new_prod = ProductModel(
         product_name=product_name,
@@ -497,12 +530,39 @@ def contribute_new_product(
         ean=ean,
         genre="Unknown",
         description="User Contributed via Scanner",
-        # is_user_contributed=True # TODO: Add column to DB
+        image_blob=front_blob,
+        back_image_blob=back_blob
     )
     db.add(new_prod)
+    
+    # Gamification Logic
+    points_earned = 50
+    current_user.xp = (current_user.xp or 0) + points_earned
+    
+    # Simple Rank System
+    new_rank = current_user.rank
+    if current_user.xp >= 1000: new_rank = "Expert"
+    elif current_user.xp >= 500: new_rank = "Pro"
+    elif current_user.xp >= 100: new_rank = "Hunter"
+    elif current_user.xp >= 0: new_rank = "Novice"
+    
+    if new_rank != current_user.rank:
+        current_user.rank = new_rank
+        # Could notify user?
+        
     db.commit()
     db.refresh(new_prod)
-    return new_prod
+    
+    # Build custom response
+    return {
+        "product": ProductSchema.from_orm(new_prod),
+        "gamification": {
+            "points_earned": points_earned,
+            "new_total_xp": current_user.xp,
+            "current_rank": current_user.rank,
+            "rank_up": new_rank != current_user.rank
+        }
+    }
 
 from app.schemas.product import ProductUpdate
 

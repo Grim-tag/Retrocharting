@@ -44,7 +44,8 @@ def run_auto_migrations(engine: Engine):
                 ("gtin", "TEXT"),
                 ("box_only_price", "FLOAT"),
                 ("manual_only_price", "FLOAT"),
-                ("image_blob", "BYTEA")
+                ("image_blob", "BYTEA"),
+                ("back_image_blob", "BYTEA")
             ]
             
             for col, type_ in common_cols:

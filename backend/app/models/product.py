@@ -17,7 +17,8 @@ class Product(Base):
     genre = Column(String, nullable=True)
     release_date = Column(Date, nullable=True)
     image_url = Column(String, nullable=True)
-    image_blob = Column(LargeBinary, nullable=True) # Stored Image Data
+    image_blob = Column(LargeBinary, nullable=True) # Stored Image Data (Front)
+    back_image_blob = Column(LargeBinary, nullable=True) # Stored Image Data (Back)
     description = Column(String, nullable=True)
     last_scraped = Column(DateTime, nullable=True)
 

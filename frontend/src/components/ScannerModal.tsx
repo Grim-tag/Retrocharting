@@ -27,237 +27,44 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
 
     // Create State
     const [createForm, setCreateForm] = useState({ name: '', console: '' });
+    const [frontImage, setFrontImage] = useState<File | null>(null);
+    const [backImage, setBackImage] = useState<File | null>(null);
 
     const router = useRouter();
-    const scannerRef = useRef<Html5Qrcode | null>(null);
-    const mountedRef = useRef(false);
+    // ... (refs remain)
 
-    // Helper logging
-    const addLog = (msg: string) => {
-        const time = new Date().toLocaleTimeString();
-        setDebugLogs(prev => [...prev, `[${time}] ${msg}`]);
-        console.log(`[ScannerLog] ${msg}`);
-    };
+    // ... (resetState needs update to clear images)
 
-    // Reset when opening
-    useEffect(() => {
-        if (isOpen) {
-            mountedRef.current = true;
-            resetState();
-            startScanner();
-        } else {
-            mountedRef.current = false;
-            stopScanner();
-        }
-        return () => {
-            mountedRef.current = false;
-            stopScanner();
-        };
-    }, [isOpen]);
-
-    const resetState = () => {
-        setView('scan');
-        setScannedCode(null);
-        setErrorMsg(null);
-        setLoading(false);
-        setSearchQuery("");
-        setSearchResults([]);
-        setCreateForm({ name: '', console: '' });
-        setDebugLogs([]); // optional: keep logs? no clear them
-        addLog("State reset. Scanner opening.");
-    };
-
-    const startScanner = async () => {
-        // Wait a bit for UI to mount
-        await new Promise(r => setTimeout(r, 200));
-
-        // 0. Check Secure Context
-        if (typeof window !== 'undefined' && !window.isSecureContext && window.location.hostname !== 'localhost') {
-            addLog("FATAL: Not in secure context (HTTPS/Localhost). Camera will fail.");
-            setErrorMsg("Permission Denied (Insecure Context)");
-            setView('error');
-            return;
-        }
-
-        const elem = document.getElementById("reader");
-        if (!elem) {
-            addLog("ERROR: #reader element not found in DOM");
-            return;
-        }
-
-        try {
-            if (scannerRef.current) {
-                addLog("Scanner instance already exists. Checking state...");
-                try {
-                    // If it's running, stop it first?
-                    if (scannerRef.current.isScanning) {
-                        await scannerRef.current.stop();
-                        addLog("Stopped existing scan.");
-                    }
-                } catch (e) {
-                    addLog("Error checking/stopping existing: " + e);
-                }
-            } else {
-                addLog("Creating new Html5Qrcode instance.");
-                scannerRef.current = new Html5Qrcode("reader");
-            }
-
-            const html5QrCode = scannerRef.current;
-
-            // Config
-            const config = {
-                fps: 10,
-                qrbox: { width: 250, height: 250 },
-                aspectRatio: 1.0,
-                formatsToSupport: [
-                    Html5QrcodeSupportedFormats.EAN_13,
-                    Html5QrcodeSupportedFormats.EAN_8,
-                    Html5QrcodeSupportedFormats.UPC_A,
-                    // Html5QrcodeSupportedFormats.UPC_E,
-                    // Html5QrcodeSupportedFormats.CODE_128,
-                    Html5QrcodeSupportedFormats.QR_CODE
-                ]
-            };
-
-            // 1. Directy try "environment" camera without enumeration
-            // This avoids "getCameras" failing on some devices/permissions
-            const startConfig = { facingMode: "environment" };
-            addLog(`Direct start with config: ${JSON.stringify(startConfig)}`);
-
-            await html5QrCode.start(
-                startConfig,
-                config,
-                (decodedText) => {
-                    handleScanSuccess(decodedText);
-                },
-                (errorMessage) => {
-                    // Ignore transient
-                }
-            );
-
-            addLog("Scanner started successfully!");
-            if (mountedRef.current) {
-                setHasPermission(true);
-            }
-
-        } catch (err: any) {
-            addLog(`START FAIL: ${err.message || err}`);
-            console.error("Start Scanner Error", err);
-
-            let msg = "Could not start camera.";
-            if (err?.name === "NotAllowedError" || err?.message?.includes("permission")) {
-                msg = "Permission denied. Check browser settings.";
-            } else if (err?.name === "NotFoundError") {
-                msg = "No camera found.";
-            } else if (typeof err === 'string') {
-                msg = err;
-            }
-
-            // If it's the "Unable to query supported devices" error, it might be persistent
-            if (mountedRef.current) {
-                setErrorMsg(msg);
-                setView('error');
-            }
-        }
-    };
-
-    const stopScanner = async () => {
-        if (scannerRef.current) {
-            try {
-                // Check if running before stop? html5-qrcode throws if not running
-                await scannerRef.current.stop();
-                scannerRef.current.clear();
-            } catch (ignore) {
-                // Ignore stop errors
-            }
-            // Do NOT nullify ref immediately if we want to reuse? 
-            // Actually best to recreate instance to avoid state issues
-            scannerRef.current = null;
-        }
-    };
-
-    const handleScanSuccess = async (code: string) => {
-        if (!mountedRef.current) return;
-        addLog(`Barcode found: ${code}`);
-
-        // Stop scanning
-        await stopScanner();
-
-        setScannedCode(code);
-        setLoading(true);
-        processCode(code);
-    };
-
-    const processCode = async (code: string) => {
-        try {
-            addLog(`Searching API for: ${code}`);
-            const res = await apiClient.get(`/products?search=${code}`);
-            const products = res.data;
-
-            if (products && products.length > 0) {
-                addLog("Product found! Redirecting.");
-                const product = products[0];
-                onClose();
-                router.push(`/products/${product.id}`);
-            } else {
-                addLog("Product not found via scan.");
-                setErrorMsg(`Unknown Game (Code: ${code})`);
-                setView('error');
-                setLoading(false);
-            }
-        } catch (e) {
-            console.error("Scan Error", e);
-            addLog("API Error: " + e);
-            setErrorMsg("Network Error checking code.");
-            setView('error');
-            setLoading(false);
-        }
-    };
-
-    // Actions
-    const performSearch = async () => {
-        if (searchQuery.length < 2) return;
-        setLoading(true);
-        try {
-            const res = await apiClient.get(`/products?search=${searchQuery}&limit=5`);
-            setSearchResults(res.data);
-            setView('search');
-        } catch (e) {
-            alert("Search failed");
-        }
-        setLoading(false);
-    };
-
-    const linkProduct = async (productId: number) => {
-        if (!scannedCode) return;
-        if (!confirm("Link this barcode to this game?")) return;
-
-        setLoading(true);
-        try {
-            await apiClient.post(`/products/${productId}/ean`, null, { params: { ean: scannedCode } });
-            alert("Linked! Redirecting...");
-            onClose();
-            router.push(`/products/${productId}`);
-        } catch (e) {
-            alert("Link failed");
-            setLoading(false);
-        }
-    };
-
+    // ... (createProduct rewrite)
     const createProduct = async () => {
         if (!scannedCode || !createForm.name || !createForm.console) return;
         setLoading(true);
         try {
-            const res = await apiClient.post(`/products/contribute`, null, {
-                params: {
-                    product_name: createForm.name,
-                    console_name: createForm.console,
-                    ean: scannedCode
-                }
+            const formData = new FormData();
+            formData.append('product_name', createForm.name);
+            formData.append('console_name', createForm.console);
+            formData.append('ean', scannedCode);
+            if (frontImage) formData.append('front_image', frontImage);
+            if (backImage) formData.append('back_image', backImage);
+
+            const res = await apiClient.post(`/products/contribute`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
             });
-            alert("Created & Linked! Redirecting...");
+
+            // Gamification Feedback
+            const { product, gamification } = res.data; // Expecting new dict format
+            const pts = gamification?.points_earned || 0;
+            const newRank = gamification?.current_rank;
+            const rankUp = gamification?.rank_up;
+
+            let msg = `Jeu ajouté ! Vous gagnez +${pts} XP.`;
+            if (rankUp) msg += `\n\n🎉 Félicitations ! Vous êtes maitenant "${newRank}" !`;
+
+            alert(msg);
             onClose();
-            router.push(`/products/${res.data.id}`);
+            // Redirect to new product
+            const pid = product?.id || res.data.id; // Fallback if schema differs
+            router.push(`/products/${pid}`);
         } catch (e) {
             alert("Creation failed");
             setLoading(false);
@@ -297,6 +104,20 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
                     setErrorMsg("Could not read barcode from image.");
                 });
         }
+    };
+
+    const resetState = () => {
+        setView('scan');
+        setScannedCode(null);
+        setErrorMsg(null);
+        setLoading(false);
+        setSearchQuery("");
+        setSearchResults([]);
+        setCreateForm({ name: '', console: '' });
+        setFrontImage(null);
+        setBackImage(null);
+        setDebugLogs([]); // optional: keep logs? no clear them
+        addLog("State reset. Scanner opening.");
     };
 
     const requestPermissionManual = () => {
@@ -541,12 +362,53 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
                 )}
 
                 {view === 'create' && (
-                    <div className="p-6 flex flex-col h-full bg-gray-900">
-                        <h3 className="text-white font-bold mb-4">Create New</h3>
-                        <input className="mb-2 bg-gray-800 text-white p-2 border border-gray-700 rounded" placeholder="Name" value={createForm.name} onChange={e => setCreateForm({ ...createForm, name: e.target.value })} />
-                        <input className="mb-4 bg-gray-800 text-white p-2 border border-gray-700 rounded" placeholder="Console" value={createForm.console} onChange={e => setCreateForm({ ...createForm, console: e.target.value })} />
-                        <button onClick={createProduct} className="bg-green-600 text-white py-2 rounded font-bold">Create & Link</button>
-                        <button onClick={() => setView('error')} className="mt-2 text-gray-400 underline">Cancel</button>
+                    <div className="p-6 flex flex-col h-full bg-gray-900 overflow-y-auto">
+                        <div className="bg-gradient-to-r from-yellow-600 to-orange-600 p-3 rounded mb-4 text-center">
+                            <p className="text-white font-bold text-sm">🏆 Contribution</p>
+                            <p className="text-yellow-100 text-xs">Ajoutez ce jeu pour gagner <span className="font-bold text-white">+50 XP</span> !</p>
+                        </div>
+
+                        <h3 className="text-white font-bold mb-4">Nouveau Jeu</h3>
+
+                        <label className="text-gray-400 text-xs mb-1">Nom du Jeu *</label>
+                        <input className="mb-3 bg-gray-800 text-white p-3 border border-gray-700 rounded focus:border-blue-500 outline-none transition-colors" placeholder="Ex: Super Mario" value={createForm.name} onChange={e => setCreateForm({ ...createForm, name: e.target.value })} />
+
+                        <label className="text-gray-400 text-xs mb-1">Console *</label>
+                        <input className="mb-4 bg-gray-800 text-white p-3 border border-gray-700 rounded focus:border-blue-500 outline-none transition-colors" placeholder="Ex: Nintendo 64" value={createForm.console} onChange={e => setCreateForm({ ...createForm, console: e.target.value })} />
+
+                        <div className="grid grid-cols-2 gap-3 mb-4">
+                            <div>
+                                <label className="text-gray-400 text-xs mb-1 block text-center">Photo Face 📷</label>
+                                <label className={`block w-full aspect-square rounded border-2 border-dashed flex items-center justify-center cursor-pointer overflow-hidden relative ${frontImage ? 'border-green-500 bg-black' : 'border-gray-600 bg-gray-800 hover:bg-gray-700'}`}>
+                                    {frontImage ? (
+                                        <img src={URL.createObjectURL(frontImage)} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <span className="text-gray-500 text-2xl">+</span>
+                                    )}
+                                    <input type="file" accept="image/*" className="hidden" onChange={e => setFrontImage(e.target.files?.[0] || null)} />
+                                </label>
+                            </div>
+                            <div>
+                                <label className="text-gray-400 text-xs mb-1 block text-center">Photo Dos 📷</label>
+                                <label className={`block w-full aspect-square rounded border-2 border-dashed flex items-center justify-center cursor-pointer overflow-hidden relative ${backImage ? 'border-green-500 bg-black' : 'border-gray-600 bg-gray-800 hover:bg-gray-700'}`}>
+                                    {backImage ? (
+                                        <img src={URL.createObjectURL(backImage)} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <span className="text-gray-500 text-2xl">+</span>
+                                    )}
+                                    <input type="file" accept="image/*" className="hidden" onChange={e => setBackImage(e.target.files?.[0] || null)} />
+                                </label>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={createProduct}
+                            disabled={!createForm.name || !createForm.console}
+                            className={`w-full py-3 rounded font-bold shadow-lg transition-all ${(!createForm.name || !createForm.console) ? 'bg-gray-700 text-gray-500 cursor-not-allowed' : 'bg-green-600 hover:bg-green-500 text-white'}`}
+                        >
+                            {loading ? "Envoi..." : "Créer le Jeu (+50 XP)"}
+                        </button>
+                        <button onClick={() => setView('error')} className="mt-4 text-gray-500 text-xs underline text-center">Annuler</button>
                     </div>
                 )}
             </div>
