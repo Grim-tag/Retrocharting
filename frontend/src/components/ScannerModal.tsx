@@ -71,6 +71,14 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
         // Wait a bit for UI to mount
         await new Promise(r => setTimeout(r, 200));
 
+        // 0. Check Secure Context
+        if (typeof window !== 'undefined' && !window.isSecureContext && window.location.hostname !== 'localhost') {
+            addLog("FATAL: Not in secure context (HTTPS/Localhost). Camera will fail.");
+            setErrorMsg("Permission Denied (Insecure Context)");
+            setView('error');
+            return;
+        }
+
         const elem = document.getElementById("reader");
         if (!elem) {
             addLog("ERROR: #reader element not found in DOM");
@@ -374,16 +382,51 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
 
                         {errorMsg?.toLowerCase().includes("permission") && (
                             <div className="bg-orange-900/40 border border-orange-500/50 p-4 rounded mb-6 text-left">
-                                <p className="text-orange-200 font-bold mb-2">How to unblock camera: 🔓</p>
-                                <ol className="text-gray-300 text-xs space-y-2 list-decimal list-inside">
-                                    <li>Tap the <strong>icon left of the URL</strong> (🔒 Lock or ⚙️ Settings).</li>
-                                    <li>Tap <strong>Permissions</strong>.</li>
-                                    <li>Find <strong>Camera</strong> and set to <strong>Allow</strong>.</li>
-                                    <li>Reload the page.</li>
-                                </ol>
-                                <p className="text-orange-300/80 text-[10px] mt-2 italic">
-                                    Or go to: Browser Menu (⋮) &gt; Settings &gt; Site Settings &gt; Camera
-                                </p>
+                                <h4 className="text-orange-200 font-bold mb-2 text-sm">Accès Caméra Bloqué 📷</h4>
+
+                                <div className="space-y-4">
+                                    {/* 1. Secure Context Warning */}
+                                    {typeof window !== 'undefined' && !window.isSecureContext && (
+                                        <div className="bg-red-900/60 p-2 rounded border border-red-500">
+                                            <p className="text-red-200 text-xs font-bold">
+                                                ⚠️ Connexion non sécurisée détectée.
+                                            </p>
+                                            <p className="text-red-300 text-[10px] mt-1">
+                                                Les navigateurs bloquent la caméra sur les sites non-HTTPS (ou non-localhost).
+                                                Assurez-vous d'utiliser <strong>https://</strong>.
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {/* 2. Site Level */}
+                                    <div>
+                                        <p className="text-orange-300 text-xs font-semibold mb-1">étape 1: Vérifier le site</p>
+                                        <ol className="text-gray-300 text-[11px] space-y-1 list-decimal list-inside pl-1">
+                                            <li>Appuyez sur l'icône à gauche de l'URL (🔒 ou ⚙️).</li>
+                                            <li>Allez dans <strong>Permissions</strong>.</li>
+                                            <li>Activez <strong>Caméra</strong> (ou "Autoriser").</li>
+                                            <li>Rechargez la page.</li>
+                                        </ol>
+                                    </div>
+
+                                    {/* 3. OS Level - CRITICAL */}
+                                    <div className="bg-black/40 p-3 rounded border border-orange-500/30">
+                                        <p className="text-orange-300 text-xs font-semibold mb-1">
+                                            🚨 Option "Caméra" invisible ?
+                                        </p>
+                                        <p className="text-gray-400 text-[10px] mb-2 leading-tight">
+                                            Si vous ne voyez pas l'option caméra ci-dessus, c'est que <strong>votre téléphone bloque le navigateur</strong> complètement.
+                                        </p>
+                                        <p className="text-white text-[11px] font-bold mb-1">Solution Android/iOS :</p>
+                                        <ol className="text-gray-300 text-[11px] space-y-1 list-decimal list-inside pl-1">
+                                            <li>Quittez le navigateur.</li>
+                                            <li>Allez dans les <strong>Réglages du Téléphone</strong> (pas du navigateur).</li>
+                                            <li>Allez dans <strong>Applications</strong> -&gt; <strong>Chrome/Safari</strong>.</li>
+                                            <li>Cherchez <strong>Autorisations</strong> -&gt; <strong>Caméra</strong>.</li>
+                                            <li>Choisissez "Toujours autoriser" ou "Si l'appli est active".</li>
+                                        </ol>
+                                    </div>
+                                </div>
                             </div>
                         )}
 
@@ -398,19 +441,19 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
                         {scannedCode && (
                             <div className="space-y-4 text-left">
                                 <div className="p-4 bg-gray-800 rounded border border-gray-700">
-                                    <p className="text-gray-300 text-sm mb-2 font-bold"> Help us build the database! 🤝</p>
-                                    <p className="text-gray-400 text-xs mb-4">Link this barcode to a game so the next person finds it instantly.</p>
+                                    <p className="text-gray-300 text-sm mb-2 font-bold"> Aidez-nous à grandir ! 🤝</p>
+                                    <p className="text-gray-400 text-xs mb-4">Liez ce code-barres à un jeu pour aider les futurs collectionneurs.</p>
 
                                     <div className="flex gap-2">
                                         <input
                                             type="text"
-                                            placeholder="Search game..."
+                                            placeholder="Chercher le jeu..."
                                             className="bg-gray-900 border border-gray-600 text-white text-sm rounded px-3 py-2 flex-1 outline-none"
                                             value={searchQuery}
                                             onChange={(e) => setSearchQuery(e.target.value)}
                                             onKeyDown={(e) => e.key === 'Enter' && performSearch()}
                                         />
-                                        <button onClick={performSearch} className="bg-blue-600 text-white px-3 py-2 rounded font-bold text-sm">Search</button>
+                                        <button onClick={performSearch} className="bg-blue-600 text-white px-3 py-2 rounded font-bold text-sm">Chercher</button>
                                     </div>
                                 </div>
                             </div>
@@ -420,14 +463,26 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
                             {!scannedCode && (
                                 <>
                                     <button
-                                        onClick={requestPermissionManual}
-                                        className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded font-bold shadow-lg"
+                                        onClick={async () => {
+                                            // Quick permission check test
+                                            try {
+                                                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                                                stream.getTracks().forEach(t => t.stop());
+                                                addLog("Manual permission check passed! Restarting scanner...");
+                                                resetState();
+                                                startScanner();
+                                            } catch (e: any) {
+                                                addLog("Manual permission check failed: " + e.message);
+                                                alert("Toujours bloqué : " + e.message + "\n\nVérifiez les réglages Android/iOS du téléphone.");
+                                            }
+                                        }}
+                                        className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded font-bold shadow-lg flex items-center justify-center gap-2"
                                     >
-                                        🔄 Retry Camera
+                                        <span>🔄</span> Tester la Permission & Réessayer
                                     </button>
 
-                                    <label className="block w-full bg-gray-700 hover:bg-gray-600 text-white py-3 rounded font-bold mt-2 border border-gray-500 cursor-pointer">
-                                        📷 Upload Photo
+                                    <label className="block w-full bg-gray-700 hover:bg-gray-600 text-white py-3 rounded font-bold mt-2 border border-gray-500 cursor-pointer text-center">
+                                        📷 Télécharger une Photo
                                         <input
                                             type="file"
                                             accept="image/*"
