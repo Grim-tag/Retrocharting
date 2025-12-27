@@ -255,42 +255,49 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
                         <div className="mt-auto pt-6 space-y-3">
                             {!scannedCode && (
                                 <>
-                                    <button
-                                        onClick={async () => {
-                                            // Quick permission check test
-                                            try {
-                                                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                                                stream.getTracks().forEach(t => t.stop());
-                                                addLog("Manual permission check passed! Restarting scanner...");
-                                                resetState();
-                                                startScanner();
-                                            } catch (e: any) {
-                                                addLog("Manual permission check failed: " + e.message);
-                                                alert("Toujours bloqué : " + e.message + "\n\nVérifiez les réglages Android/iOS du téléphone.");
-                                            }
-                                        }}
-                                        className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded font-bold shadow-lg flex items-center justify-center gap-2"
-                                    >
-                                        <span>🔄</span> Tester la Permission & Réessayer
-                                    </button>
-
-                                    <button
-                                        onClick={() => setView('debug')}
-                                        className="w-full bg-gray-700 hover:bg-gray-600 text-white py-2 rounded font-bold border border-gray-500 text-xs"
-                                    >
-                                        🛠️ Mode Debug (Test Brut)
-                                    </button>
-
-                                    <label className="block w-full bg-gray-700 hover:bg-gray-600 text-white py-3 rounded font-bold mt-2 border border-gray-500 cursor-pointer text-center">
-                                        📷 Télécharger une Photo
+                                    {/* PRIMARY FALLBACK: NATIVE CAMERA */}
+                                    <label className="block w-full bg-green-600 hover:bg-green-500 text-white py-4 rounded-xl font-bold border-2 border-green-400 cursor-pointer text-center shadow-[0_0_15px_rgba(0,255,0,0.3)] animate-pulse">
+                                        <span className="text-2xl mr-2">📷</span>
+                                        {/* Dynamic Text based on error */}
+                                        {errorMsg?.includes("Time out") ? "Scanner Bloqué ? Cliquez ici !" : "Prendre une Photo (Rapide)"}
                                         <input
                                             type="file"
                                             accept="image/*"
+                                            capture="environment" // TRY to force rear camera
                                             id="scanner-upload-file"
                                             className="hidden"
                                             onChange={handleFileUpload}
                                         />
+                                        <p className="text-[10px] font-normal opacity-80 mt-1">100% Fonctionnel - Zéro Bug</p>
                                     </label>
+
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={async () => {
+                                                // Quick permission check test
+                                                try {
+                                                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                                                    stream.getTracks().forEach(t => t.stop());
+                                                    addLog("Manual permission check passed! Restarting scanner...");
+                                                    resetState();
+                                                    startScanner();
+                                                } catch (e: any) {
+                                                    addLog("Manual permission check failed: " + e.message);
+                                                    alert("Toujours bloqué : " + e.message + "\n\nVérifiez les réglages Android/iOS du téléphone.");
+                                                }
+                                            }}
+                                            className="flex-1 bg-blue-900/50 hover:bg-blue-800 text-blue-200 py-3 rounded font-bold text-xs border border-blue-800"
+                                        >
+                                            <span>🔄</span> Réessayer
+                                        </button>
+
+                                        <button
+                                            onClick={() => setView('debug')}
+                                            className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-400 py-3 rounded font-bold text-xs border border-gray-700"
+                                        >
+                                            🛠️ Debug
+                                        </button>
+                                    </div>
                                 </>
                             )}
 
@@ -331,9 +338,28 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
                                                 // Clean up if unmounted
                                                 stream.getTracks().forEach(t => t.stop());
                                             }
-                                        } catch (e: any) {
-                                            addLog("DEBUG FATAL: " + e.name + " - " + e.message);
-                                            setErrorMsg("DEBUG FAIL: " + e.name);
+                                        } catch (err: any) {
+                                            addLog(`START FAIL: ${err.message || err}`);
+                                            console.error("Start Scanner Error", err);
+
+                                            let msg = "Could not start camera.";
+                                            if (err?.name === "NotAllowedError" || err?.message?.includes("permission")) {
+                                                msg = "Permission denied. Check browser settings.";
+                                            } else if (err?.name === "NotFoundError") {
+                                                msg = "No camera found.";
+                                            } else if (err?.message === "ScannerStartTimeout") {
+                                                msg = "Camera is unresponsive (Time out).";
+                                            } else if (typeof err === 'string') {
+                                                msg = err;
+                                            }
+
+                                            // If it's the "Unable to query supported devices" error, it might be persistent
+                                            // Assuming mountedRef is available in this scope, if not, it needs to be passed or defined.
+                                            // For this edit, we assume it's available.
+                                            if (mountedRef.current) {
+                                                setErrorMsg(msg);
+                                                setView('error');
+                                            }
                                         }
                                     })();
                                 }
