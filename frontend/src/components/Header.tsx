@@ -11,7 +11,6 @@ import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguageAlternate } from '@/context/LanguageAlternateContext';
 import CurrencySelector from './CurrencySelector';
-import ScannerModal from './ScannerModal';
 
 export default function Header({ dict, lang }: { dict: any; lang: string }) {
     const router = useRouter();
@@ -79,7 +78,6 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
     ];
 
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-    const [isScannerOpen, setIsScannerOpen] = useState(false);
 
     return (
         <header className="bg-[#1f2533] border-b border-[#2a3142] sticky top-0 z-50 shadow-lg font-sans">
@@ -217,15 +215,15 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
 
                     {/* Mobile Menu Button + SCANNER */}
                     <div className="md:hidden flex items-center gap-4">
-                        <button
-                            onClick={() => setIsScannerOpen(true)}
+                        <Link
+                            href={`/${lang}/scan`}
                             className="text-white p-2 bg-[#2a3142] rounded-full hover:bg-gray-700 transition-colors"
                             aria-label="Scan Barcode"
                         >
                             <svg className="w-5 h-5 text-[#ff6600]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
                             </svg>
-                        </button>
+                        </Link>
                         <Link
                             href={switchLocale(lang === 'en' ? 'fr' : 'en')}
                             className="text-sm font-bold text-gray-400 hover:text-white uppercase"
@@ -248,7 +246,7 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
                 </div>
             </div>
 
-            <ScannerModal isOpen={isScannerOpen} onClose={() => setIsScannerOpen(false)} />
+
 
             {/* Mobile Navigation Overlay */}
             {isMobileMenuOpen && (
