@@ -194,15 +194,21 @@ export default function ScanPage({ params }: { params: { lang: string } }) {
                 const product = products[0];
                 router.push(`/${params?.lang || 'en'}/products/${product.id}`);
             } else {
-                addLog("Product not found via scan.");
-                setErrorMsg(`Unknown Game (Code: ${code})`);
-                setView('error');
+                addLog("Product not found via scan. Switching to Create Mode.");
+                // AUTO-REDIRECT TO CREATE if not found
+                if (confirm(`Jeu inconnu (Code: ${code}).\n\nVoulez-vous l'ajouter pour gagner +50 XP ?`)) {
+                    setScannedCode(code);
+                    setView('create');
+                } else {
+                    setErrorMsg(`Jeu inconnu (Code: ${code})`);
+                    setView('error');
+                }
                 setLoading(false);
             }
         } catch (e) {
             console.error("Scan Error", e);
             addLog("API Error: " + e);
-            setErrorMsg("Network Error checking code.");
+            setErrorMsg("Erreur réseau lors de la recherche.");
             setView('error');
             setLoading(false);
         }
@@ -216,32 +222,44 @@ export default function ScanPage({ params }: { params: { lang: string } }) {
         setLoading(true);
 
         try {
-            // CRITICAL FIX: Always create a FRESH instance for file scanning
-            // This avoids any "stuck" state from the live scanner
+            // CRITICAL FIX: Ensure previous instance is cleared
             if (scannerRef.current) {
                 try {
                     if (scannerRef.current.isScanning) {
                         await scannerRef.current.stop();
                     }
                     scannerRef.current.clear();
-                } catch (e) {
-                    // Ignore stop errors
-                }
+                } catch (e) { /* ignore */ }
                 scannerRef.current = null;
             }
 
-            const tempScanner = new Html5Qrcode("reader");
-            addLog("Created fresh scanner instance for file.");
+            // CRITICAL FIX: Use the HIDDEN, PERSISTENT div for file scanning
+            // This ensures it works even if the main "reader" div is unmounted
+            // Using "reader-hidden" which is rendered below
+            const tempScanner = new Html5Qrcode("reader-hidden");
+            addLog("Created scanner instance on hidden div.");
 
             const decodedText = await tempScanner.scanFile(file, true);
             addLog("File scan success: " + decodedText);
+
+            // Clean up
+            tempScanner.clear();
+
             handleScanSuccess(decodedText);
         } catch (err: any) {
             console.error("File Scan Error", err);
             addLog("File scan error: " + err);
-            // Explicitly tell user what happened
-            alert(`Impossible de lire le code-barres sur cette image.\n\nErreur: ${err?.message || err}`);
-            setErrorMsg("Échec lecture fichier image.");
+
+            // Helpful error mapping
+            let userMsg = "Code-barres illisible.";
+            if (err?.toString().includes("No MultiFormat Readers")) {
+                userMsg = "Aucun code-barres détecté sur l'image. Essayez de cadrer plus serré.";
+            } else if (err?.toString().includes("reader element not found")) {
+                userMsg = "Erreur technique (DOM).";
+            }
+
+            alert(`❌ ${userMsg}\n\nDétail: ${err?.message || err}`);
+            setErrorMsg(userMsg);
             setView('error');
             setLoading(false);
         }
@@ -252,11 +270,11 @@ export default function ScanPage({ params }: { params: { lang: string } }) {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: true });
             setMinimalTestStatus("✅ SUCCÈS ! Caméra accessible.");
-            alert("✅ La caméra fonctionne ! Le blocage vient donc du scanner de code-barres, pas de votre téléphone. Utilisez le mode 'Photo' ou 'Manuel'.");
+            alert("✅ La caméra fonctionne !");
             stream.getTracks().forEach(track => track.stop());
         } catch (err: any) {
             setMinimalTestStatus(`❌ ÉCHEC : ${err.name}`);
-            alert(`❌ Échec Test Caméra : ${err.name}\n\n${err.message}\n\nCela confirme que le navigateur ou l'OS bloque la caméra.`);
+            alert(`❌ Bloqué par le système : ${err.name}`);
         }
     };
 
@@ -289,7 +307,7 @@ export default function ScanPage({ params }: { params: { lang: string } }) {
             const pid = product?.id || res.data.id;
             router.push(`/${params?.lang || 'en'}/products/${pid}`);
         } catch (e) {
-            alert("Creation failed");
+            alert("Erreur lors de la création.");
             setLoading(false);
         }
     };
@@ -307,8 +325,25 @@ export default function ScanPage({ params }: { params: { lang: string } }) {
         setLoading(false);
     };
 
+    const linkProduct = async (productId: number) => {
+        if (!scannedCode) return;
+        if (!confirm("Link this barcode to this game?")) return;
+
+        setLoading(true);
+        try {
+            await apiClient.post(`/products/${productId}/ean`, null, { params: { ean: scannedCode } });
+            alert("Linked! Redirecting...");
+            router.push(`/${params?.lang || 'en'}/products/${productId}`);
+        } catch (e) {
+            alert("Link failed");
+            setLoading(false);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-black flex flex-col">
+            {/* HIDDEN MOUNT POINT FOR FILE SCANNER IN ALL VIEWS */}
+            <div id="reader-hidden" className="hidden"></div>
 
             {/* Header / Back Link */}
             <div className="absolute top-4 left-4 z-50">
@@ -358,67 +393,54 @@ export default function ScanPage({ params }: { params: { lang: string } }) {
 
             {/* ERROR VIEW */}
             {view === 'error' && (
-                <div className="flex-1 bg-gray-900 p-6 flex flex-col items-center justify-center text-center overflow-y-auto">
+                <div className="flex-1 bg-gray-900 p-6 flex flex-col items-center justify-center text-center">
                     <div className="text-red-500 text-6xl mb-6">⚠️</div>
                     <h2 className="text-white text-2xl font-bold mb-2">Scanner Bloqué</h2>
                     <p className="text-gray-400 mb-8 max-w-xs mx-auto text-sm">
                         {errorMsg || "Impossible d'accéder à la caméra."}
                     </p>
 
-                    <div className="w-full max-w-sm space-y-4">
-                        {/* 1. NATIVE CAMERA FALLBACK */}
-                        <label className="block w-full bg-green-600 hover:bg-green-500 text-white py-4 rounded-xl font-bold border-2 border-green-400 cursor-pointer text-center shadow-lg relative">
-                            {loading && <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-xl">⏳</div>}
-                            <span className="text-2xl mr-2">📷</span>
-                            1. Prendre une Photo
+                    {/* PRIMARY FALLBACK */}
+                    <label className="block w-full max-w-sm bg-green-600 hover:bg-green-500 text-white py-6 rounded-xl font-bold border-2 border-green-400 cursor-pointer text-center shadow-lg mb-6">
+                        {loading && <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-xl z-20"><span className="text-3xl animate-spin">⏳</span></div>}
+                        <span className="text-3xl mr-2">📷</span>
+                        UTILISER L'APPAREIL PHOTO
+                        <input
+                            type="file"
+                            accept="image/*"
+                            capture="environment"
+                            className="hidden"
+                            onChange={handleFileUpload}
+                        />
+                        <p className="text-xs font-normal opacity-90 mt-2">Prenez une photo du code-barres, ça marche à tous les coups !</p>
+                    </label>
+
+                    {/* 2. MANUAL ENTRY FALLBACK */}
+                    <div className="bg-gray-800 p-4 rounded-xl border border-gray-700 w-full max-w-sm text-left mb-6">
+                        <p className="text-white font-bold mb-2 text-sm">2. Saisie Manuelle (Code EAN 13)</p>
+                        <div className="flex gap-2">
                             <input
-                                type="file"
-                                accept="image/*"
-                                capture="environment"
-                                className="hidden"
-                                onChange={handleFileUpload}
+                                type="number"
+                                placeholder="Ex: 334854223..."
+                                className="flex-1 bg-black text-white p-3 rounded-lg border border-gray-600 outline-none font-mono"
+                                onChange={(e) => setScannedCode(e.target.value)}
                             />
-                            <p className="text-[10px] font-normal opacity-90 mt-1">Prenez le code-barres en photo</p>
-                        </label>
-
-                        {/* 2. MANUAL ENTRY FALLBACK */}
-                        <div className="bg-gray-800 p-4 rounded-xl border border-gray-700">
-                            <p className="text-white font-bold mb-2 text-sm text-left">2. Saisie Manuelle (Code EAN 13)</p>
-                            <div className="flex gap-2">
-                                <input
-                                    type="number"
-                                    placeholder="Ex: 334854223..."
-                                    className="flex-1 bg-black text-white p-3 rounded-lg border border-gray-600 outline-none font-mono"
-                                    onChange={(e) => setScannedCode(e.target.value)}
-                                />
-                                <button
-                                    onClick={() => scannedCode && handleScanSuccess(scannedCode)}
-                                    className="bg-blue-600 text-white px-4 rounded-lg font-bold"
-                                >
-                                    OK
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* 3. DEBUG TOOLS */}
-                        <div className="border-t border-gray-800 pt-4 mt-8">
-                            <p className="text-gray-500 text-xs mb-2">Outils de Diagnostic</p>
                             <button
-                                onClick={runMinimalCameraTest}
-                                className="w-full bg-gray-800 hover:bg-gray-700 text-gray-300 py-2 rounded text-xs border border-gray-600 mb-2"
+                                onClick={() => scannedCode && handleScanSuccess(scannedCode)}
+                                className="bg-blue-600 text-white px-4 rounded-lg font-bold"
                             >
-                                🛠️ Tester la Caméra (Minimal)
-                            </button>
-                            {minimalTestStatus && <p className="text-xs font-mono text-yellow-400 mb-2">{minimalTestStatus}</p>}
-
-                            <button
-                                onClick={() => { resetState(); startScanner(); }}
-                                className="text-gray-500 underline text-xs"
-                            >
-                                Réessayer le scanner live
+                                OK
                             </button>
                         </div>
                     </div>
+
+                    <button
+                        onClick={() => { resetState(); startScanner(); }}
+                        className="text-gray-500 underline text-sm"
+                    >
+                        Réessayer le scanner live
+                    </button>
+
                 </div>
             )}
 
@@ -432,12 +454,12 @@ export default function ScanPage({ params }: { params: { lang: string } }) {
 
                     <div className="max-w-md mx-auto space-y-4">
                         <div>
-                            <label className="text-gray-400 text-xs mb-1 block">Nom du Jeu *</label>
+                            <label className="text-gray-400 text-xs mb-1 block">Nom du Jeu * (Requis)</label>
                             <input className="w-full bg-gray-800 text-white p-4 border border-gray-700 rounded-xl focus:border-blue-500 outline-none text-lg" placeholder="Ex: Super Mario 64" value={createForm.name} onChange={e => setCreateForm({ ...createForm, name: e.target.value })} />
                         </div>
 
                         <div>
-                            <label className="text-gray-400 text-xs mb-1 block">Console *</label>
+                            <label className="text-gray-400 text-xs mb-1 block">Console * (Requis)</label>
                             <input className="w-full bg-gray-800 text-white p-4 border border-gray-700 rounded-xl focus:border-blue-500 outline-none text-lg" placeholder="Ex: Nintendo 64" value={createForm.console} onChange={e => setCreateForm({ ...createForm, console: e.target.value })} />
                         </div>
 
