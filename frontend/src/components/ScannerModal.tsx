@@ -9,7 +9,7 @@ interface ScannerModalProps {
     onClose: () => void;
 }
 
-type ViewState = 'scan' | 'error' | 'search' | 'create';
+type ViewState = 'scan' | 'error' | 'search' | 'create' | 'debug';
 
 export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
     const [view, setView] = useState<ViewState>('scan');
@@ -453,6 +453,13 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
                                         <span>🔄</span> Tester la Permission & Réessayer
                                     </button>
 
+                                    <button
+                                        onClick={() => setView('debug')}
+                                        className="w-full bg-gray-700 hover:bg-gray-600 text-white py-2 rounded font-bold border border-gray-500 text-xs"
+                                    >
+                                        🛠️ Mode Debug (Test Brut)
+                                    </button>
+
                                     <label className="block w-full bg-gray-700 hover:bg-gray-600 text-white py-3 rounded font-bold mt-2 border border-gray-500 cursor-pointer text-center">
                                         📷 Télécharger une Photo
                                         <input
@@ -480,6 +487,44 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
                 )}
 
                 {/* 3. SEARCH RESULTS & CREATE VIEW (Abbreviated) */}
+                {view === 'debug' && (
+                    <div className="flex-1 bg-black flex flex-col relative">
+                        <div className="absolute top-0 left-0 bg-red-600 text-white text-xs px-2 py-1 z-10 font-bold">MODE DEBUG BRUT</div>
+                        {/* Raw Video Element */}
+                        <video
+                            id="debug-video"
+                            autoPlay
+                            playsInline
+                            className="w-full h-full object-cover"
+                            ref={(v) => {
+                                if (v && !v.srcObject) {
+                                    (async () => {
+                                        try {
+                                            addLog("DEBUG: Requesting raw UserMedia...");
+                                            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                                            // Ensure element is still there
+                                            if (v) {
+                                                v.srcObject = stream;
+                                                addLog("DEBUG: Stream acquired!");
+                                            } else {
+                                                // Clean up if unmounted
+                                                stream.getTracks().forEach(t => t.stop());
+                                            }
+                                        } catch (e: any) {
+                                            addLog("DEBUG FATAL: " + e.name + " - " + e.message);
+                                            setErrorMsg("DEBUG FAIL: " + e.name);
+                                        }
+                                    })();
+                                }
+                            }}
+                        />
+                        <div className="absolute bottom-4 left-4 right-4 bg-black/80 p-2 rounded border border-gray-700">
+                            <p className="text-xs text-gray-300 mb-2">Ceci contourne le scanner. Si vous voyez l'image ici, c'est la librairie qui bug. Sinon, c'est votre téléphone.</p>
+                            <button onClick={() => { resetState(); startScanner(); }} className="w-full bg-gray-700 text-white py-2 rounded text-xs">Retour</button>
+                        </div>
+                    </div>
+                )}
+
                 {view === 'search' && (
                     <div className="p-4 flex flex-col h-full bg-gray-900">
                         <h3 className="text-white font-bold mb-4">Select Game to Link</h3>
