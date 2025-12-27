@@ -17,6 +17,7 @@ export default function ScanPage({ params }: { params: { lang: string } }) {
 
     // Debug Logs
     const [debugLogs, setDebugLogs] = useState<string[]>([]);
+    const [minimalTestStatus, setMinimalTestStatus] = useState<string>("");
 
     // Search State
     const [searchQuery, setSearchQuery] = useState("");
@@ -61,6 +62,7 @@ export default function ScanPage({ params }: { params: { lang: string } }) {
         setFrontImage(null);
         setBackImage(null);
         setDebugLogs([]);
+        setMinimalTestStatus("");
         addLog("Page mounted. Starting scanner...");
     };
 
@@ -206,38 +208,55 @@ export default function ScanPage({ params }: { params: { lang: string } }) {
         }
     };
 
-    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
         addLog(`File selected: ${file.name} (${file.size} bytes)`);
+        setLoading(true);
 
-        if (scannerRef.current) {
-            addLog("Scanning file with existing instance...");
-            scannerRef.current.scanFile(file, true)
-                .then(decodedText => {
-                    addLog("File scan success: " + decodedText);
-                    handleScanSuccess(decodedText);
-                })
-                .catch(err => {
-                    addLog("File scan error: " + err);
-                    setErrorMsg("Could not read barcode from image.");
-                    setView('error');
-                });
-        } else {
-            // Need instance
+        try {
+            // CRITICAL FIX: Always create a FRESH instance for file scanning
+            // This avoids any "stuck" state from the live scanner
+            if (scannerRef.current) {
+                try {
+                    if (scannerRef.current.isScanning) {
+                        await scannerRef.current.stop();
+                    }
+                    scannerRef.current.clear();
+                } catch (e) {
+                    // Ignore stop errors
+                }
+                scannerRef.current = null;
+            }
+
             const tempScanner = new Html5Qrcode("reader");
-            addLog("Creating temp scanner for file...");
-            tempScanner.scanFile(file, true)
-                .then(decodedText => {
-                    addLog("File scan success: " + decodedText);
-                    handleScanSuccess(decodedText);
-                })
-                .catch(err => {
-                    addLog("File scan error: " + err);
-                    setErrorMsg("Could not read barcode from image.");
-                    setView('error');
-                });
+            addLog("Created fresh scanner instance for file.");
+
+            const decodedText = await tempScanner.scanFile(file, true);
+            addLog("File scan success: " + decodedText);
+            handleScanSuccess(decodedText);
+        } catch (err: any) {
+            console.error("File Scan Error", err);
+            addLog("File scan error: " + err);
+            // Explicitly tell user what happened
+            alert(`Impossible de lire le code-barres sur cette image.\n\nErreur: ${err?.message || err}`);
+            setErrorMsg("Échec lecture fichier image.");
+            setView('error');
+            setLoading(false);
+        }
+    };
+
+    const runMinimalCameraTest = async () => {
+        setMinimalTestStatus("Test en cours...");
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            setMinimalTestStatus("✅ SUCCÈS ! Caméra accessible.");
+            alert("✅ La caméra fonctionne ! Le blocage vient donc du scanner de code-barres, pas de votre téléphone. Utilisez le mode 'Photo' ou 'Manuel'.");
+            stream.getTracks().forEach(track => track.stop());
+        } catch (err: any) {
+            setMinimalTestStatus(`❌ ÉCHEC : ${err.name}`);
+            alert(`❌ Échec Test Caméra : ${err.name}\n\n${err.message}\n\nCela confirme que le navigateur ou l'OS bloque la caméra.`);
         }
     };
 
@@ -286,21 +305,6 @@ export default function ScanPage({ params }: { params: { lang: string } }) {
             alert("Search failed");
         }
         setLoading(false);
-    };
-
-    const linkProduct = async (productId: number) => {
-        if (!scannedCode) return;
-        if (!confirm("Link this barcode to this game?")) return;
-
-        setLoading(true);
-        try {
-            await apiClient.post(`/products/${productId}/ean`, null, { params: { ean: scannedCode } });
-            alert("Linked! Redirecting...");
-            router.push(`/${params?.lang || 'en'}/products/${productId}`);
-        } catch (e) {
-            alert("Link failed");
-            setLoading(false);
-        }
     };
 
     return (
@@ -354,42 +358,67 @@ export default function ScanPage({ params }: { params: { lang: string } }) {
 
             {/* ERROR VIEW */}
             {view === 'error' && (
-                <div className="flex-1 bg-gray-900 p-6 flex flex-col items-center justify-center text-center">
+                <div className="flex-1 bg-gray-900 p-6 flex flex-col items-center justify-center text-center overflow-y-auto">
                     <div className="text-red-500 text-6xl mb-6">⚠️</div>
                     <h2 className="text-white text-2xl font-bold mb-2">Scanner Bloqué</h2>
                     <p className="text-gray-400 mb-8 max-w-xs mx-auto text-sm">
                         {errorMsg || "Impossible d'accéder à la caméra."}
                     </p>
 
-                    {/* PRIMARY FALLBACK */}
-                    <label className="block w-full max-w-sm bg-green-600 hover:bg-green-500 text-white py-6 rounded-xl font-bold border-2 border-green-400 cursor-pointer text-center shadow-lg mb-6">
-                        <span className="text-3xl mr-2">📷</span>
-                        UTILISER L'APPAREIL PHOTO
-                        <input
-                            type="file"
-                            accept="image/*"
-                            capture="environment"
-                            className="hidden"
-                            onChange={handleFileUpload}
-                        />
-                        <p className="text-xs font-normal opacity-90 mt-2">Prenez une photo du code-barres, ça marche à tous les coups !</p>
-                    </label>
+                    <div className="w-full max-w-sm space-y-4">
+                        {/* 1. NATIVE CAMERA FALLBACK */}
+                        <label className="block w-full bg-green-600 hover:bg-green-500 text-white py-4 rounded-xl font-bold border-2 border-green-400 cursor-pointer text-center shadow-lg relative">
+                            {loading && <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-xl">⏳</div>}
+                            <span className="text-2xl mr-2">📷</span>
+                            1. Prendre une Photo
+                            <input
+                                type="file"
+                                accept="image/*"
+                                capture="environment"
+                                className="hidden"
+                                onChange={handleFileUpload}
+                            />
+                            <p className="text-[10px] font-normal opacity-90 mt-1">Prenez le code-barres en photo</p>
+                        </label>
 
-                    <button
-                        onClick={() => { resetState(); startScanner(); }}
-                        className="text-gray-500 underline text-sm"
-                    >
-                        Réessayer le scanner live
-                    </button>
+                        {/* 2. MANUAL ENTRY FALLBACK */}
+                        <div className="bg-gray-800 p-4 rounded-xl border border-gray-700">
+                            <p className="text-white font-bold mb-2 text-sm text-left">2. Saisie Manuelle (Code EAN 13)</p>
+                            <div className="flex gap-2">
+                                <input
+                                    type="number"
+                                    placeholder="Ex: 334854223..."
+                                    className="flex-1 bg-black text-white p-3 rounded-lg border border-gray-600 outline-none font-mono"
+                                    onChange={(e) => setScannedCode(e.target.value)}
+                                />
+                                <button
+                                    onClick={() => scannedCode && handleScanSuccess(scannedCode)}
+                                    className="bg-blue-600 text-white px-4 rounded-lg font-bold"
+                                >
+                                    OK
+                                </button>
+                            </div>
+                        </div>
 
-                    {scannedCode && (
-                        <div className="mt-8 w-full max-w-sm">
-                            <p className="text-white mb-2 font-mono bg-gray-800 p-2 rounded">{scannedCode}</p>
-                            <button onClick={() => setView('create')} className="w-full bg-blue-600 text-white py-3 rounded font-bold">
-                                Créer ce jeu (+50 XP)
+                        {/* 3. DEBUG TOOLS */}
+                        <div className="border-t border-gray-800 pt-4 mt-8">
+                            <p className="text-gray-500 text-xs mb-2">Outils de Diagnostic</p>
+                            <button
+                                onClick={runMinimalCameraTest}
+                                className="w-full bg-gray-800 hover:bg-gray-700 text-gray-300 py-2 rounded text-xs border border-gray-600 mb-2"
+                            >
+                                🛠️ Tester la Caméra (Minimal)
+                            </button>
+                            {minimalTestStatus && <p className="text-xs font-mono text-yellow-400 mb-2">{minimalTestStatus}</p>}
+
+                            <button
+                                onClick={() => { resetState(); startScanner(); }}
+                                className="text-gray-500 underline text-xs"
+                            >
+                                Réessayer le scanner live
                             </button>
                         </div>
-                    )}
+                    </div>
                 </div>
             )}
 
