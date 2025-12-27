@@ -15,20 +15,26 @@ export async function generateSitemaps() {
     // 1. Fetch total count from backend
     let total = 0;
     try {
-        // If backend fails, we return a safe estimate to generate chunks anyway
-        total = await getProductsCount();
+        // Timeout the request after 2s to not block the build long
+        const timeoutPromise = new Promise<number>((_, reject) =>
+            setTimeout(() => reject(new Error("Timeout")), 2000)
+        );
+        // If backend fails or is unreachable (common during build), fallback
+        total = await Promise.race([getProductsCount(), timeoutPromise]);
     } catch (error) {
-        console.error("Failed to fetch products count for sitemap generation", error);
-        total = 50000; // Fallback
+        console.warn("Failed to fetch products count for sitemap generation (using fallback)", error);
+        // Fallback to a reasonable default (e.g., 50k products) so we generate *some* chunks
+        // If the API works at runtime (when user visits sitemap), it will be fine.
+        total = 50000;
     }
 
     // 2. Calculate number of chunks
-    // If total is 40000 and chunk is 4000 -> 10 chunks (0 to 9)
+    // If total is 40000 and chunk is 500 -> 80 chunks
     const numChunks = Math.ceil(total / CHUNK_SIZE);
 
     // 3. Create ID list
     const sitemaps = [
-        { id: 'main-pages' }, // Renamed from static to match index
+        { id: 'main-pages' },
     ];
 
     for (let i = 0; i < numChunks; i++) {

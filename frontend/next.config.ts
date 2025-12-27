@@ -10,11 +10,9 @@ const nextConfig: NextConfig = {
     // Critical for low-memory build environments (Render Free Tier 512MB).
     ignoreBuildErrors: true,
   },
-  eslint: {
-    // Warning: This allows production builds to successfully complete even if
-    // your project has ESLint errors.
-    ignoreDuringBuilds: true,
-  },
+  // eslint: {    // REMOVED: Deprecated in Next.js 15+
+  //   ignoreDuringBuilds: true,
+  // },
   // Disable source maps in production to save memory/build time
   productionBrowserSourceMaps: false,
 
