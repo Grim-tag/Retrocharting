@@ -119,38 +119,10 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
                 ]
             };
 
-            // 1. Try to get cameras
-            let cameraIdToUse = null;
-            try {
-                addLog("Enumerating cameras...");
-                const cameras = await Html5Qrcode.getCameras();
-                addLog(`Found ${cameras.length} cameras.`);
-
-                if (cameras && cameras.length > 0) {
-                    cameras.forEach((c, i) => addLog(`[${i}] ${c.label} (id: ${c.id.slice(0, 5)}...)`));
-
-                    // Priority: Environment/Back > Last Camera > First Camera
-                    const backCam = cameras.find(c => c.label.toLowerCase().includes('back') || c.label.toLowerCase().includes('environment'));
-                    if (backCam) {
-                        cameraIdToUse = backCam.id;
-                        addLog(`Selected Back Cam: ${backCam.label}`);
-                    } else if (cameras.length > 1) {
-                        cameraIdToUse = cameras[cameras.length - 1].id;
-                        addLog(`Selected Last Cam (Fallback): ${cameras[cameras.length - 1].label}`);
-                    } else {
-                        cameraIdToUse = cameras[0].id;
-                        addLog(`Selected First Cam: ${cameras[0].label}`);
-                    }
-                } else {
-                    addLog("Warning: getCameras returned empty list.");
-                }
-            } catch (e: any) {
-                addLog(`Enumeration Error: ${e.message || e}`);
-                // Proceed to try generic config
-            }
-
-            const startConfig = cameraIdToUse ? { deviceId: { exact: cameraIdToUse } } : { facingMode: "environment" };
-            addLog(`Calling start() with config: ${JSON.stringify(startConfig)}`);
+            // 1. Directy try "environment" camera without enumeration
+            // This avoids "getCameras" failing on some devices/permissions
+            const startConfig = { facingMode: "environment" };
+            addLog(`Direct start with config: ${JSON.stringify(startConfig)}`);
 
             await html5QrCode.start(
                 startConfig,
