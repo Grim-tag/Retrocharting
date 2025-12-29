@@ -31,11 +31,158 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
     const [backImage, setBackImage] = useState<File | null>(null);
 
     const router = useRouter();
-    // ... (refs remain)
+    const scannerRef = useRef<Html5Qrcode | null>(null);
+    const mountedRef = useRef(true);
 
-    // ... (resetState needs update to clear images)
+    useEffect(() => {
+        mountedRef.current = true;
+        return () => {
+            mountedRef.current = false;
+            stopScanner();
+        };
+    }, []);
 
-    // ... (createProduct rewrite)
+    const addLog = (msg: string) => {
+        const time = new Date().toLocaleTimeString();
+        setDebugLogs(prev => [`[${time}] ${msg}`, ...prev]);
+        console.log(`[Scanner] ${msg}`);
+    };
+
+    const stopScanner = async () => {
+        if (scannerRef.current) {
+            try {
+                if (scannerRef.current.isScanning) {
+                    await scannerRef.current.stop();
+                }
+                scannerRef.current.clear();
+            } catch (e) {
+                console.warn("Stop scanner error:", e);
+            }
+            scannerRef.current = null;
+        }
+    };
+
+    const handleScanSuccess = async (decodedText: string, result: any) => {
+        if (scannedCode === decodedText) return;
+
+        // Stop scanning immediately
+        await stopScanner();
+        setScannedCode(decodedText);
+        addLog(`Scanned: ${decodedText}`);
+
+        try {
+            setLoading(true);
+            const res = await apiClient.get(`/products/isbn/${decodedText}`);
+            setLoading(false);
+
+            if (res.data && res.data.id) {
+                addLog("Product found! Redirecting...");
+                router.push(`/products/${res.data.id}`);
+            } else {
+                throw { response: { status: 404 } };
+            }
+        } catch (e: any) {
+            setLoading(false);
+            if (e.response?.status === 404) {
+                addLog("Product not found in DB.");
+                setErrorMsg("Barre-code inconnu. Voulez-vous le lier ou créer le jeu ?");
+                setView('error');
+            } else {
+                addLog("API Error: " + e.message);
+                setErrorMsg("Erreur connexion serveur.");
+                setView('error');
+            }
+        }
+    };
+
+    const startScanner = async () => {
+        // Prevent multiple starts
+        if (scannerRef.current) return;
+
+        setView('scan');
+        setErrorMsg(null);
+        setHasPermission(false);
+        addLog("Starting scanner initialization...");
+
+        try {
+            // Create instance
+            const html5QrCode = new Html5Qrcode("reader");
+            scannerRef.current = html5QrCode;
+
+            // Config
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+            // Start
+            await html5QrCode.start(
+                { facingMode: "environment" },
+                config,
+                (decodedText, result) => handleScanSuccess(decodedText, result),
+                (errorMessage) => {
+                    // ignore frame errors
+                }
+            );
+
+            if (mountedRef.current) {
+                setHasPermission(true);
+                addLog("Scanner started successfully.");
+            }
+
+        } catch (err: any) {
+            if (!mountedRef.current) return;
+
+            addLog(`Start failed: ${err.name} - ${err.message}`);
+
+            let msg = "Erreur caméra inconnue.";
+            if (err.name === "NotAllowedError" || err.message?.includes("permission")) {
+                msg = "Permission refusée. Vérifiez vos réglages.";
+            } else if (err.name === "NotFoundError") {
+                msg = "Aucune caméra détectée.";
+            } else if (err.name === "NotReadableError") {
+                msg = "Caméra inaccessible.";
+            }
+
+            setErrorMsg(msg);
+            setView('error');
+            scannerRef.current = null;
+        }
+    };
+
+    const performSearch = async () => {
+        if (!searchQuery) return;
+        setLoading(true);
+        try {
+            const res = await apiClient.get(`/products/search?q=${encodeURIComponent(searchQuery)}`);
+            setSearchResults(res.data.items || res.data || []);
+            setView('search');
+        } catch (e) {
+            alert("Erreur recherche");
+            addLog("Search error: " + e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const linkProduct = async (productId: number) => {
+        if (!scannedCode) return;
+        if (!confirm("Lier ce code-barres à ce jeu ?")) return;
+
+        try {
+            setLoading(true);
+            // Use patch to update EAN
+            await apiClient.patch(`/products/${productId}`, { ean: scannedCode });
+            alert("Lié avec succès !");
+            router.push(`/products/${productId}`);
+        } catch (e: any) {
+            alert("Erreur lors de la liaison.");
+            addLog("Link error: " + e.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+
+
+
     const createProduct = async () => {
         if (!scannedCode || !createForm.name || !createForm.console) return;
         setLoading(true);
