@@ -18,6 +18,20 @@ const nextConfig: NextConfig = {
 
   // Experimental: Restrict CPU usage? No official config for that in Next.js directly
 
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=*', // Allow camera from anywhere to rule out origin issues
+          },
+        ],
+      },
+    ];
+  },
+
 
   async redirects() {
     return [
