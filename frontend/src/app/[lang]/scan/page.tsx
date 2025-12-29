@@ -79,27 +79,44 @@ export default function BatchScanPage({ params }: { params: { lang: string } }) 
                 throw new Error("HTTPS requis pour la caméra");
             }
 
-            // List devices
-            // ERROR FIX: Use native API instead of BrowserMultiFormatReader.listVideoInputDevices()
+            // 1. Request Permission FIRST (vital for mobile)
+            // This triggers the browser prompt if not already granted.
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+
+            // 2. List devices now that we have permission
             const allDevices = await navigator.mediaDevices.enumerateDevices();
             const devices = allDevices.filter(d => d.kind === 'videoinput');
             setVideoDevices(devices);
 
-            // Auto-select Back Camera
+            // Stop the initial stream, we'll start a new one with the specific device ID
+            stream.getTracks().forEach(t => t.stop());
+
+            // 3. Auto-select Back Camera
             let deviceId = devices[0]?.deviceId;
-            const backCamera = devices.find(d => d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('environment'));
+            const backCamera = devices.find(d =>
+                d.label.toLowerCase().includes('back') ||
+                d.label.toLowerCase().includes('environment') ||
+                d.label.toLowerCase().includes('arrière')
+            );
             if (backCamera) deviceId = backCamera.deviceId;
 
-            if (deviceId) {
-                setSelectedDeviceId(deviceId);
-                startScanning(deviceId);
+            if (devices.length > 0) {
+                setSelectedDeviceId(deviceId || devices[0].deviceId);
+                startScanning(deviceId || devices[0].deviceId);
             } else {
-                setPermissionError("Aucune caméra détectée.");
+                setPermissionError("Aucune caméra détectée (Permission OK pourtant).");
             }
 
         } catch (err: any) {
             console.error("Init Error", err);
-            setPermissionError(`${err.name}: ${err.message}`);
+            // Handle specifically NotAllowedError
+            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                setPermissionError("Permission caméra refusée. Débloquez-la via l'icône 🔒.");
+            } else if (err.name === 'NotFoundError') {
+                setPermissionError("Aucune caméra trouvée sur cet appareil.");
+            } else {
+                setPermissionError(`${err.name}: ${err.message}`);
+            }
         }
     };
 
