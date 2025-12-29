@@ -111,24 +111,46 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
         setHasPermission(false);
         addLog("Starting scanner initialization...");
 
+        // 1. Check Secure Context (HTTPS)
+        if (typeof window !== 'undefined' && !window.isSecureContext && window.location.hostname !== 'localhost') {
+            addLog("Error: Not Secure Context (HTTPS required)");
+            setErrorMsg("L'accès caméra nécessite HTTPS (ou localhost).");
+            setView('error');
+            return;
+        }
+
+        // 2. Check MediaDevices Support
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            addLog("Error: navigator.mediaDevices not supported");
+            setErrorMsg("Votre navigateur ne supporte pas l'accès caméra direct.");
+            setView('error');
+            return;
+        }
+
         try {
             // Create instance
             const html5QrCode = new Html5Qrcode("reader");
             scannerRef.current = html5QrCode;
 
             // Config
-            // Removed qrbox to avoid errors on small screens (width > viewport)
             const config = { fps: 10 };
 
-            // Start
-            await html5QrCode.start(
+            // 3. Start with Timeout Race
+            addLog("Requesting camera stream...");
+
+            const startPromise = html5QrCode.start(
                 { facingMode: "environment" },
                 config,
                 (decodedText, result) => handleScanSuccess(decodedText, result),
-                (errorMessage) => {
-                    // ignore frame errors
-                }
+                (errorMessage) => { /* ignore frame errors */ }
             );
+
+            // Timeout after 5 seconds
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error("ScannerStartTimeout")), 5000)
+            );
+
+            await Promise.race([startPromise, timeoutPromise]);
 
             if (mountedRef.current) {
                 setHasPermission(true);
@@ -146,7 +168,9 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
             } else if (err.name === "NotFoundError") {
                 msg = "Aucune caméra détectée.";
             } else if (err.name === "NotReadableError") {
-                msg = "Caméra inaccessible.";
+                msg = "Caméra inaccessible (peut-être utilisée par une autre app).";
+            } else if (err.message === "ScannerStartTimeout") {
+                msg = "La caméra ne répond pas (Timeout).";
             }
 
             setErrorMsg(msg);
