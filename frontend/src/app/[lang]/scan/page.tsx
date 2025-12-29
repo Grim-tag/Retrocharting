@@ -155,6 +155,24 @@ export default function BatchScanPage({ params }: { params: { lang: string } }) 
         }
     };
 
+    const handleNativeScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !codeReader.current) return;
+
+        try {
+            // Decode from image file
+            const url = URL.createObjectURL(file);
+            const result = await codeReader.current.decodeFromImageUrl(url);
+            URL.revokeObjectURL(url); // Cleanup
+
+            if (result) {
+                handleScan(result.getText());
+            }
+        } catch (err) {
+            alert("Aucun code-barres trouvé dans l'image. Essayez de vous rapprocher.");
+        }
+    };
+
     // --- 2. BUSINESS LOGIC ---
 
     const handleScan = (ean: string) => {
@@ -224,20 +242,26 @@ export default function BatchScanPage({ params }: { params: { lang: string } }) 
                 {/* Overlay Elements */}
                 {permissionError ? (
                     <div className="absolute inset-0 z-50 bg-gray-900 flex items-center justify-center p-6 text-center">
-                        <div className="max-w-xs">
-                            <p className="text-red-500 text-4xl mb-4">📷❌</p>
-                            <p className="text-red-300 text-sm mb-4 font-bold">{permissionError}</p>
+                        <div className="max-w-xs w-full">
+                            <p className="text-red-500 text-4xl mb-4">🔒 Accès Bloqué</p>
 
-                            <div className="bg-gray-800 p-3 rounded text-left text-xs text-gray-400 mb-4">
-                                <p className="mb-1 font-bold">Dépannage :</p>
-                                <ul className="list-disc list-inside">
-                                    <li>Vérifiez que le site est en HTTPS.</li>
-                                    <li>Essayez l'autre caméra (bouton en bas).</li>
-                                    <li>Vérifiez l'icône 🔒 dans la barre d'adresse.</li>
-                                </ul>
+                            <div className="bg-red-900/20 border border-red-500/30 p-3 rounded text-left text-xs text-red-200 mb-6">
+                                <p className="font-bold mb-1">Dernière chance :</p>
+                                <p>Le système (Android/iOS) bloque peut-être Chrome. Essayez de scanner par photo ci-dessous.</p>
                             </div>
 
-                            <button onClick={() => window.location.reload()} className="bg-blue-600 w-full py-3 rounded font-bold">Réessayer</button>
+                            <label className="block w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-lg shadow-lg cursor-pointer mb-3 flex items-center justify-center gap-2">
+                                <span>📸 Scanner via Photo</span>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    capture="environment"
+                                    className="hidden"
+                                    onChange={handleNativeScan}
+                                />
+                            </label>
+
+                            <button onClick={() => window.location.reload()} className="text-gray-500 text-xs underline">Réessayer le Live</button>
                         </div>
                     </div>
                 ) : (
