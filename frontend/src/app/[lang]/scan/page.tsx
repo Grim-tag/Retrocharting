@@ -190,27 +190,29 @@ export default function BatchScanPage({ params }: { params: { lang: string } }) 
             <div className="relative h-[40%] bg-gray-900 border-b border-gray-800">
                 {permissionError ? (
                     <div className="h-full flex items-center justify-center text-center p-6 bg-gray-900 z-50 absolute inset-0">
-                        <div>
-                            <p className="text-red-500 text-3xl mb-2">📷❌</p>
-                            <p className="text-red-200 font-bold mb-2">Erreur Caméra</p>
-                            <p className="text-red-400 text-xs font-mono mb-4 max-w-xs mx-auto break-words bg-black/50 p-2 rounded">
-                                {permissionError}
+                        <div className="max-w-xs">
+                            <p className="text-red-500 text-4xl mb-4">🔒 Caméra Bloquée</p>
+
+                            <div className="bg-gray-800 p-4 rounded-lg text-left mb-6 border border-gray-700">
+                                <p className="text-white font-bold mb-2 text-sm">Comment débloquer :</p>
+                                <ol className="list-decimal list-inside text-gray-300 text-xs space-y-2">
+                                    <li>Cliquez sur l'icône 🔒 ou ⚙️ dans la barre d'adresse (en haut).</li>
+                                    <li>Cherchez "Caméra" ou "Permissions".</li>
+                                    <li>Choisissez <strong>Autoriser</strong> (Allow).</li>
+                                    <li>Cliquez sur "Recharger" ci-dessous.</li>
+                                </ol>
+                            </div>
+
+                            <p className="text-gray-500 text-[10px] font-mono mb-4 break-words">
+                                Code erreur: {permissionError}
                             </p>
 
-                            <div className="flex flex-col gap-2">
-                                <button
-                                    onClick={requestManualPermission}
-                                    className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded font-bold text-sm"
-                                >
-                                    Force Permission (Click here)
-                                </button>
-                                <button
-                                    onClick={() => window.location.reload()}
-                                    className="bg-gray-700 text-gray-300 px-4 py-2 rounded text-xs"
-                                >
-                                    Recharger la page
-                                </button>
-                            </div>
+                            <button
+                                onClick={() => window.location.reload()}
+                                className="bg-blue-600 hover:bg-blue-500 w-full text-white px-4 py-3 rounded-lg font-bold shadow-lg"
+                            >
+                                🔄 Recharger la page
+                            </button>
                         </div>
                     </div>
                 ) : (
