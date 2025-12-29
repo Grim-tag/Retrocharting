@@ -366,52 +366,36 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
                         </h3>
 
                         {errorMsg?.toLowerCase().includes("permission") && (
-                            <div className="bg-orange-900/40 border border-orange-500/50 p-4 rounded mb-6 text-left">
-                                <h4 className="text-orange-200 font-bold mb-2 text-sm">Accès Caméra Bloqué 📷</h4>
+                            <div className="bg-gray-800 p-4 rounded mb-6 text-left border border-gray-700">
+                                <h4 className="text-white font-bold mb-2 text-sm text-center">Accès Vidéo Refusé 🚫</h4>
+                                <p className="text-gray-400 text-xs mb-4 text-center">
+                                    Votre navigateur bloque l'accès à la caméra en direct.
+                                </p>
 
-                                <div className="space-y-4">
-                                    {/* 1. Secure Context Warning */}
-                                    {typeof window !== 'undefined' && !window.isSecureContext && (
-                                        <div className="bg-red-900/60 p-2 rounded border border-red-500">
-                                            <p className="text-red-200 text-xs font-bold">
-                                                ⚠️ Connexion non sécurisée détectée.
-                                            </p>
-                                            <p className="text-red-300 text-[10px] mt-1">
-                                                Les navigateurs bloquent la caméra sur les sites non-HTTPS (ou non-localhost).
-                                                Assurez-vous d'utiliser <strong>https://</strong>.
-                                            </p>
-                                        </div>
-                                    )}
-
-                                    {/* 2. Site Level */}
-                                    <div>
-                                        <p className="text-orange-300 text-xs font-semibold mb-1">étape 1: Vérifier le site</p>
-                                        <ol className="text-gray-300 text-[11px] space-y-1 list-decimal list-inside pl-1">
-                                            <li>Appuyez sur l'icône à gauche de l'URL (🔒 ou ⚙️).</li>
-                                            <li>Allez dans <strong>Permissions</strong>.</li>
-                                            <li>Activez <strong>Caméra</strong> (ou "Autoriser").</li>
-                                            <li>Rechargez la page.</li>
-                                        </ol>
-                                    </div>
-
-                                    {/* 3. OS Level - CRITICAL */}
-                                    <div className="bg-black/40 p-3 rounded border border-orange-500/30">
-                                        <p className="text-orange-300 text-xs font-semibold mb-1">
-                                            🚨 Option "Caméra" invisible ?
-                                        </p>
-                                        <p className="text-gray-400 text-[10px] mb-2 leading-tight">
-                                            Si vous ne voyez pas l'option caméra ci-dessus, c'est que <strong>votre téléphone bloque le navigateur</strong> complètement.
-                                        </p>
-                                        <p className="text-white text-[11px] font-bold mb-1">Solution Android/iOS :</p>
-                                        <ol className="text-gray-300 text-[11px] space-y-1 list-decimal list-inside pl-1">
-                                            <li>Quittez le navigateur.</li>
-                                            <li>Allez dans les <strong>Réglages du Téléphone</strong> (pas du navigateur).</li>
-                                            <li>Allez dans <strong>Applications</strong> -&gt; <strong>Chrome/Safari</strong>.</li>
-                                            <li>Cherchez <strong>Autorisations</strong> -&gt; <strong>Caméra</strong>.</li>
-                                            <li>Choisissez "Toujours autoriser" ou "Si l'appli est active".</li>
-                                        </ol>
-                                    </div>
+                                <div className="bg-green-900/30 p-4 rounded-xl border border-green-500/50 mb-4 animate-pulse">
+                                    <p className="text-green-300 text-sm font-bold text-center mb-2">Solution Rapide (Comme Gochineur) 👇</p>
+                                    <label className="block w-full bg-green-600 hover:bg-green-500 text-white py-4 rounded-xl font-bold border-2 border-green-400 cursor-pointer text-center shadow-lg">
+                                        <span className="text-2xl mr-2">📷</span>
+                                        Ouvrir l'Appareil Photo
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            capture="environment"
+                                            className="hidden"
+                                            onChange={handleFileUpload}
+                                        />
+                                    </label>
                                 </div>
+
+                                <details className="text-gray-500 text-xs">
+                                    <summary className="cursor-pointer hover:text-gray-300">Comment réactiver le scanner vidéo ?</summary>
+                                    <ol className="mt-2 list-decimal list-inside space-y-1 pl-2">
+                                        <li>Cliquez sur le cadenas 🔒 (ou ⚙️) à gauche de l'adresse web.</li>
+                                        <li>Allez dans "Permissions" ou "Paramètres du site".</li>
+                                        <li>Autorisez l'accès à la <strong>Caméra</strong>.</li>
+                                        <li>Rechargez la page.</li>
+                                    </ol>
+                                </details>
                             </div>
                         )}
 
