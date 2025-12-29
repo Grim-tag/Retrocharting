@@ -87,8 +87,19 @@ export default function BatchScanPage({ params }: { params: { lang: string } }) 
         } catch (err: any) {
             console.error("Scanner Start Error", err);
             if (mountedRef.current) {
-                setPermissionError("Accès caméra refusé ou impossible. Vérifiez que vous êtes en HTTPS.");
+                setPermissionError(`${err.name}: ${err.message || "Erreur inconnue"}`);
             }
+        }
+    };
+
+    const requestManualPermission = async () => {
+        try {
+            setPermissionError(null);
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            stream.getTracks().forEach(t => t.stop()); // Close immediately
+            startScanner(); // Retry library start
+        } catch (err: any) {
+            setPermissionError(`Erreur directe: ${err.name} - ${err.message}`);
         }
     };
 
@@ -178,11 +189,28 @@ export default function BatchScanPage({ params }: { params: { lang: string } }) 
             {/* TOP: CAMERA VIEWPORT (40%) */}
             <div className="relative h-[40%] bg-gray-900 border-b border-gray-800">
                 {permissionError ? (
-                    <div className="h-full flex items-center justify-center text-center p-6">
+                    <div className="h-full flex items-center justify-center text-center p-6 bg-gray-900 z-50 absolute inset-0">
                         <div>
                             <p className="text-red-500 text-3xl mb-2">📷❌</p>
-                            <p className="text-red-200 font-bold">{permissionError}</p>
-                            <button onClick={() => window.location.reload()} className="mt-4 bg-gray-700 px-4 py-2 rounded">Réessayer</button>
+                            <p className="text-red-200 font-bold mb-2">Erreur Caméra</p>
+                            <p className="text-red-400 text-xs font-mono mb-4 max-w-xs mx-auto break-words bg-black/50 p-2 rounded">
+                                {permissionError}
+                            </p>
+
+                            <div className="flex flex-col gap-2">
+                                <button
+                                    onClick={requestManualPermission}
+                                    className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded font-bold text-sm"
+                                >
+                                    Force Permission (Click here)
+                                </button>
+                                <button
+                                    onClick={() => window.location.reload()}
+                                    className="bg-gray-700 text-gray-300 px-4 py-2 rounded text-xs"
+                                >
+                                    Recharger la page
+                                </button>
+                            </div>
                         </div>
                     </div>
                 ) : (
