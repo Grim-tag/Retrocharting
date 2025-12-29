@@ -80,8 +80,9 @@ export default function BatchScanPage({ params }: { params: { lang: string } }) 
             }
 
             // List devices
-            // BrowserMultiFormatReader.listVideoInputDevices() is a static method
-            const devices = await BrowserMultiFormatReader.listVideoInputDevices();
+            // ERROR FIX: Use native API instead of BrowserMultiFormatReader.listVideoInputDevices()
+            const allDevices = await navigator.mediaDevices.enumerateDevices();
+            const devices = allDevices.filter(d => d.kind === 'videoinput');
             setVideoDevices(devices);
 
             // Auto-select Back Camera
