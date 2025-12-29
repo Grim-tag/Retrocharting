@@ -36,11 +36,18 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
 
     useEffect(() => {
         mountedRef.current = true;
+        if (isOpen && view === 'scan') {
+            // Give a small delay for the DOM to be ready
+            const timer = setTimeout(() => {
+                startScanner();
+            }, 100);
+            return () => clearTimeout(timer);
+        }
         return () => {
             mountedRef.current = false;
             stopScanner();
         };
-    }, []);
+    }, [isOpen, view]);
 
     const addLog = (msg: string) => {
         const time = new Date().toLocaleTimeString();
@@ -110,7 +117,8 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
             scannerRef.current = html5QrCode;
 
             // Config
-            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+            // Removed qrbox to avoid errors on small screens (width > viewport)
+            const config = { fps: 10 };
 
             // Start
             await html5QrCode.start(
@@ -270,7 +278,7 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
     const requestPermissionManual = () => {
         addLog("User requested manual restart.");
         resetState();
-        startScanner();
+        // Effect will trigger startScanner when view becomes 'scan'
     };
 
     if (!isOpen) return null;
@@ -304,10 +312,23 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
                             </div>
                         )}
 
-                        <div className="absolute inset-x-0 bottom-4 text-center pointer-events-none">
-                            <p className="text-white/90 font-bold bg-black/60 inline-block px-3 py-1 rounded text-sm animate-pulse">
+                        <div className="absolute inset-x-0 bottom-4 px-4 flex flex-col gap-2 pointer-events-auto">
+                            <p className="text-white/90 font-bold bg-black/60 self-center px-3 py-1 rounded text-sm animate-pulse mb-2">
                                 SCANNING...
                             </p>
+
+                            {/* Always available fallback */}
+                            <label className="block w-full bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white py-3 rounded-xl font-bold border border-white/30 cursor-pointer text-center transition-all">
+                                <span className="mr-2">📷</span>
+                                Prendre une Photo (Rapide)
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    capture="environment"
+                                    className="hidden"
+                                    onChange={handleFileUpload}
+                                />
+                            </label>
                         </div>
                     </div>
                 )}
@@ -452,7 +473,7 @@ export default function ScannerModal({ isOpen, onClose }: ScannerModalProps) {
                                 <button onClick={() => setView('create')} className="text-gray-500 text-xs underline">Game not found? Create it manually</button>
                             )}
                             <button
-                                onClick={() => { resetState(); startScanner(); }}
+                                onClick={() => { resetState(); }}
                                 className="w-full bg-gray-800 hover:bg-gray-700 text-white py-3 rounded font-bold border border-gray-600"
                             >
                                 Restart
