@@ -83,29 +83,16 @@ export default async function Page({
         const systemName = isSystemSlug(slug);
 
         if (systemName) {
-            // --- CONSOLE VIEW (SSR) ---
-            const [products, genres] = await Promise.all([
-                getProductsByConsole(systemName, 40, genre, 'game', sort, 0, search),
-                getGenres(systemName)
-            ]);
+            // --- CONSOLE VIEW (CLIENT-ONLY STABILITY MODE) ---
+            // We skip server-side fetching to prevent 500 errors.
+            // The client component will fetch data on mount.
 
-            const gamesSlug = lang === 'en' ? 'games' : 'games'; // TODO: use routeMap properly if needed
+            const gamesSlug = lang === 'en' ? 'games' : 'games';
 
             return (
                 <main className="flex-grow bg-[#0f121e] py-8">
                     <div className="max-w-[1400px] mx-auto px-4">
-                        {/* Breadcrumbs handled in ConsoleGameCatalog via props? No, usually outside? 
-                            The original GameConsoleClient handled Breadcrumbs OUTSIDE ConsoleGameCatalog.
-                            Let's check ConsoleGameCatalog.tsx again. It did NOT handle breadcrumbs layout. 
-                            It handled Breadcrumbs import but commented out.
-                            I need to pass breadcrumbs or render them here. 
-                         */}
-                        {/* Wait, ConsoleGameCatalog expects us to render the Main Container? 
-                            Looking at ConsoleGameCatalog.tsx, it renders `<div>`.
-                            So I should render Breadcrumbs here.
-                         */}
                         <div className="mb-4">
-                            {/* We need Breadcrumbs component. Copied from GameConsoleClient. */}
                             <nav className="flex text-sm text-gray-400 mb-6" aria-label="Breadcrumb">
                                 <ol className="flex items-center space-x-2">
                                     <li>
@@ -122,8 +109,8 @@ export default async function Page({
                         </div>
 
                         <ConsoleGameCatalogWrapper
-                            products={products}
-                            genres={genres}
+                            products={[]}
+                            genres={[]}
                             systemName={systemName}
                             lang={lang}
                             gamesSlug={gamesSlug}
