@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Header, Query, BackgroundTasks
 from sqlalchemy.orm import Session
-from sqlalchemy import func, or_
+from sqlalchemy import func, or_, not_
 from app.db.session import get_db
 from app.models.product import Product
 import os
@@ -153,7 +153,7 @@ def get_admin_stats(db: Session = Depends(get_db)):
         pending_image_migration_count = db.query(Product).filter(
             Product.image_url.isnot(None),
             Product.image_url != "",
-            ~Product.image_url.contains("cloudinary.com")
+            not_(Product.image_url.contains("retrocharting.com"))
         ).count()
         
         return {
