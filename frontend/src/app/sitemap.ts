@@ -1,186 +1,85 @@
-
 import { MetadataRoute } from 'next';
-import { getSitemapProducts, getProductsCount } from '@/lib/api';
-import { getGameUrl } from '@/lib/utils';
 import { routeMap } from '@/lib/route-config';
 import { systems } from '@/data/systems';
 
-// CAPACITOR BUILD: Force static via logic, not config
-// CAPACITOR BUILD: Force static via logic, not config
 export const dynamic = 'force-static';
 export const revalidate = 3600;
 
 const BASE_URL = 'https://retrocharting.com';
-const CHUNK_SIZE = 500;
 
-export async function generateSitemaps() {
-    return []; // FORCE EMPTY FOR DEBUGGING
-    // If mobile build, skip sitemap generation entirely (not needed for an app)
-    if (process.env.CAPACITOR_BUILD === 'true') {
-        return [];
-    }
+// Simplified static sitemap generator
+export default function sitemap(): MetadataRoute.Sitemap {
+    const staticRoutes: MetadataRoute.Sitemap = [];
+    const langs = ['en', 'fr'];
+    const mainPages = ['', 'login', 'register'];
 
-    // 1. Fetch total count from backend
-    let total = 0;
-    try {
-        // Timeout the request after 2s to not block the build long
-        const timeoutPromise = new Promise<number>((_, reject) =>
-            setTimeout(() => reject(new Error("Timeout")), 2000)
-        );
-        // If backend fails or is unreachable (common during build), fallback
-        total = await Promise.race([getProductsCount(), timeoutPromise]);
-    } catch (error) {
-        console.warn("Failed to fetch products count for sitemap generation (using fallback)", error);
-        // Fallback to a reasonable default (e.g., 50k products) so we generate *some* chunks
-        // If the API works at runtime (when user visits sitemap), it will be fine.
-        total = 50000;
-    }
+    // 1. Home / Login / Register
+    langs.forEach(lang => {
+        mainPages.forEach(page => {
+            const path = page === '' ? (lang === 'en' ? '/' : `/${lang}`) : `/${lang}/${page}`;
+            const url = page === '' && lang === 'en' ? BASE_URL : `${BASE_URL}${path}`;
 
-    // 2. Calculate number of chunks
-    // If total is 40000 and chunk is 500 -> 80 chunks
-    const numChunks = Math.ceil(total / CHUNK_SIZE);
-
-    // 3. Create ID list
-    const sitemaps = [
-        { id: 'main-pages' },
-    ];
-
-    for (let i = 0; i < numChunks; i++) {
-        // ID must be string for Next.js consistency
-        sitemaps.push({ id: i.toString() });
-    }
-
-    return sitemaps;
-}
-
-type SitemapProps = {
-    id: string | Promise<string>;
-}
-
-export default async function sitemap({ id }: SitemapProps): Promise<MetadataRoute.Sitemap> {
-    // CRITICAL FIX: Next.js 15+ sometimes passes params as Promises. Await it.
-    const resolvedId = (id instanceof Promise) ? await id : id;
-
-    // --- STATIC SITEMAP ---
-    if (resolvedId === 'main-pages' || resolvedId === 'static') { // Keep static for backward compat if needed
-        const staticRoutes: MetadataRoute.Sitemap = [];
-        const langs = ['en', 'fr'];
-        const mainPages = ['', 'login', 'register'];
-
-        // 1. Home / Login / Register
-        langs.forEach(lang => {
-            mainPages.forEach(page => {
-                const path = page === '' ? (lang === 'en' ? '/' : `/ ${lang} `) : ` / ${lang}/${page}`;
-                const url = page === '' && lang === 'en' ? BASE_URL : `${BASE_URL}${path}`;
-
-                staticRoutes.push({
-                    url,
-                    lastModified: new Date(),
-                    changeFrequency: 'daily',
-                    priority: page === '' ? 1.0 : 0.5,
-                });
-            });
-
-            // 2. Main Categories (Games, Consoles, etc)
-            ['games', 'consoles', 'accessories', 'collectibles'].forEach(key => {
-                const slug = routeMap[key]?.[lang] || key;
-                const path = lang === 'en' ? `/${slug}` : `/${lang}/${slug}`;
-                staticRoutes.push({
-                    url: `${BASE_URL}${path}`,
-                    lastModified: new Date(),
-                    changeFrequency: 'daily',
-                    priority: 0.9,
-                });
-            });
-        });
-
-        // 3. System Category Pages (Games / hardware / accessories per console)
-        // These are effectively "static" categories, even though there are many.
-        // There are about 150 systems * 3 types * 2 langs = ~900 URLs. Fits easily in one file.
-        const categoryUrls: MetadataRoute.Sitemap = [];
-        const systemSlugs = systems.map(s => s.toLowerCase().replace(/ /g, '-').replace(/&/g, '%26'));
-
-        systemSlugs.forEach(systemSlug => {
-            langs.forEach(lang => {
-                // Games Catalog
-                const gamesBase = routeMap['games']?.[lang] || 'games';
-                const gamesPath = lang === 'en' ? `/${gamesBase}/${systemSlug}` : `/${lang}/${gamesBase}/${systemSlug}`;
-                categoryUrls.push({
-                    url: `${BASE_URL}${gamesPath}`,
-                    lastModified: new Date(),
-                    changeFrequency: 'daily',
-                    priority: 0.9,
-                });
-
-                // Hardware Catalog
-                const consolesBase = routeMap['consoles']?.[lang] || 'consoles';
-                const consolesPath = lang === 'en' ? `/${consolesBase}/${systemSlug}` : `/${lang}/${consolesBase}/${systemSlug}`;
-                categoryUrls.push({
-                    url: `${BASE_URL}${consolesPath}`,
-                    lastModified: new Date(),
-                    changeFrequency: 'weekly',
-                    priority: 0.9,
-                });
-
-                // Accessories Catalog
-                const accessoriesBase = routeMap['accessories']?.[lang] || 'accessories';
-                const accessoriesPath = lang === 'en'
-                    ? `/${accessoriesBase}/console/${systemSlug}`
-                    : `/${lang}/${accessoriesBase}/console/${systemSlug}`;
-
-                categoryUrls.push({
-                    url: `${BASE_URL}${accessoriesPath}`,
-                    lastModified: new Date(),
-                    changeFrequency: 'weekly',
-                    priority: 0.8,
-                });
-            });
-        });
-
-        return [...staticRoutes, ...categoryUrls];
-    }
-
-    // --- PRODUCT SITEMAPS (Chunked) ---
-    const chunkIndex = parseInt(resolvedId);
-    if (!isNaN(chunkIndex)) {
-        const skip = chunkIndex * CHUNK_SIZE;
-        let products = [];
-        try {
-            products = await getSitemapProducts(CHUNK_SIZE, skip);
-        } catch (e) {
-            console.error(`Failed to fetch sitemap chunk ${chunkIndex}`, e);
-            // Return empty list so we don't 500
-            products = [];
-        }
-
-        const productUrls: MetadataRoute.Sitemap = [];
-
-        products.forEach((product) => {
-            ['en', 'fr'].forEach(lang => {
-                const path = getGameUrl(product, lang);
-                productUrls.push({
-                    url: `${BASE_URL}${path}`,
-                    lastModified: new Date(product.updated_at || new Date()),
-                    changeFrequency: 'weekly',
-                    priority: 0.8,
-                });
-            });
-        });
-
-        // If products are empty, return explicit "Empty" URL to debug
-        if (products.length === 0) {
-            return [{
-                url: `${BASE_URL}/debug/empty_products_chunk_${chunkIndex}_skip_${skip}`,
+            staticRoutes.push({
+                url,
                 lastModified: new Date(),
-            }];
-        }
+                changeFrequency: 'daily',
+                priority: page === '' ? 1.0 : 0.5,
+            });
+        });
 
-        return productUrls;
-    }
+        // 2. Main Categories (Games, Consoles, etc)
+        ['games', 'consoles', 'accessories', 'collectibles'].forEach(key => {
+            const slug = routeMap[key]?.[lang] || key;
+            const path = lang === 'en' ? `/${slug}` : `/${lang}/${slug}`;
+            staticRoutes.push({
+                url: `${BASE_URL}${path}`,
+                lastModified: new Date(),
+                changeFrequency: 'daily',
+                priority: 0.9,
+            });
+        });
+    });
 
-    // DEBUG FALLBACK if no ID matched
-    return [{
-        url: `${BASE_URL}/debug/unmatched_id_${resolvedId}`,
-        lastModified: new Date(),
-    }];
+    // 3. System Category Pages (Games / hardware / accessories per console)
+    const categoryUrls: MetadataRoute.Sitemap = [];
+    const systemSlugs = systems.map(s => s.toLowerCase().replace(/ /g, '-').replace(/&/g, '%26'));
+
+    systemSlugs.forEach(systemSlug => {
+        langs.forEach(lang => {
+            // Games Catalog
+            const gamesBase = routeMap['games']?.[lang] || 'games';
+            const gamesPath = lang === 'en' ? `/${gamesBase}/${systemSlug}` : `/${lang}/${gamesBase}/${systemSlug}`;
+            categoryUrls.push({
+                url: `${BASE_URL}${gamesPath}`,
+                lastModified: new Date(),
+                changeFrequency: 'daily',
+                priority: 0.9,
+            });
+
+            // Hardware Catalog
+            const consolesBase = routeMap['consoles']?.[lang] || 'consoles';
+            const consolesPath = lang === 'en' ? `/${consolesBase}/${systemSlug}` : `/${lang}/${consolesBase}/${systemSlug}`;
+            categoryUrls.push({
+                url: `${BASE_URL}${consolesPath}`,
+                lastModified: new Date(),
+                changeFrequency: 'weekly',
+                priority: 0.9,
+            });
+
+            // Accessories Catalog
+            const accessoriesBase = routeMap['accessories']?.[lang] || 'accessories';
+            const accessoriesPath = lang === 'en'
+                ? `/${accessoriesBase}/console/${systemSlug}`
+                : `/${lang}/${accessoriesBase}/console/${systemSlug}`;
+
+            categoryUrls.push({
+                url: `${BASE_URL}${accessoriesPath}`,
+                lastModified: new Date(),
+                changeFrequency: 'weekly',
+                priority: 0.8,
+            });
+        });
+    });
+
+    return [...staticRoutes, ...categoryUrls];
 }
