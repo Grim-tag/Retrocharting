@@ -1,12 +1,14 @@
 import { Metadata } from 'next';
+import Link from 'next/link';
 import { getDictionary } from '@/lib/get-dictionary';
 import { groupedSystems } from '@/data/systems';
-import GameConsoleClient from './GameConsoleClient';
 import { generateConsoleSeo } from '@/lib/seo-utils';
-import { getProductById } from '@/lib/cached-api';
-import { getGameUrl, formatConsoleName } from '@/lib/utils';
+import { getProductById, getProductHistory, getProductsByConsole, getGenres } from '@/lib/api';
+import { formatConsoleName } from '@/lib/utils';
+import ConsoleGameCatalog from '@/components/ConsoleGameCatalog';
+import GameDetailView from '@/components/GameDetailView';
 
-// Helper
+// Dispatch Logic
 function isSystemSlug(slug: string): string | null {
     const flatSystems = Object.values(groupedSystems).flat();
     const found = flatSystems.find(s => s.toLowerCase().replace(/ /g, '-') === slug);
@@ -20,40 +22,25 @@ function getIdFromSlug(slug: string): number {
     return isNaN(id) ? 0 : id;
 }
 
-// Generate Static Params for CONSOLES explicitly
+// Disable Static Generation for Build Performance (ISR Only)
 export async function generateStaticParams() {
-    const flatSystems = Object.values(groupedSystems).flat();
-    const params: { lang: string, slug: string }[] = [];
-
-    const langs = ['en', 'fr'];
-
-    for (const lang of langs) {
-        // 1. Add All Console Pages
-        for (const system of flatSystems) {
-            params.push({
-                lang,
-                slug: system.toLowerCase().replace(/ /g, '-')
-            });
-        }
-    }
-    return params;
+    return [];
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string; lang: string }> }): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: { params: Promise<{ slug: string; lang: string }>, searchParams: Promise<{ genre?: string, sort?: string }> }): Promise<Metadata> {
     const { slug, lang } = await params;
+    const { genre, sort } = await searchParams;
     const dict = await getDictionary(lang);
 
-    // 1. Console Page
     const systemName = isSystemSlug(slug);
     if (systemName) {
-        const seo = generateConsoleSeo(systemName, undefined, undefined, 0, lang);
+        const seo = generateConsoleSeo(systemName, genre, sort, 0, lang);
         return {
             title: seo.title,
             description: seo.description
         };
     }
 
-    // 2. Game Page (Fetch basic metadata, avoiding searchParams)
     const id = getIdFromSlug(slug);
     const product = await getProductById(id);
 
@@ -67,23 +54,105 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 }
 
 export default async function Page({
-    params
+    params,
+    searchParams
 }: {
-    params: Promise<{ slug: string; lang: string }>
+    params: Promise<{ slug: string; lang: string }>,
+    searchParams: Promise<{ genre?: string, sort?: string, search?: string }>
 }) {
     const { slug, lang } = await params;
+    const { genre, sort, search } = await searchParams;
     const dict = await getDictionary(lang);
 
-    // Determine initial type to avoid client-side flash if possible, or just pass slug
     const systemName = isSystemSlug(slug);
 
-    return (
-        <GameConsoleClient
-            slug={slug}
-            lang={lang}
-            dict={dict}
-            groupedSystems={groupedSystems}
-            initialSystemName={systemName}
-        />
-    );
+    if (systemName) {
+        // --- CONSOLE VIEW (SSR) ---
+        const [products, genres] = await Promise.all([
+            getProductsByConsole(systemName, 40, genre, 'game', sort, 0, search),
+            getGenres(systemName)
+        ]);
+
+        const gamesSlug = lang === 'en' ? 'games' : 'games'; // TODO: use routeMap properly if needed
+
+        return (
+            <main className="flex-grow bg-[#0f121e] py-8">
+                <div className="max-w-[1400px] mx-auto px-4">
+                    {/* Breadcrumbs handled in ConsoleGameCatalog via props? No, usually outside? 
+                        The original GameConsoleClient handled Breadcrumbs OUTSIDE ConsoleGameCatalog.
+                        Let's check ConsoleGameCatalog.tsx again. It did NOT handle breadcrumbs layout. 
+                        It handled Breadcrumbs import but commented out.
+                        I need to pass breadcrumbs or render them here. 
+                     */}
+                    {/* Wait, ConsoleGameCatalog expects us to render the Main Container? 
+                        Looking at ConsoleGameCatalog.tsx, it renders `<div>`.
+                        So I should render Breadcrumbs here.
+                     */}
+                    <div className="mb-4">
+                        {/* We need Breadcrumbs component. Copied from GameConsoleClient. */}
+                        <nav className="flex text-sm text-gray-400 mb-6" aria-label="Breadcrumb">
+                            <ol className="flex items-center space-x-2">
+                                <li>
+                                    <Link href={`/${lang}/${gamesSlug}`} className="hover:text-white transition-colors">
+                                        {dict.header.nav.video_games}
+                                    </Link>
+                                </li>
+                                <li className="text-gray-600">/</li>
+                                <li className="text-white font-medium" aria-current="page">
+                                    {systemName}
+                                </li>
+                            </ol>
+                        </nav>
+                    </div>
+
+                    <ConsoleGameCatalog
+                        products={products}
+                        genres={genres}
+                        systemName={systemName}
+                        lang={lang}
+                        gamesSlug={gamesSlug}
+                        systemSlug={slug}
+                        h1Title={`${systemName} Games`}
+                        introText={`Explore ${systemName} prices and values.`}
+                        faq={[]}
+                        productType="game"
+                    />
+                </div>
+            </main>
+        );
+    } else {
+        // --- GAME VIEW (SSR) ---
+        const id = getIdFromSlug(slug);
+
+        if (!id) {
+            return (
+                <div className="text-white text-center py-20">Invalid Product ID</div>
+            );
+        }
+
+        const [product, history] = await Promise.all([
+            getProductById(id),
+            getProductHistory(id)
+        ]);
+
+        if (!product) {
+            return (
+                <main className="flex-grow bg-[#0f121e] py-20 text-center text-white">
+                    <h1 className="text-3xl font-bold">{dict.product.not_found.title}</h1>
+                    <Link href={`/${lang}/games`} className="text-[#ff6600] hover:underline mt-4 inline-block">
+                        {dict.product.not_found.back}
+                    </Link>
+                </main>
+            );
+        }
+
+        return (
+            <GameDetailView
+                product={product}
+                history={history}
+                lang={lang}
+                dict={dict}
+            />
+        );
+    }
 }
