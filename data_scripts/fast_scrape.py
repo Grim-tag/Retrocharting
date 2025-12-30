@@ -7,18 +7,33 @@ from bs4 import BeautifulSoup
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from sqlalchemy import text, or_
 from datetime import datetime
-import sys
-import os
-import time
-import random
-import requests
-from bs4 import BeautifulSoup
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from sqlalchemy import text, or_
-from datetime import datetime
 from dotenv import load_dotenv
 from io import BytesIO
 from PIL import Image
+
+# --- Setup Environment ---
+# Add backend directory to path
+backend_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'backend')
+sys.path.append(backend_path)
+
+# Load .env
+env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env')
+load_dotenv(env_path)
+
+if not os.environ.get("DATABASE_URL"):
+    db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'collector.db')
+    os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
+
+from app.db.session import SessionLocal
+from app.models.product import Product
+from app.models.price_history import PriceHistory
+from app.models.listing import Listing
+from app.models.sales_transaction import SalesTransaction
+from app.models.comment import Comment
+from app.models.user import User
+from app.models.collection_item import CollectionItem
+from app.models.sniper import SniperWatch
+from app.core.config import settings
 
 # --- Configuration ---
 MAX_WORKERS = 5  # Number of parallel threads
