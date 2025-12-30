@@ -7,12 +7,13 @@ import { getProductById, getProductHistory, getProductsByConsole, getGenres } fr
 import { formatConsoleName } from '@/lib/utils';
 // import ConsoleGameCatalog from '@/components/ConsoleGameCatalog';
 import GameDetailView from '@/components/GameDetailView';
-import dynamic from 'next/dynamic';
+import ConsoleGameCatalogWrapper from '@/components/ConsoleGameCatalogWrapper';
+// import dynamic from 'next/dynamic';
 
-const ConsoleGameCatalog = dynamic(() => import('@/components/ConsoleGameCatalog'), {
-    ssr: false,
-    loading: () => <div className="text-white text-center py-20">Loading Catalog...</div>
-});
+// const ConsoleGameCatalog = dynamic(() => import('@/components/ConsoleGameCatalog'), {
+//     ssr: false,
+//     loading: () => <div className="text-white text-center py-20">Loading Catalog...</div>
+// });
 
 // Dispatch Logic
 function isSystemSlug(slug: string): string | null {
@@ -120,7 +121,7 @@ export default async function Page({
                             </nav>
                         </div>
 
-                        <ConsoleGameCatalog
+                        <ConsoleGameCatalogWrapper
                             products={products}
                             genres={genres}
                             systemName={systemName}
