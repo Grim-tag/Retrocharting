@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { apiClient } from '@/lib/client'; // Use direct client for error capturing
 
+export const dynamic = 'force-static';
+
 export const revalidate = 3600; // Cache for 1 hour
 
 export async function GET() {

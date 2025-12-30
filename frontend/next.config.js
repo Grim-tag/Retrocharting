@@ -7,15 +7,7 @@ const nextConfig = {
     productionBrowserSourceMaps: false,
     output: 'export', // FORCED
     images: { unoptimized: true },
-    async redirects() {
-        return [
-            {
-                source: '/admin/dashboard',
-                destination: '/admin',
-                permanent: true,
-            },
-        ]
-    },
+    images: { unoptimized: true },
 };
 
 module.exports = nextConfig;
