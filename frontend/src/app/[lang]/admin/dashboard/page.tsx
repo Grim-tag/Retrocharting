@@ -1,22 +1,9 @@
-"use client";
-
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import RedirectClient from './RedirectClient';
 
 export async function generateStaticParams() {
     return [{ lang: 'en' }, { lang: 'fr' }];
 }
 
-export default function AdminDashboardRedirect() {
-    const router = useRouter();
-
-    useEffect(() => {
-        router.replace('/admin');
-    }, [router]);
-
-    return (
-        <div className="min-h-screen flex items-center justify-center bg-[#0f121e] text-white">
-            <p>Redirecting to Fusion Center...</p>
-        </div>
-    );
+export default function AdminDashboardRedirectPage() {
+    return <RedirectClient />;
 }
