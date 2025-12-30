@@ -2,6 +2,10 @@
 
 import { useState, useEffect } from 'react';
 
+export async function generateStaticParams() {
+    return [{ lang: 'en' }, { lang: 'fr' }];
+}
+
 export default function AdminDashboard() {
     const [stats, setStats] = useState<any>(null);
     const [fusionStats, setFusionStats] = useState<any>(null);
