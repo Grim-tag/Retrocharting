@@ -88,11 +88,11 @@ export default function GameDetailView({
                     {/* Right Column */}
                     <div className="md:col-span-8">
                         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-6">
-                            <PriceCard label={dict.product.prices.loose} price={product.loose_price} definition={dict.product.conditions.loose} />
-                            <PriceCard label={dict.product.prices.cib} price={product.cib_price} color="text-[#007bff]" definition={dict.product.conditions.cib} bestValue={true} />
-                            <PriceCard label={dict.product.prices.new} price={product.new_price} color="text-[#00ff00]" definition={dict.product.conditions.new} />
-                            <PriceCard label={dict.product.conditions.box_only} price={product.box_only_price || 0} color="text-[#f59e0b]" definition={dict.product.conditions.box_only} />
-                            <PriceCard label={dict.product.conditions.manual_only} price={product.manual_only_price || 0} color="text-[#ef4444]" definition={dict.product.conditions.manual_only} />
+                            <PriceCard label={dict.product.prices.loose} price={product.loose_price} definition={dict.product.conditions?.loose || "Cartridge only"} />
+                            <PriceCard label={dict.product.prices.cib} price={product.cib_price} color="text-[#007bff]" definition={dict.product.conditions?.cib || "Complete in Box"} bestValue={true} />
+                            <PriceCard label={dict.product.prices.new} price={product.new_price} color="text-[#00ff00]" definition={dict.product.conditions?.new || "New Sealed"} />
+                            <PriceCard label={dict.product.conditions?.box_only || "Box Only"} price={product.box_only_price || 0} color="text-[#f59e0b]" definition={dict.product.conditions?.box_only || "Box Only"} />
+                            <PriceCard label={dict.product.conditions?.manual_only || "Manual Only"} price={product.manual_only_price || 0} color="text-[#ef4444]" definition={dict.product.conditions?.manual_only || "Manual Only"} />
                         </div>
 
                         <div className="mb-6">
