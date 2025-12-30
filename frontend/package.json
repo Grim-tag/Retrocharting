@@ -6,8 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "build:mobile": "cross-env CAPACITOR_BUILD=true next build && npx cap sync",
-    "start": "next start",
-    "lint": "eslint"
+    "start": "npx serve@latest out",
+    "lint": "next lint"
   },
   "dependencies": {
     "@capacitor/android": "^8.0.0",
