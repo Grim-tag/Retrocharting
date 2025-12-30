@@ -38,7 +38,7 @@ export interface PriceHistoryPoint {
 
 export async function getProductsByConsole(consoleName: string, limit = 50, genre?: string, type?: 'game' | 'console' | 'accessory', sort?: string, skip = 0, search?: string): Promise<Product[]> {
     try {
-        const response = await apiClient.get(`/products/`, {
+        const response = await apiClient.get(`/products`, {
             params: {
                 console: consoleName,
                 limit,
@@ -92,7 +92,7 @@ export async function getProductHistory(id: number): Promise<PriceHistoryPoint[]
 
 export async function searchProducts(query: string): Promise<Product[]> {
     try {
-        const response = await apiClient.get(`/products/`, {
+        const response = await apiClient.get(`/products`, {
             params: { search: query, limit: 5 }
         });
         return response.data;
