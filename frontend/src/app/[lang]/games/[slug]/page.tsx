@@ -28,29 +28,37 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({ params, searchParams }: { params: Promise<{ slug: string; lang: string }>, searchParams: Promise<{ genre?: string, sort?: string }> }): Promise<Metadata> {
-    const { slug, lang } = await params;
-    const { genre, sort } = await searchParams;
-    const dict = await getDictionary(lang);
+    try {
+        const { slug, lang } = await params;
+        const { genre, sort } = await searchParams;
+        const dict = await getDictionary(lang);
 
-    const systemName = isSystemSlug(slug);
-    if (systemName) {
-        const seo = generateConsoleSeo(systemName, genre, sort, 0, lang);
+        const systemName = isSystemSlug(slug);
+        if (systemName) {
+            const seo = generateConsoleSeo(systemName, genre, sort, 0, lang);
+            return {
+                title: seo.title,
+                description: seo.description
+            };
+        }
+
+        const id = getIdFromSlug(slug);
+        const product = await getProductById(id);
+
+        if (!product) return { title: "Product Not Found" };
+
+        const shortConsoleName = formatConsoleName(product.console_name);
         return {
-            title: seo.title,
-            description: seo.description
+            title: `${product.product_name} ${shortConsoleName} ${dict.product.market.suffix} | RetroCharting`,
+            description: `Current market value for ${product.product_name}`
+        };
+    } catch (error) {
+        console.error("Error generating metadata:", error);
+        return {
+            title: "RetroCharting",
+            description: "Video Game Price Guide"
         };
     }
-
-    const id = getIdFromSlug(slug);
-    const product = await getProductById(id);
-
-    if (!product) return { title: "Product Not Found" };
-
-    const shortConsoleName = formatConsoleName(product.console_name);
-    return {
-        title: `${product.product_name} ${shortConsoleName} ${dict.product.market.suffix} | RetroCharting`,
-        description: `Current market value for ${product.product_name}`
-    };
 }
 
 export default async function Page({
