@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "build:mobile": "cross-env CAPACITOR_BUILD=true next build && npx cap sync",
-    "start": "npx serve@latest out",
+    "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {

@@ -7,7 +7,6 @@ const nextConfig = {
         ignoreDuringBuilds: true,
     },
     productionBrowserSourceMaps: false,
-    output: 'export',
     images: { unoptimized: true },
 };
 
