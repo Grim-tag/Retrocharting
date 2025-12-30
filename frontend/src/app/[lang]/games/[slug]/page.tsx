@@ -30,9 +30,13 @@ function getIdFromSlug(slug: string): number {
 }
 
 // Disable Static Generation for Build Performance (ISR Only)
-export async function generateStaticParams() {
-    return [];
-}
+// We must force dynamic because we access searchParams which makes the page dynamic at runtime
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+// export async function generateStaticParams() {
+//     return [];
+// }
 
 export async function generateMetadata({ params, searchParams }: { params: Promise<{ slug: string; lang: string }>, searchParams: Promise<{ genre?: string, sort?: string }> }): Promise<Metadata> {
     try {
