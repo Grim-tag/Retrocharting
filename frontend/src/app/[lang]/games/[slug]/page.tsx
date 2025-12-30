@@ -5,8 +5,14 @@ import { groupedSystems } from '@/data/systems';
 import { generateConsoleSeo } from '@/lib/seo-utils';
 import { getProductById, getProductHistory, getProductsByConsole, getGenres } from '@/lib/api';
 import { formatConsoleName } from '@/lib/utils';
-import ConsoleGameCatalog from '@/components/ConsoleGameCatalog';
+// import ConsoleGameCatalog from '@/components/ConsoleGameCatalog';
 import GameDetailView from '@/components/GameDetailView';
+import dynamic from 'next/dynamic';
+
+const ConsoleGameCatalog = dynamic(() => import('@/components/ConsoleGameCatalog'), {
+    ssr: false,
+    loading: () => <div className="text-white text-center py-20">Loading Catalog...</div>
+});
 
 // Dispatch Logic
 function isSystemSlug(slug: string): string | null {
