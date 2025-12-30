@@ -47,12 +47,9 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_SECRET: str
     GOOGLE_CALLBACK_URL: str
 
-    # Cloudinary
-    CLOUDINARY_CLOUD_NAME: str
-    CLOUDINARY_API_KEY: str
-    CLOUDINARY_API_SECRET: str
 
     class Config:
+        extra = "ignore"
         import os
         # Calculate absolute path to .env (project root)
         # config.py is in backend/app/core/
