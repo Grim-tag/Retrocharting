@@ -1,7 +1,11 @@
-
 import { MetadataRoute } from 'next';
 
+export const dynamic = 'force-static';
+
 export default function robots(): MetadataRoute.Robots {
+    if (process.env.CAPACITOR_BUILD === 'true') {
+        return { rules: { userAgent: '*', allow: '/' } };
+    }
     return {
         rules: {
             userAgent: '*',
@@ -10,13 +14,9 @@ export default function robots(): MetadataRoute.Robots {
                 '/api/',
                 '/_next/',
                 '/static/',
-
-                // Admin
                 '/admin/',
                 '/en/admin/',
                 '/fr/admin/',
-
-                // Private User Area (Profile, Collection, Settings)
                 '/profile/',
                 '/en/profile/',
                 '/fr/profile/',
@@ -26,8 +26,6 @@ export default function robots(): MetadataRoute.Robots {
                 '/import/',
                 '/en/import/',
                 '/fr/import/',
-
-                // Public Profiles (Currently blocked as per instruction to ignore "page ... profile")
                 '/user/',
                 '/en/user/',
                 '/fr/user/',

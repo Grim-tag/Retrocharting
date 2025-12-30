@@ -5,13 +5,21 @@ import { getGameUrl } from '@/lib/utils';
 import { routeMap } from '@/lib/route-config';
 import { systems } from '@/data/systems';
 
-export const revalidate = 3600; // Cache for 1 hour
-export const dynamic = 'force-dynamic'; // Prevent Build-Time Static Generation of Sitemap if Backend is slow
+// CAPACITOR BUILD: Force static via logic, not config
+// CAPACITOR BUILD: Force static via logic, not config
+export const dynamic = 'force-static';
+export const revalidate = 3600;
 
 const BASE_URL = 'https://retrocharting.com';
-const CHUNK_SIZE = 500; // Reduced to 500 for maximum speed/stability
+const CHUNK_SIZE = 500;
 
 export async function generateSitemaps() {
+    return []; // FORCE EMPTY FOR DEBUGGING
+    // If mobile build, skip sitemap generation entirely (not needed for an app)
+    if (process.env.CAPACITOR_BUILD === 'true') {
+        return [];
+    }
+
     // 1. Fetch total count from backend
     let total = 0;
     try {
@@ -62,7 +70,7 @@ export default async function sitemap({ id }: SitemapProps): Promise<MetadataRou
         // 1. Home / Login / Register
         langs.forEach(lang => {
             mainPages.forEach(page => {
-                const path = page === '' ? (lang === 'en' ? '/' : `/${lang}`) : `/${lang}/${page}`;
+                const path = page === '' ? (lang === 'en' ? '/' : `/ ${lang} `) : ` / ${lang}/${page}`;
                 const url = page === '' && lang === 'en' ? BASE_URL : `${BASE_URL}${path}`;
 
                 staticRoutes.push({
