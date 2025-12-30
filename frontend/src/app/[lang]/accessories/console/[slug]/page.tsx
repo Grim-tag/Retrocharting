@@ -16,19 +16,8 @@ function isSystemSlug(slug: string): string | null {
 
 // Generate Static Params for ACCESSORIES consoles (ISR Priming)
 export async function generateStaticParams() {
-    const flatSystems = Object.values(groupedSystems).flat();
-    const params: { lang: string, slug: string }[] = [];
-    const langs = ['en', 'fr'];
-
-    for (const lang of langs) {
-        for (const system of flatSystems) {
-            params.push({
-                lang,
-                slug: system.toLowerCase().replace(/ /g, '-')
-            });
-        }
-    }
-    return params;
+    // Return empty to disable build-time generation to prevent API timeouts.
+    return [];
 }
 
 export async function generateMetadata({ params, searchParams }: { params: Promise<{ slug: string; lang: string }>; searchParams: Promise<{ genre?: string, sort?: string }> }): Promise<Metadata> {
