@@ -7,57 +7,22 @@ from bs4 import BeautifulSoup
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from sqlalchemy import text, or_
 from datetime import datetime
-import cloudinary
-import cloudinary.uploader
+import sys
+import os
+import time
+import random
+import requests
+from bs4 import BeautifulSoup
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from sqlalchemy import text, or_
+from datetime import datetime
 from dotenv import load_dotenv
+from io import BytesIO
+from PIL import Image
 
 # --- Configuration ---
 MAX_WORKERS = 5  # Number of parallel threads
-BATCH_SIZE = 50   # Database batch size
-REQUEST_TIMEOUT = 10
-MAX_RETRIES = 2
-DELAY_MIN = 0.5
-DELAY_MAX = 2.0
-
-# User Agents for rotation
-USER_AGENTS = [
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Safari/605.1.15",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0",
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.114 Safari/537.36",
-    "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1"
-]
-
-# --- Setup Environment ---
-# Add backend directory to path
-backend_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'backend')
-sys.path.append(backend_path)
-
-# Load .env
-env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env')
-load_dotenv(env_path)
-
-if not os.environ.get("DATABASE_URL"):
-    db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'collector.db')
-    os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
-
-from app.db.session import SessionLocal
-from app.models.product import Product
-from app.models.price_history import PriceHistory
-from app.models.listing import Listing
-from app.models.sales_transaction import SalesTransaction
-from app.models.comment import Comment
-from app.models.user import User
-from app.models.collection_item import CollectionItem
-from app.models.sniper import SniperWatch
-from app.core.config import settings
-
-# Configure Cloudinary
-cloudinary.config( 
-  cloud_name = settings.CLOUDINARY_CLOUD_NAME, 
-  api_key = settings.CLOUDINARY_API_KEY, 
-  api_secret = settings.CLOUDINARY_API_SECRET 
-)
+# ... (rest of config)
 
 def get_random_header():
     return {"User-Agent": random.choice(USER_AGENTS)}
@@ -91,6 +56,7 @@ def scrape_single_product(product_info):
     updates = {
         'id': p_id,
         'image_url': None,
+        'image_blob': None, # New: Binary Data
         'description': None,
         'details': {},
         'price_history': [],
@@ -106,25 +72,35 @@ def scrape_single_product(product_info):
         soup = BeautifulSoup(response.content, 'html.parser')
         updates['success'] = True
 
-        # 1. Image (Cloudinary upload inside worker to save time on main thread)
+        # 1. Image (Local Download)
         # Check if we need image (passed in info)
         if product_info.get('needs_image'):
             img = soup.select_one('#product_images img') or soup.select_one('.cover img')
             if img and img.get('src') and "shim.gif" not in img.get('src'):
                 original_url = img.get('src')
                 try:
-                    # Sync upload
-                    # SEO Optimization: Slugify filename and force WebP
-                    seo_filename = slugify(f"{product_name}-{console_name}")
-                    upload_result = cloudinary.uploader.upload(
-                        original_url, 
-                        folder="retrocharting/products",
-                        public_id=seo_filename,
-                        format="webp",
-                        overwrite=True
-                    )
-                    updates['image_url'] = upload_result['secure_url']
-                except Exception:
+                    # Download
+                    img_resp = requests.get(original_url, timeout=10)
+                    if img_resp.status_code == 200:
+                         # Process
+                        image = Image.open(BytesIO(img_resp.content))
+                        if image.mode in ("RGBA", "P"): image = image.convert("RGB")
+                        image.thumbnail((1000, 1000))
+                        buffer = BytesIO()
+                        image.save(buffer, "WEBP", quality=80)
+                        
+                        updates['image_blob'] = buffer.getvalue()
+                        
+                        # SEO URL
+                        seo_filename = slugify(f"{product_name}-{console_name}")
+                        # We need API_BASE_URL. Assuming it's in settings or hardcode fallback?
+                        # settings is imported.
+                        api_base = getattr(settings, "API_BASE_URL", "https://retrocharting.com")
+                        updates['image_url'] = f"{api_base}/api/v1/products/{p_id}/image/{seo_filename}.webp"
+                    else:
+                        updates['image_url'] = original_url # Fallback
+                except Exception as e:
+                    #print(f"Image download error: {e}")
                     updates['image_url'] = original_url # Fallback
 
         # 2. Description
@@ -260,6 +236,7 @@ def main():
                 processed_in_this_batch += 1
                 
                 # Update Text Fields
+                if res.get('image_blob'): p.image_blob = res['image_blob']
                 if res['image_url']: p.image_url = res['image_url']
                 if res['description']: p.description = res['description']
                 if res['details'].get('genre'): p.genre = res['details']['genre']

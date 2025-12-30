@@ -1,8 +1,6 @@
 
 import time
 import random
-import cloudinary
-import cloudinary.uploader
 import re
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, text, and_
@@ -19,13 +17,6 @@ from app.db.session import SessionLocal
 # Models imported inside functions to prevent circular imports
 from app.core.config import settings
 
-# Configure Cloudinary
-cloudinary.config( 
-  cloud_name = settings.CLOUDINARY_CLOUD_NAME, 
-  api_key = settings.CLOUDINARY_API_KEY, 
-  api_secret = settings.CLOUDINARY_API_SECRET,
-  secure = True
-)
 
 def slugify(text: str) -> str:
     """
@@ -71,31 +62,7 @@ def _process_image_to_bytes(img_data: bytes) -> bytes:
         print(f"Image processing error: {e}")
         return None
 
-def _migrate_cloudinary_image(db: Session, product: "Product") -> bool:
-    """
-    Downloads existing Cloudinary image and saves locally as WebP.
-    """
-    try:
-        if not product.image_url or "cloudinary" not in product.image_url:
-            return False
-            
-        original_url = product.image_url
-        
-        # Download
-        img_resp = requests.get(original_url, timeout=15)
-        if img_resp.status_code == 200:
-            new_bytes = _process_image_to_bytes(img_resp.content)
-            if new_bytes:
-                product.image_blob = new_bytes
-                # Point to API endpoint with SEO slug
-                slug = slugify(f"{product.product_name} {product.console_name}")
-                product.image_url = f"{settings.API_BASE_URL}/api/v1/products/{product.id}/image/{slug}.webp"
-                return True
-        return False
 
-    except Exception as e:
-        print(f"Migration error: {e}")
-        return False
 
 async def scrape_single_product(db: Session, product: "Product"):
     """
@@ -110,7 +77,6 @@ async def scrape_single_product(db: Session, product: "Product"):
     needs_metadata = (
         not product.description or 
         not product.image_url or 
-        "cloudinary" in (product.image_url or "") or # Migrate Cloudinary -> Local
         not has_valid_image or
         not product.publisher
     )
@@ -154,19 +120,14 @@ def process_product_id(product_id: int) -> bool:
         needs_metadata = (
             not product.description or
             not product.image_url or
-            "cloudinary" in (product.image_url or "") or
             not has_valid_image or
             not product.publisher
         )
 
         if needs_metadata:
-            # Special fast path for Cloudinary Migration
-            if product.image_url and "cloudinary" in product.image_url:
-                success = _migrate_cloudinary_image(db, product)
-            else:
-                success = _scrape_html_logic(db, product)
-            
-            if success: time.sleep(0.1)
+             success = _scrape_html_logic(db, product)
+             if success: time.sleep(0.1)
+        
         elif settings.PRICECHARTING_API_TOKEN:
             success = _update_product_via_api(db, product)
             # API is fast
@@ -299,7 +260,7 @@ def scrape_missing_data(max_duration: int = 600, limit: int = 50):
                     Product.description == "",
                     Product.publisher == None,
                     Product.publisher == "",
-                    Product.image_url.contains("cloudinary"), # Target Cloudinary for migration
+
                     PriceHistory.id == None
                 ),
                 Product.console_name != None,
