@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Redirecting...</title>
+    <script>
+        // Check for saved language or default to 'fr'
+        var lang = localStorage.getItem('NEXT_LOCALE') || 'fr';
+        // Check if we are in Capacitor
+        // For now, simple redirect to /fr/scan or /fr
+        window.location.replace('/' + lang + '/scan');
+    </script>
+    <meta http-equiv="refresh" content="0;url=/fr/scan">
+</head>
+<body>
+    <p>Redirecting to application...</p>
+</body>
+</html>

@@ -4,7 +4,7 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_URL
     ? process.env.NEXT_PUBLIC_API_URL
     : (process.env.NODE_ENV === 'production'
         ? 'https://retrocharting-backend.onrender.com'
-        : 'http://127.0.0.1:8000');
+        : 'http://192.168.1.10:8000'); // IP Locale du PC pour accès Mobile
 
 export const API_URL = `${BASE_URL}/api/v1`;
 
@@ -13,6 +13,8 @@ export const apiClient = axios.create({
     headers: {
         'Content-Type': 'application/json',
     },
+    // Fail fast during build
+    timeout: process.env.CAPACITOR_BUILD === 'true' ? 100 : 30000,
 });
 
 // Request Interceptor: Auto-inject token from localStorage

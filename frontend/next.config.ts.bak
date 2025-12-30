@@ -1,0 +1,83 @@
+import type { NextConfig } from "next";
+
+console.log(" [NEXT.CONFIG] CAPACITOR_BUILD IS:", process.env.CAPACITOR_BUILD);
+
+const nextConfig: NextConfig = {
+  reactCompiler: true,
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  productionBrowserSourceMaps: false,
+};
+
+// MOBILE APP CONFIG (Static Export)
+if (process.env.CAPACITOR_BUILD === 'true') {
+  nextConfig.output = 'export';
+  nextConfig.images = { unoptimized: true };
+}
+// WEB CONFIG (Server Features)
+/*
+else {
+  nextConfig.headers = async () => {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=*',
+          },
+        ],
+      },
+    ];
+  };
+
+  nextConfig.redirects = async () => {
+    return [
+      {
+        source: '/fr/jeux-video/dogz-pc-games-cote-prix-119314',
+        destination: '/fr/jeux-video/dogz-pal-gameboy-color-cote-prix-45260',
+        permanent: true,
+      },
+      {
+        source: '/games/dogz-pc-games-prices-119314',
+        destination: '/games/dogz-gameboy-color-prices-12265',
+        permanent: true,
+      },
+      {
+        source: '/collection',
+        destination: '/profile',
+        permanent: false,
+      },
+      {
+        source: '/collection/analytics',
+        destination: '/profile',
+        permanent: false,
+      },
+    ];
+  };
+
+  nextConfig.rewrites = async () => {
+    return [
+      {
+        source: '/api/:path*',
+        destination: process.env.NEXT_PUBLIC_API_URL
+          ? `${process.env.NEXT_PUBLIC_API_URL}/api/:path*`
+          : (process.env.NODE_ENV === 'production'
+            ? 'https://retrocharting.onrender.com/api/:path*'
+            : 'http://127.0.0.1:8000/api/:path*'),
+      },
+      {
+        source: '/static/:path*',
+        destination: process.env.NEXT_PUBLIC_API_URL
+          ? `${process.env.NEXT_PUBLIC_API_URL}/static/:path*`
+          : (process.env.NODE_ENV === 'production'
+            ? 'https://retrocharting.onrender.com/static/:path*'
+            : 'http://127.0.0.1:8000/static/:path*'),
+      }
+    ];
+  };
+}
+*/
+
+export default nextConfig;

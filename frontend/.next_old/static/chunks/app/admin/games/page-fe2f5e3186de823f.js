@@ -1,0 +1,1 @@
+(self.webpackChunk_N_E=self.webpackChunk_N_E||[]).push([[6606],{16020:(e,s,t)=>{Promise.resolve().then(t.bind(t,72153))},72153:(e,s,t)=>{"use strict";t.r(s),t.d(s,{default:()=>n});var a=t(95155),r=t(34973);function n(){return(0,a.jsx)(r.A,{type:"game",title:"Games Catalog"})}}},e=>{var s=s=>e(e.s=s);e.O(0,[5714,2651,8173,4973,8441,1517,7358],()=>s(16020)),_N_E=e.O()}]);

@@ -19,6 +19,11 @@ const setNestedValue = (obj: any, path: string, value: string) => {
 // Cached fetch to prevent API flood during build/deploy
 const fetchTranslations = async (locale: string) => {
     try {
+        // Skip network fetch during Capacitor build (Static Export)
+        if (process.env.CAPACITOR_BUILD === 'true') {
+            return {};
+        }
+
         const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
         // Ensure no double slash
         const url = `${baseUrl.replace(/\/$/, '')}/api/v1/translations/${locale}`;

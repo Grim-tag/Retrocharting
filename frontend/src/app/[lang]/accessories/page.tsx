@@ -6,6 +6,10 @@ import JsonLd, { generateCollectionSchema } from "@/components/seo/JsonLd";
 import { getDictionary } from "@/lib/get-dictionary";
 import { routeMap } from "@/lib/route-config";
 
+export async function generateStaticParams() {
+    return [{ lang: 'en' }, { lang: 'fr' }];
+}
+
 export default async function AccessoriesPage({ params }: { params: Promise<{ lang: string }> }) {
     const { lang } = await params;
     const dict = await getDictionary(lang);

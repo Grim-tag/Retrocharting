@@ -1,0 +1,303 @@
+{
+  "version": 3,
+  "pages404": true,
+  "caseSensitive": false,
+  "basePath": "",
+  "redirects": [
+    {
+      "source": "/:path+/",
+      "destination": "/:path+",
+      "internal": true,
+      "priority": true,
+      "statusCode": 308,
+      "regex": "^(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))/$"
+    }
+  ],
+  "headers": [],
+  "rewrites": {
+    "beforeFiles": [],
+    "afterFiles": [],
+    "fallback": []
+  },
+  "dynamicRoutes": [
+    {
+      "page": "/admin/games/[id]/edit",
+      "regex": "^/admin/games/([^/]+?)/edit(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/admin/games/(?<nxtPid>[^/]+?)/edit(?:/)?$"
+    },
+    {
+      "page": "/admin/games/[id]/listings",
+      "regex": "^/admin/games/([^/]+?)/listings(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/admin/games/(?<nxtPid>[^/]+?)/listings(?:/)?$"
+    },
+    {
+      "page": "/sitemap/[__metadata_id__]",
+      "regex": "^/sitemap/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtP__metadata_id__": "nxtP__metadata_id__"
+      },
+      "namedRegex": "^/sitemap/(?<nxtP__metadata_id__>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/[lang]",
+      "regex": "^/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPlang": "nxtPlang"
+      },
+      "namedRegex": "^/(?<nxtPlang>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/[lang]/accessories",
+      "regex": "^/([^/]+?)/accessories(?:/)?$",
+      "routeKeys": {
+        "nxtPlang": "nxtPlang"
+      },
+      "namedRegex": "^/(?<nxtPlang>[^/]+?)/accessories(?:/)?$"
+    },
+    {
+      "page": "/[lang]/accessories/console/[system_slug]",
+      "regex": "^/([^/]+?)/accessories/console/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPlang": "nxtPlang",
+        "nxtPsystem_slug": "nxtPsystem_slug"
+      },
+      "namedRegex": "^/(?<nxtPlang>[^/]+?)/accessories/console/(?<nxtPsystem_slug>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/[lang]/accessories/[slug]",
+      "regex": "^/([^/]+?)/accessories/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPlang": "nxtPlang",
+        "nxtPslug": "nxtPslug"
+      },
+      "namedRegex": "^/(?<nxtPlang>[^/]+?)/accessories/(?<nxtPslug>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/[lang]/collectibles",
+      "regex": "^/([^/]+?)/collectibles(?:/)?$",
+      "routeKeys": {
+        "nxtPlang": "nxtPlang"
+      },
+      "namedRegex": "^/(?<nxtPlang>[^/]+?)/collectibles(?:/)?$"
+    },
+    {
+      "page": "/[lang]/collection",
+      "regex": "^/([^/]+?)/collection(?:/)?$",
+      "routeKeys": {
+        "nxtPlang": "nxtPlang"
+      },
+      "namedRegex": "^/(?<nxtPlang>[^/]+?)/collection(?:/)?$"
+    },
+    {
+      "page": "/[lang]/collection/analytics",
+      "regex": "^/([^/]+?)/collection/analytics(?:/)?$",
+      "routeKeys": {
+        "nxtPlang": "nxtPlang"
+      },
+      "namedRegex": "^/(?<nxtPlang>[^/]+?)/collection/analytics(?:/)?$"
+    },
+    {
+      "page": "/[lang]/consoles",
+      "regex": "^/([^/]+?)/consoles(?:/)?$",
+      "routeKeys": {
+        "nxtPlang": "nxtPlang"
+      },
+      "namedRegex": "^/(?<nxtPlang>[^/]+?)/consoles(?:/)?$"
+    },
+    {
+      "page": "/[lang]/consoles/[slug]",
+      "regex": "^/([^/]+?)/consoles/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPlang": "nxtPlang",
+        "nxtPslug": "nxtPslug"
+      },
+      "namedRegex": "^/(?<nxtPlang>[^/]+?)/consoles/(?<nxtPslug>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/[lang]/games",
+      "regex": "^/([^/]+?)/games(?:/)?$",
+      "routeKeys": {
+        "nxtPlang": "nxtPlang"
+      },
+      "namedRegex": "^/(?<nxtPlang>[^/]+?)/games(?:/)?$"
+    },
+    {
+      "page": "/[lang]/games/console/[system_slug]",
+      "regex": "^/([^/]+?)/games/console/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPlang": "nxtPlang",
+        "nxtPsystem_slug": "nxtPsystem_slug"
+      },
+      "namedRegex": "^/(?<nxtPlang>[^/]+?)/games/console/(?<nxtPsystem_slug>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/[lang]/games/[slug]",
+      "regex": "^/([^/]+?)/games/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPlang": "nxtPlang",
+        "nxtPslug": "nxtPslug"
+      },
+      "namedRegex": "^/(?<nxtPlang>[^/]+?)/games/(?<nxtPslug>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/[lang]/import",
+      "regex": "^/([^/]+?)/import(?:/)?$",
+      "routeKeys": {
+        "nxtPlang": "nxtPlang"
+      },
+      "namedRegex": "^/(?<nxtPlang>[^/]+?)/import(?:/)?$"
+    },
+    {
+      "page": "/[lang]/onboarding",
+      "regex": "^/([^/]+?)/onboarding(?:/)?$",
+      "routeKeys": {
+        "nxtPlang": "nxtPlang"
+      },
+      "namedRegex": "^/(?<nxtPlang>[^/]+?)/onboarding(?:/)?$"
+    },
+    {
+      "page": "/[lang]/profile",
+      "regex": "^/([^/]+?)/profile(?:/)?$",
+      "routeKeys": {
+        "nxtPlang": "nxtPlang"
+      },
+      "namedRegex": "^/(?<nxtPlang>[^/]+?)/profile(?:/)?$"
+    },
+    {
+      "page": "/[lang]/scan",
+      "regex": "^/([^/]+?)/scan(?:/)?$",
+      "routeKeys": {
+        "nxtPlang": "nxtPlang"
+      },
+      "namedRegex": "^/(?<nxtPlang>[^/]+?)/scan(?:/)?$"
+    },
+    {
+      "page": "/[lang]/sniper",
+      "regex": "^/([^/]+?)/sniper(?:/)?$",
+      "routeKeys": {
+        "nxtPlang": "nxtPlang"
+      },
+      "namedRegex": "^/(?<nxtPlang>[^/]+?)/sniper(?:/)?$"
+    },
+    {
+      "page": "/[lang]/user/[username]",
+      "regex": "^/([^/]+?)/user/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPlang": "nxtPlang",
+        "nxtPusername": "nxtPusername"
+      },
+      "namedRegex": "^/(?<nxtPlang>[^/]+?)/user/(?<nxtPusername>[^/]+?)(?:/)?$"
+    }
+  ],
+  "staticRoutes": [
+    {
+      "page": "/",
+      "regex": "^/(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/(?:/)?$"
+    },
+    {
+      "page": "/_global-error",
+      "regex": "^/_global\\-error(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_global\\-error(?:/)?$"
+    },
+    {
+      "page": "/_not-found",
+      "regex": "^/_not\\-found(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_not\\-found(?:/)?$"
+    },
+    {
+      "page": "/admin/accessories",
+      "regex": "^/admin/accessories(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/accessories(?:/)?$"
+    },
+    {
+      "page": "/admin/amazon",
+      "regex": "^/admin/amazon(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/amazon(?:/)?$"
+    },
+    {
+      "page": "/admin/comments",
+      "regex": "^/admin/comments(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/comments(?:/)?$"
+    },
+    {
+      "page": "/admin/consoles",
+      "regex": "^/admin/consoles(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/consoles(?:/)?$"
+    },
+    {
+      "page": "/admin/dashboard",
+      "regex": "^/admin/dashboard(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/dashboard(?:/)?$"
+    },
+    {
+      "page": "/admin/games",
+      "regex": "^/admin/games(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/games(?:/)?$"
+    },
+    {
+      "page": "/admin/health",
+      "regex": "^/admin/health(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/health(?:/)?$"
+    },
+    {
+      "page": "/admin/translations",
+      "regex": "^/admin/translations(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/translations(?:/)?$"
+    },
+    {
+      "page": "/favicon.ico",
+      "regex": "^/favicon\\.ico(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/favicon\\.ico(?:/)?$"
+    },
+    {
+      "page": "/robots.txt",
+      "regex": "^/robots\\.txt(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/robots\\.txt(?:/)?$"
+    },
+    {
+      "page": "/sitemap_index.xml",
+      "regex": "^/sitemap_index\\.xml(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/sitemap_index\\.xml(?:/)?$"
+    }
+  ],
+  "dataRoutes": [],
+  "rsc": {
+    "header": "rsc",
+    "varyHeader": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+    "prefetchHeader": "next-router-prefetch",
+    "didPostponeHeader": "x-nextjs-postponed",
+    "contentTypeHeader": "text/x-component",
+    "suffix": ".rsc",
+    "prefetchSuffix": ".prefetch.rsc",
+    "prefetchSegmentHeader": "next-router-segment-prefetch",
+    "prefetchSegmentSuffix": ".segment.rsc",
+    "prefetchSegmentDirSuffix": ".segments",
+    "clientParamParsing": false,
+    "dynamicRSCPrerender": false
+  },
+  "rewriteHeaders": {
+    "pathHeader": "x-nextjs-rewritten-path",
+    "queryHeader": "x-nextjs-rewritten-query"
+  }
+}

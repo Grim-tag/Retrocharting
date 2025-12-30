@@ -13,6 +13,10 @@ const poppins = Poppins({
     weight: ["300", "400", "500", "600", "700"],
 });
 
+export async function generateStaticParams() {
+    return [{ lang: 'en' }, { lang: 'fr' }];
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
     const { lang } = await params;
     const baseUrl = 'https://retrocharting.com';
