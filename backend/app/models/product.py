@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Date, DateTime, LargeBinary
+from sqlalchemy import Column, Integer, String, Float, Date, DateTime, LargeBinary, ForeignKey
 from sqlalchemy.orm import relationship
 from app.db.session import Base
 
@@ -30,7 +30,14 @@ class Product(Base):
     asin = Column(String, nullable=True) # Amazon ID
     players = Column(String, nullable=True)
 
+    # Consolidation Fields
+    game_id = Column(Integer, ForeignKey('games.id'), nullable=True, index=True) # Foreign Key to Game
+    variant_type = Column(String, default="Standard")   # Standard, Collector, etc.
+
+    # Relationships
+    game = relationship("Game", back_populates="products")
     price_history = relationship("PriceHistory", back_populates="product", cascade="all, delete-orphan")
     listings = relationship("Listing", back_populates="product", cascade="all, delete-orphan")
     sales_transactions = relationship("SalesTransaction", back_populates="product", cascade="all, delete-orphan")
     comments = relationship("Comment", back_populates="product", cascade="all, delete-orphan")
+

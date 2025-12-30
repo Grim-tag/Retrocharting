@@ -45,7 +45,9 @@ def run_auto_migrations(engine: Engine):
                 ("box_only_price", "FLOAT"),
                 ("manual_only_price", "FLOAT"),
                 ("image_blob", "BYTEA"),
-                ("back_image_blob", "BYTEA")
+                ("back_image_blob", "BYTEA"),
+                ("game_id", "INTEGER"),
+                ("variant_type", "VARCHAR")
             ]
             
             for col, type_ in common_cols:

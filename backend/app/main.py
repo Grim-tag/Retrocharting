@@ -12,7 +12,9 @@ from app.models.listing import Listing
 from app.models.price_history import PriceHistory
 from app.models.sniper import SniperQuery, SniperWatch, SniperResult
 from app.models.collection_item import CollectionItem
+from app.models.collection_item import CollectionItem
 from app.models.comment import Comment
+from app.models.game import Game # New Model
 
 # Create tables on startup
 # Base.metadata.create_all(bind=engine) # Moved to startup_event
@@ -26,7 +28,9 @@ origins = [
     "https://retrocharting-frontend.onrender.com",
     "https://retrocharting.onrender.com",
     "https://retrocharting.com",
-    "https://www.retrocharting.com"
+    "https://www.retrocharting.com",
+    "capacitor://localhost",
+    "http://localhost"
 ]
 
 app.add_middleware(

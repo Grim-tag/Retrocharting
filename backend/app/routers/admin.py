@@ -395,3 +395,47 @@ def get_amazon_stats(db: Session = Depends(get_db)):
         print(f"Error fetching amazon stats: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/consolidation/stats", dependencies=[Depends(get_admin_access)])
+def get_consolidation_stats(db: Session = Depends(get_db)):
+    """
+    Returns stats for the Fusion Center.
+    """
+    from app.models.game import Game
+    
+    total_products = db.query(Product).count()
+    orphans = db.query(Product).filter(Product.game_id == None).count()
+    games_created = db.query(Game).count()
+    
+    # Calculate fusion rate
+    fusion_rate = ((total_products - orphans) / total_products * 100) if total_products > 0 else 0
+    
+    return {
+        "total_products": total_products,
+        "orphans": orphans,
+        "games_created": games_created,
+        "fusion_rate": round(fusion_rate, 1)
+    }
+
+@router.post("/consolidation/run", dependencies=[Depends(get_admin_access)])
+def run_consolidation_job(
+    dry_run: bool = False,
+    background_tasks: BackgroundTasks = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Triggers the Consolidation Matcher.
+    """
+    from app.services.consolidation import run_consolidation
+    
+    # Run synchronously if dry_run for immediate feedback? 
+    # Or always background if heavy?
+    # Let's run sync if dry_run, async if real write to be safe?
+    # Actually, for debugging, sync is better to see return value. 
+    # But if DB is huge, it will timeout.
+    # Let's assume < 20k items for now, sync is acceptable for 10-15s op.
+    
+    try:
+        stats = run_consolidation(db, dry_run=dry_run)
+        return {"status": "success", "mode": "dry_run" if dry_run else "live", "stats": stats}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
