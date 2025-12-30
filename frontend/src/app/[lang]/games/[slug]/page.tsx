@@ -60,99 +60,117 @@ export default async function Page({
     params: Promise<{ slug: string; lang: string }>,
     searchParams: Promise<{ genre?: string, sort?: string, search?: string }>
 }) {
-    const { slug, lang } = await params;
-    const { genre, sort, search } = await searchParams;
-    const dict = await getDictionary(lang);
+    try {
+        const { slug, lang } = await params;
+        const { genre, sort, search } = await searchParams;
+        const dict = await getDictionary(lang);
 
-    const systemName = isSystemSlug(slug);
+        const systemName = isSystemSlug(slug);
 
-    if (systemName) {
-        // --- CONSOLE VIEW (SSR) ---
-        const [products, genres] = await Promise.all([
-            getProductsByConsole(systemName, 40, genre, 'game', sort, 0, search),
-            getGenres(systemName)
-        ]);
+        if (systemName) {
+            // --- CONSOLE VIEW (SSR) ---
+            const [products, genres] = await Promise.all([
+                getProductsByConsole(systemName, 40, genre, 'game', sort, 0, search),
+                getGenres(systemName)
+            ]);
 
-        const gamesSlug = lang === 'en' ? 'games' : 'games'; // TODO: use routeMap properly if needed
+            const gamesSlug = lang === 'en' ? 'games' : 'games'; // TODO: use routeMap properly if needed
 
-        return (
-            <main className="flex-grow bg-[#0f121e] py-8">
-                <div className="max-w-[1400px] mx-auto px-4">
-                    {/* Breadcrumbs handled in ConsoleGameCatalog via props? No, usually outside? 
-                        The original GameConsoleClient handled Breadcrumbs OUTSIDE ConsoleGameCatalog.
-                        Let's check ConsoleGameCatalog.tsx again. It did NOT handle breadcrumbs layout. 
-                        It handled Breadcrumbs import but commented out.
-                        I need to pass breadcrumbs or render them here. 
-                     */}
-                    {/* Wait, ConsoleGameCatalog expects us to render the Main Container? 
-                        Looking at ConsoleGameCatalog.tsx, it renders `<div>`.
-                        So I should render Breadcrumbs here.
-                     */}
-                    <div className="mb-4">
-                        {/* We need Breadcrumbs component. Copied from GameConsoleClient. */}
-                        <nav className="flex text-sm text-gray-400 mb-6" aria-label="Breadcrumb">
-                            <ol className="flex items-center space-x-2">
-                                <li>
-                                    <Link href={`/${lang}/${gamesSlug}`} className="hover:text-white transition-colors">
-                                        {dict.header.nav.video_games}
-                                    </Link>
-                                </li>
-                                <li className="text-gray-600">/</li>
-                                <li className="text-white font-medium" aria-current="page">
-                                    {systemName}
-                                </li>
-                            </ol>
-                        </nav>
+            return (
+                <main className="flex-grow bg-[#0f121e] py-8">
+                    <div className="max-w-[1400px] mx-auto px-4">
+                        {/* Breadcrumbs handled in ConsoleGameCatalog via props? No, usually outside? 
+                            The original GameConsoleClient handled Breadcrumbs OUTSIDE ConsoleGameCatalog.
+                            Let's check ConsoleGameCatalog.tsx again. It did NOT handle breadcrumbs layout. 
+                            It handled Breadcrumbs import but commented out.
+                            I need to pass breadcrumbs or render them here. 
+                         */}
+                        {/* Wait, ConsoleGameCatalog expects us to render the Main Container? 
+                            Looking at ConsoleGameCatalog.tsx, it renders `<div>`.
+                            So I should render Breadcrumbs here.
+                         */}
+                        <div className="mb-4">
+                            {/* We need Breadcrumbs component. Copied from GameConsoleClient. */}
+                            <nav className="flex text-sm text-gray-400 mb-6" aria-label="Breadcrumb">
+                                <ol className="flex items-center space-x-2">
+                                    <li>
+                                        <Link href={`/${lang}/${gamesSlug}`} className="hover:text-white transition-colors">
+                                            {dict.header.nav.video_games}
+                                        </Link>
+                                    </li>
+                                    <li className="text-gray-600">/</li>
+                                    <li className="text-white font-medium" aria-current="page">
+                                        {systemName}
+                                    </li>
+                                </ol>
+                            </nav>
+                        </div>
+
+                        <ConsoleGameCatalog
+                            products={products}
+                            genres={genres}
+                            systemName={systemName}
+                            lang={lang}
+                            gamesSlug={gamesSlug}
+                            systemSlug={slug}
+                            h1Title={`${systemName} Games`}
+                            introText={`Explore ${systemName} prices and values.`}
+                            faq={[]}
+                            productType="game"
+                        />
                     </div>
-
-                    <ConsoleGameCatalog
-                        products={products}
-                        genres={genres}
-                        systemName={systemName}
-                        lang={lang}
-                        gamesSlug={gamesSlug}
-                        systemSlug={slug}
-                        h1Title={`${systemName} Games`}
-                        introText={`Explore ${systemName} prices and values.`}
-                        faq={[]}
-                        productType="game"
-                    />
-                </div>
-            </main>
-        );
-    } else {
-        // --- GAME VIEW (SSR) ---
-        const id = getIdFromSlug(slug);
-
-        if (!id) {
-            return (
-                <div className="text-white text-center py-20">Invalid Product ID</div>
-            );
-        }
-
-        const [product, history] = await Promise.all([
-            getProductById(id),
-            getProductHistory(id)
-        ]);
-
-        if (!product) {
-            return (
-                <main className="flex-grow bg-[#0f121e] py-20 text-center text-white">
-                    <h1 className="text-3xl font-bold">{dict.product.not_found.title}</h1>
-                    <Link href={`/${lang}/games`} className="text-[#ff6600] hover:underline mt-4 inline-block">
-                        {dict.product.not_found.back}
-                    </Link>
                 </main>
             );
-        }
+        } else {
+            // --- GAME VIEW (SSR) ---
+            const id = getIdFromSlug(slug);
 
+            if (!id) {
+                return (
+                    <div className="text-white text-center py-20">Invalid Product ID</div>
+                );
+            }
+
+            const [product, history] = await Promise.all([
+                getProductById(id),
+                getProductHistory(id)
+            ]);
+
+            if (!product) {
+                return (
+                    <main className="flex-grow bg-[#0f121e] py-20 text-center text-white">
+                        <h1 className="text-3xl font-bold">{dict.product.not_found.title}</h1>
+                        <Link href={`/${lang}/games`} className="text-[#ff6600] hover:underline mt-4 inline-block">
+                            {dict.product.not_found.back}
+                        </Link>
+                    </main>
+                );
+            }
+
+            return (
+                <GameDetailView
+                    product={product}
+                    history={history}
+                    lang={lang}
+                    dict={dict}
+                />
+            );
+        }
+    } catch (error: any) {
+        console.error("Critical Error in Page:", error);
         return (
-            <GameDetailView
-                product={product}
-                history={history}
-                lang={lang}
-                dict={dict}
-            />
+            <div className="bg-[#0f121e] min-h-screen flex items-center justify-center text-white p-4">
+                <div className="max-w-md bg-[#1f2533] p-6 rounded border border-red-500">
+                    <h2 className="text-xl font-bold mb-4 text-red-500">Oops! Something went wrong.</h2>
+                    <p className="mb-4 text-gray-300">We couldn't load this page.</p>
+                    <pre className="bg-black p-2 rounded text-xs text-red-400 overflow-auto mb-4">
+                        {error?.message || "Unknown error"}
+                    </pre>
+                    <Link href="/" className="bg-[#ff6600] text-white px-4 py-2 rounded hover:bg-[#e65c00]">
+                        Go Home
+                    </Link>
+                </div>
+            </div>
         );
     }
 }
