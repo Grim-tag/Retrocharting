@@ -138,9 +138,7 @@ def run_consolidation(db: Session, dry_run: bool = False):
                         db.add(existing_game)
                         db.flush() 
                     stats["games_created"] += 1
-                        db.add(existing_game)
-                        db.flush() 
-                    stats["games_created"] += 1
+
                 
                 # Link
                 if existing_game or dry_run:
