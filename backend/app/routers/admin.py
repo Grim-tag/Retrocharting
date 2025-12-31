@@ -416,6 +416,21 @@ def get_consolidation_stats(db: Session = Depends(get_db)):
         "fusion_rate": round(fusion_rate, 1)
     }
 
+def consolidation_bg_task(dry_run: bool):
+    """
+    Wrapper to run consolidation with its own DB session.
+    """
+    from app.db.session import SessionLocal
+    from app.services.consolidation import run_consolidation
+    
+    db_bg = SessionLocal()
+    try:
+        run_consolidation(db_bg, dry_run=dry_run)
+    except Exception as e:
+        print(f"Background Consolidation Error: {e}")
+    finally:
+        db_bg.close()
+
 @router.post("/consolidation/run", dependencies=[Depends(get_admin_access)])
 def run_consolidation_job(
     dry_run: bool = False,
@@ -423,19 +438,17 @@ def run_consolidation_job(
     db: Session = Depends(get_db)
 ):
     """
-    Triggers the Consolidation Matcher.
+    Triggers the Consolidation Matcher in Background.
     """
-    from app.services.consolidation import run_consolidation
-    
-    # Run synchronously if dry_run for immediate feedback? 
-    # Or always background if heavy?
-    # Let's run sync if dry_run, async if real write to be safe?
-    # Actually, for debugging, sync is better to see return value. 
-    # But if DB is huge, it will timeout.
-    # Let's assume < 20k items for now, sync is acceptable for 10-15s op.
-    
-    try:
+    if background_tasks:
+        background_tasks.add_task(consolidation_bg_task, dry_run)
+        return {
+            "status": "success", 
+            "mode": "dry_run" if dry_run else "live", 
+            "stats": {"message": "Job started in background. Check System -> Logs tab for results."}
+        }
+    else:
+        # Fallback (unlikely)
+        from app.services.consolidation import run_consolidation
         stats = run_consolidation(db, dry_run=dry_run)
         return {"status": "success", "mode": "dry_run" if dry_run else "live", "stats": stats}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
