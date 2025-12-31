@@ -53,44 +53,29 @@ def run_consolidation(db: Session, dry_run: bool = False):
     db.refresh(log_entry)
     
     try:
-        # BATCH PROCESSING APPROACH
-        # We fetch orphans in chunks of 5000, process them, and commit.
-        # Since we are updating 'game_id', they will naturally drop out of the 'filter(game_id==None)' query
-        # in the next iteration. This handles memory AND transaction safety (no long cursors).
+        # BATCH PROCESSING (FAST START)
+        # Removed global count() and order_by() to avoid initial DB hang on 126k items.
+        # We process whatever we find in chunks. Correctness is guaranteed by Game Slug idempotency.
         
-        # Get total count first for progress bar
-        total_orphans = db.query(Product).filter(
-            Product.game_id == None,
-            Product.product_name != None
-        ).count()
-        
-        print(f"Found {total_orphans} orphans to process.")
-        
-        log_entry.error_message = f"Found {total_orphans} orphans. Starting Batch Consolidator..."
+        log_entry.error_message = "Starting Fast Batch Consolidator..."
         db.commit()
         
         stats = {
             "games_created": 0,
             "products_linked": 0,
             "skipped": 0,
-            "orphans_found": total_orphans
+            "orphans_found": "Unknown"
         }
         
         processed_total = 0
         BATCH_SIZE = 1000 
         
         while True:
-            # Fetch Batch
-            # Order by console/product to keep grouping sensible within the batch?
-            # Actually, if we just grab 1000 random ones, we might create fragmented Groups.
-            # But since we are processing ALL orphans eventually, it's okay if we create the Game in Batch 1 
-            # and verify it exists in Batch 2.
-            # Sorting helps efficiency though (cache hits on Game lookup).
-            
+            # Fetch Batch (No Sort for Speed)
             batch = db.query(Product).filter(
                 Product.game_id == None,
                 Product.product_name != None
-            ).order_by(Product.console_name, Product.product_name).limit(BATCH_SIZE).all()
+            ).limit(BATCH_SIZE).all()
             
             if not batch:
                 break
@@ -115,11 +100,12 @@ def run_consolidation(db: Session, dry_run: bool = False):
             for (console, norm_name), product_list in batch_groups.items():
                 slug = create_slug(console, norm_name)
                 
-                # Check DB for existing match
+                # Check DB for existing match (Idempotency)
                 existing_game = db.query(Game).filter(Game.slug == slug).first()
                 
                 if not existing_game:
                     if not dry_run:
+                        # Pick best metadata
                         sorted_products = sorted(product_list, key=lambda x: x.release_date or datetime.max.date())
                         master_source = sorted_products[0]
                         existing_game = Game(
@@ -133,7 +119,6 @@ def run_consolidation(db: Session, dry_run: bool = False):
                             release_date=master_source.release_date
                         )
                         db.add(existing_game)
-                        # We must flush to get the ID for linking
                         db.flush() 
                     stats["games_created"] += 1
                 
@@ -158,34 +143,18 @@ def run_consolidation(db: Session, dry_run: bool = False):
 
             # Commit the Batch changes
             if not dry_run:
-                # IMPORTANT: This commit updates product.game_id, so they won't be fetched again.
                 db.commit()
-            else:
-                # In dry_run we can't save game_id. So the 'filter(game_id==None)' loop would run forever!
-                # CRITICAL FIX for DRY RUN: We must manually offset or just break if we can't page?
-                # Actually, dry_run on 126k items is tricky with this pattern.
-                # We should use OFFSET for dry_run.
-                pass
             
             processed_total += len(batch)
             
             # Update Log
             log_entry.items_processed = processed_total
-            log_entry.error_message = f"Batching: {processed_total}/{total_orphans} items..."
-            db.commit() # Save log update
+            log_entry.error_message = f"Batching: {processed_total} items processed..."
+            db.commit() 
             
-            # If Dry Run, we must handle Pagination manually since items aren't disappearing
             if dry_run:
-                # If we used offset logic, it would be slow.
-                # Since dry_run is just for testing, maybe limit it to 5000 items total?
-                # Or use a naive offset? (slow but works)
-                if processed_total >= total_orphans: break
-                
-                # For next iteration, we need to skip the ones we just saw.
-                # But 'offset' queries are O(N).
-                # Maybe Dry Run Max Limit?
                 if processed_total >= 5000:
-                    log_entry.error_message = f"Dry Run Limited to 5000 items (Preview)."
+                    log_entry.error_message = f"Dry Run Finished (Limit 5000)."
                     db.commit()
                     break
         
