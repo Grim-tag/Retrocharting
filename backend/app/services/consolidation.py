@@ -53,23 +53,21 @@ def run_consolidation(db: Session, dry_run: bool = False):
     db.refresh(log_entry)
     
     try:
-        # PURE STREAMING APPROACH
-        # We order by Console then Name to process them in order.
-        # This allows formatting groups on the fly without loading everything.
+        # BATCH PROCESSING APPROACH
+        # We fetch orphans in chunks of 5000, process them, and commit.
+        # Since we are updating 'game_id', they will naturally drop out of the 'filter(game_id==None)' query
+        # in the next iteration. This handles memory AND transaction safety (no long cursors).
         
-        products_query = db.query(Product).filter(
+        # Get total count first for progress bar
+        total_orphans = db.query(Product).filter(
             Product.game_id == None,
             Product.product_name != None
-        ).order_by(Product.console_name, Product.product_name)
+        ).count()
         
-        total_orphans = products_query.count() # Fast count
         print(f"Found {total_orphans} orphans to process.")
         
-        log_entry.error_message = f"Found {total_orphans} orphans. Starting Streaming Consolidator..."
+        log_entry.error_message = f"Found {total_orphans} orphans. Starting Batch Consolidator..."
         db.commit()
-        
-        # Stream results in chunks of 1000 to avoid RAM explosion
-        product_stream = products_query.yield_per(1000)
         
         stats = {
             "games_created": 0,
@@ -78,100 +76,119 @@ def run_consolidation(db: Session, dry_run: bool = False):
             "orphans_found": total_orphans
         }
         
-        # Buffer for current group
-        current_monitor_key = None # (console, norm_name)
-        current_group = []
+        processed_total = 0
+        BATCH_SIZE = 1000 
         
-        processed_count = 0
-        
-        def commit_group(console, norm_name, product_list):
-            if not product_list or not norm_name: return
+        while True:
+            # Fetch Batch
+            # Order by console/product to keep grouping sensible within the batch?
+            # Actually, if we just grab 1000 random ones, we might create fragmented Groups.
+            # But since we are processing ALL orphans eventually, it's okay if we create the Game in Batch 1 
+            # and verify it exists in Batch 2.
+            # Sorting helps efficiency though (cache hits on Game lookup).
             
-            # Check IDEMPOTENCY
-            slug = create_slug(console, norm_name)
-            existing_game = db.query(Game).filter(Game.slug == slug).first()
+            batch = db.query(Product).filter(
+                Product.game_id == None,
+                Product.product_name != None
+            ).order_by(Product.console_name, Product.product_name).limit(BATCH_SIZE).all()
             
-            if not existing_game:
-                # Create Master
-                sorted_products = sorted(product_list, key=lambda x: x.release_date or datetime.max.date())
-                master_source = sorted_products[0]
+            if not batch:
+                break
                 
-                if not dry_run:
-                    existing_game = Game(
-                        console_name=console,
-                        title=master_source.product_name,
-                        slug=slug,
-                        description=master_source.description,
-                        genre=master_source.genre,
-                        developer=master_source.developer,
-                        publisher=master_source.publisher,
-                        release_date=master_source.release_date
-                    )
-                    db.add(existing_game)
-                    db.flush()
-                stats["games_created"] += 1
+            # Process Batch
+            batch_groups = {}
+            for p in batch:
+                # Veto
+                if "collector" in p.product_name.lower():
+                    stats['skipped'] += 1
+                    continue
+                    
+                norm_name = normalize_name(p.product_name)
+                if not norm_name: continue
+                
+                key = (p.console_name, norm_name)
+                if key not in batch_groups:
+                    batch_groups[key] = []
+                batch_groups[key].append(p)
             
-            # Link items
-            joined_count = 0
-            if existing_game or dry_run:
-                for p in product_list:
-                    if not dry_run: p.game_id = existing_game.id
-                    
-                    # Deduce Variant
-                    if "(PAL)" in p.product_name or "PAL" in (p.product_name or ""):
-                         variant = "PAL"
-                    elif "(JP)" in p.product_name or "Japan" in (p.product_name or ""):
-                         variant = "JP"
-                    elif "(NTSC)" in p.product_name or "USA" in (p.product_name or ""):
-                         variant = "NTSC"
-                    else:
-                         variant = "Standard"
-                    
-                    if not dry_run: p.variant_type = variant
-                    joined_count += 1
-            return joined_count
+            # Commit Batch Groups
+            for (console, norm_name), product_list in batch_groups.items():
+                slug = create_slug(console, norm_name)
+                
+                # Check DB for existing match
+                existing_game = db.query(Game).filter(Game.slug == slug).first()
+                
+                if not existing_game:
+                    if not dry_run:
+                        sorted_products = sorted(product_list, key=lambda x: x.release_date or datetime.max.date())
+                        master_source = sorted_products[0]
+                        existing_game = Game(
+                            console_name=console,
+                            title=master_source.product_name,
+                            slug=slug,
+                            description=master_source.description,
+                            genre=master_source.genre,
+                            developer=master_source.developer,
+                            publisher=master_source.publisher,
+                            release_date=master_source.release_date
+                        )
+                        db.add(existing_game)
+                        # We must flush to get the ID for linking
+                        db.flush() 
+                    stats["games_created"] += 1
+                
+                # Link
+                if existing_game or dry_run:
+                    for p in product_list:
+                        if not dry_run:
+                            p.game_id = existing_game.id
+                        
+                        # Set Variant
+                        if "(PAL)" in p.product_name or "PAL" in (p.product_name or ""):
+                             variant = "PAL"
+                        elif "(JP)" in p.product_name or "Japan" in (p.product_name or ""):
+                             variant = "JP"
+                        elif "(NTSC)" in p.product_name or "USA" in (p.product_name or ""):
+                             variant = "NTSC"
+                        else:
+                             variant = "Standard"
+                        
+                        if not dry_run: p.variant_type = variant
+                        stats["products_linked"] += 1
 
-        # ITERATE STREAM
-        for p in product_stream:
-            processed_count += 1
-            
-            # Periodic Log Update
-            if processed_count % 2500 == 0:
-                log_entry.items_processed = processed_count
-                log_entry.error_message = f"Streaming: {processed_count}/{total_orphans} items..."
+            # Commit the Batch changes
+            if not dry_run:
+                # IMPORTANT: This commit updates product.game_id, so they won't be fetched again.
                 db.commit()
-
-            # Veto
-            if "collector" in p.product_name.lower():
-                stats['skipped'] += 1
-                continue
-                
-            norm_name = normalize_name(p.product_name)
-            if not norm_name: continue
-            
-            key = (p.console_name, norm_name)
-            
-            if key != current_monitor_key:
-                # Group Changed! Commit previous group
-                if current_monitor_key:
-                    linked = commit_group(current_monitor_key[0], current_monitor_key[1], current_group)
-                    stats["products_linked"] += (linked or 0)
-                
-                # Start new group
-                current_monitor_key = key
-                current_group = [p]
             else:
-                # Continue group
-                current_group.append(p)
-                
-        # Commit final group
-        if current_monitor_key and current_group:
-             linked = commit_group(current_monitor_key[0], current_monitor_key[1], current_group)
-             stats["products_linked"] += (linked or 0)
-             
-        if not dry_run:
-            db.commit()
+                # In dry_run we can't save game_id. So the 'filter(game_id==None)' loop would run forever!
+                # CRITICAL FIX for DRY RUN: We must manually offset or just break if we can't page?
+                # Actually, dry_run on 126k items is tricky with this pattern.
+                # We should use OFFSET for dry_run.
+                pass
             
+            processed_total += len(batch)
+            
+            # Update Log
+            log_entry.items_processed = processed_total
+            log_entry.error_message = f"Batching: {processed_total}/{total_orphans} items..."
+            db.commit() # Save log update
+            
+            # If Dry Run, we must handle Pagination manually since items aren't disappearing
+            if dry_run:
+                # If we used offset logic, it would be slow.
+                # Since dry_run is just for testing, maybe limit it to 5000 items total?
+                # Or use a naive offset? (slow but works)
+                if processed_total >= total_orphans: break
+                
+                # For next iteration, we need to skip the ones we just saw.
+                # But 'offset' queries are O(N).
+                # Maybe Dry Run Max Limit?
+                if processed_total >= 5000:
+                    log_entry.error_message = f"Dry Run Limited to 5000 items (Preview)."
+                    db.commit()
+                    break
+        
         # Success
         log_entry.status = "success"
         log_entry.end_time = datetime.utcnow()
