@@ -106,7 +106,6 @@ def run_consolidation(db: Session, dry_run: bool = False):
                 
                 if not existing_game:
                     if not dry_run:
-                    if not dry_run:
                         # Pick best metadata: Priority to NTSC / Clean Titles
                         # We want the Global Page to look like "Super Mario 64" not "Super Mario 64 (PAL)"
                         def content_priority(p):
@@ -136,6 +135,9 @@ def run_consolidation(db: Session, dry_run: bool = False):
                             publisher=master_source.publisher,
                             release_date=master_source.release_date
                         )
+                        db.add(existing_game)
+                        db.flush() 
+                    stats["games_created"] += 1
                         db.add(existing_game)
                         db.flush() 
                     stats["games_created"] += 1
