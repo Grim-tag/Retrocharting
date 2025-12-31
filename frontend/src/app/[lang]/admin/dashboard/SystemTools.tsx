@@ -106,6 +106,7 @@ export default function SystemTools() {
                                 <th className="p-3">Source</th>
                                 <th className="p-3">Status</th>
                                 <th className="p-3">Items</th>
+                                <th className="p-3">Details</th>
                                 <th className="p-3">Duration</th>
                             </tr>
                         </thead>
@@ -122,6 +123,9 @@ export default function SystemTools() {
                                         </span>
                                     </td>
                                     <td className="p-3 text-gray-300">{log.items_processed} items</td>
+                                    <td className="p-3 text-gray-400 max-w-xs truncate" title={log.error_message}>
+                                        {log.error_message || '-'}
+                                    </td>
                                     <td className="p-3 text-gray-500">{log.duration_seconds ? `${log.duration_seconds.toFixed(1)}s` : '-'}</td>
                                 </tr>
                             ))}
