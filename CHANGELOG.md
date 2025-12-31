@@ -20,6 +20,7 @@ All notable changes to this project will be documented in this file.
 - **Admin Dashboard**: Created `AmazonStats`, `UsersTable`, and `SystemTools` components for modular admin features.
 - **Backend**: Implemented DB-based logging (`ScraperLog`) for Fusion/Consolidation to handle timeout scenarios and ensure results are persisted.
 - **Backend**: Promoted `/consolidation/run` to a Background Task to eliminate HTTP Timeouts on large datasets.
+- **Backend**: Optimized `consolidation.py` to provide real-time status updates (items processed count) in logs to prevent "stuck" appearance during long jobs.
 - **Documentation**: Initialized `CHANGELOG.md` to track project history.
 
 ## [Previous Sessions]

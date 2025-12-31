@@ -53,25 +53,43 @@ def run_consolidation(db: Session, dry_run: bool = False):
     db.refresh(log_entry)
     
     try:
-        # 1. Fetch all products without a Game ID
-        products = db.query(Product).filter(
+        # 1. Fetch all products without a Game ID using yield_per to save RAM
+        # But we need them all to group...
+        # Option: Process console by console to reduce working set?
+        # Let's try simpler: Just Periodic Updates first.
+        
+        products_query = db.query(Product).filter(
             Product.game_id == None,
             Product.product_name != None
-        ).all()
+        )
         
-        print(f"Found {len(products)} orphans to process.")
+        total_orphans = products_query.count()
+        print(f"Found {total_orphans} orphans to process.")
+        
+        # Update log initial count
+        log_entry.error_message = f"Found {total_orphans} orphans. Grouping..."
+        db.commit()
+        
+        products = products_query.all() # Still risky if > 50k items
         
         stats = {
             "games_created": 0,
             "products_linked": 0,
             "skipped": 0,
-            "orphans_found": len(products)
+            "orphans_found": total_orphans
         }
         
-        # Group in memory first to minimize DB hits
+        # Group in memory
         groups = {}
+        grouping_count = 0
         
         for p in products:
+            grouping_count += 1
+            if grouping_count % 5000 == 0:
+                log_entry.items_processed = grouping_count
+                log_entry.error_message = f"Grouping in memory: {grouping_count}/{total_orphans}"
+                db.commit()
+
             # Veto Logic
             if "collector" in p.product_name.lower():
                 stats['skipped'] += 1
@@ -85,12 +103,26 @@ def run_consolidation(db: Session, dry_run: bool = False):
             groups[key].append(p)
             
         # Process Groups
+        total_groups = len(groups)
+        processed_groups = 0
+        
+        log_entry.error_message = f"Processing {total_groups} groups..."
+        db.commit()
+        
         for (console, norm_name), product_list in groups.items():
+            processed_groups += 1
+            if processed_groups % 100 == 0:
+                log_entry.items_processed = stats["products_linked"]
+                log_entry.error_message = f"Processing groups: {processed_groups}/{total_groups}"
+                db.commit()
+
             if not norm_name: continue
             
             # Check if Game already exists (Idempotency)
             slug = create_slug(console, norm_name)
             
+            # OPTIMIZATION: Cache existing games in memory? 
+            # Or assume we just hit DB. 2000 queries is fine. 20k is slow.
             existing_game = db.query(Game).filter(Game.slug == slug).first()
             
             if not existing_game:
@@ -140,8 +172,6 @@ def run_consolidation(db: Session, dry_run: bool = False):
         log_entry.status = "success"
         log_entry.end_time = datetime.utcnow()
         log_entry.items_processed = stats["products_linked"]
-        # Store full stats in error_message (hack because no JSON column yet) or standard log
-        # For now, put concise summary in error_message if needed, or just let UI show success
         log_entry.error_message = json.dumps(stats) 
         db.commit()
         
