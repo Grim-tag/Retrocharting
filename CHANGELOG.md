@@ -40,6 +40,7 @@ All notable changes to this project will be documented in this file.
 - **ListingClassifier**: Enhanced logic to auto-detect region based on domain.
 
 ### 2024-12-26 to 2024-12-29
+- **Android App**: Configuration and Validation of the Capacitor/Android Studio project.
 - **Mobile app**: Migrated to `html5-qrcode` to resolve camera permission issues on Android.
 - **Scanner**: Implemented "Scan to Add" and "Scan to Link" features for contributing unknown barcodes.
 - **Scanner**: Created `ScannerModal` for a unified scanning experience (Camera/File/Manual Entry).
