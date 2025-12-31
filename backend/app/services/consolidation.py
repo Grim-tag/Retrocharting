@@ -53,24 +53,23 @@ def run_consolidation(db: Session, dry_run: bool = False):
     db.refresh(log_entry)
     
     try:
-        # 1. Fetch all products without a Game ID using yield_per to save RAM
-        # But we need them all to group...
-        # Option: Process console by console to reduce working set?
-        # Let's try simpler: Just Periodic Updates first.
+        # PURE STREAMING APPROACH
+        # We order by Console then Name to process them in order.
+        # This allows formatting groups on the fly without loading everything.
         
         products_query = db.query(Product).filter(
             Product.game_id == None,
             Product.product_name != None
-        )
+        ).order_by(Product.console_name, Product.product_name)
         
-        total_orphans = products_query.count()
+        total_orphans = products_query.count() # Fast count
         print(f"Found {total_orphans} orphans to process.")
         
-        # Update log initial count
-        log_entry.error_message = f"Found {total_orphans} orphans. Grouping..."
+        log_entry.error_message = f"Found {total_orphans} orphans. Starting Streaming Consolidator..."
         db.commit()
         
-        products = products_query.all() # Still risky if > 50k items
+        # Stream results in chunks of 1000 to avoid RAM explosion
+        product_stream = products_query.yield_per(1000)
         
         stats = {
             "games_created": 0,
@@ -79,54 +78,21 @@ def run_consolidation(db: Session, dry_run: bool = False):
             "orphans_found": total_orphans
         }
         
-        # Group in memory
-        groups = {}
-        grouping_count = 0
+        # Buffer for current group
+        current_monitor_key = None # (console, norm_name)
+        current_group = []
         
-        for p in products:
-            grouping_count += 1
-            if grouping_count % 5000 == 0:
-                log_entry.items_processed = grouping_count
-                log_entry.error_message = f"Grouping in memory: {grouping_count}/{total_orphans}"
-                db.commit()
-
-            # Veto Logic
-            if "collector" in p.product_name.lower():
-                stats['skipped'] += 1
-                continue
-                
-            norm_name = normalize_name(p.product_name)
-            key = (p.console_name, norm_name)
-            
-            if key not in groups:
-                groups[key] = []
-            groups[key].append(p)
-            
-        # Process Groups
-        total_groups = len(groups)
-        processed_groups = 0
+        processed_count = 0
         
-        log_entry.error_message = f"Processing {total_groups} groups..."
-        db.commit()
-        
-        for (console, norm_name), product_list in groups.items():
-            processed_groups += 1
-            if processed_groups % 100 == 0:
-                log_entry.items_processed = stats["products_linked"]
-                log_entry.error_message = f"Processing groups: {processed_groups}/{total_groups}"
-                db.commit()
-
-            if not norm_name: continue
+        def commit_group(console, norm_name, product_list):
+            if not product_list or not norm_name: return
             
-            # Check if Game already exists (Idempotency)
+            # Check IDEMPOTENCY
             slug = create_slug(console, norm_name)
-            
-            # OPTIMIZATION: Cache existing games in memory? 
-            # Or assume we just hit DB. 2000 queries is fine. 20k is slow.
             existing_game = db.query(Game).filter(Game.slug == slug).first()
             
             if not existing_game:
-                # Create Master Game
+                # Create Master
                 sorted_products = sorted(product_list, key=lambda x: x.release_date or datetime.max.date())
                 master_source = sorted_products[0]
                 
@@ -142,33 +108,71 @@ def run_consolidation(db: Session, dry_run: bool = False):
                         release_date=master_source.release_date
                     )
                     db.add(existing_game)
-                    db.flush() # Get ID
-                
+                    db.flush()
                 stats["games_created"] += 1
             
-            # Link Products
+            # Link items
+            joined_count = 0
             if existing_game or dry_run:
                 for p in product_list:
                     if not dry_run: p.game_id = existing_game.id
                     
-                    # Deduce Variant Type
+                    # Deduce Variant
                     if "(PAL)" in p.product_name or "PAL" in (p.product_name or ""):
-                        variant = "PAL"
+                         variant = "PAL"
                     elif "(JP)" in p.product_name or "Japan" in (p.product_name or ""):
-                        variant = "JP"
+                         variant = "JP"
                     elif "(NTSC)" in p.product_name or "USA" in (p.product_name or ""):
-                        variant = "NTSC"
+                         variant = "NTSC"
                     else:
-                        variant = "Standard"
+                         variant = "Standard"
                     
                     if not dry_run: p.variant_type = variant
-                        
-                    stats["products_linked"] += 1
-                    
+                    joined_count += 1
+            return joined_count
+
+        # ITERATE STREAM
+        for p in product_stream:
+            processed_count += 1
+            
+            # Periodic Log Update
+            if processed_count % 2500 == 0:
+                log_entry.items_processed = processed_count
+                log_entry.error_message = f"Streaming: {processed_count}/{total_orphans} items..."
+                db.commit()
+
+            # Veto
+            if "collector" in p.product_name.lower():
+                stats['skipped'] += 1
+                continue
+                
+            norm_name = normalize_name(p.product_name)
+            if not norm_name: continue
+            
+            key = (p.console_name, norm_name)
+            
+            if key != current_monitor_key:
+                # Group Changed! Commit previous group
+                if current_monitor_key:
+                    linked = commit_group(current_monitor_key[0], current_monitor_key[1], current_group)
+                    stats["products_linked"] += (linked or 0)
+                
+                # Start new group
+                current_monitor_key = key
+                current_group = [p]
+            else:
+                # Continue group
+                current_group.append(p)
+                
+        # Commit final group
+        if current_monitor_key and current_group:
+             linked = commit_group(current_monitor_key[0], current_monitor_key[1], current_group)
+             stats["products_linked"] += (linked or 0)
+             
         if not dry_run:
             db.commit()
             
-        # Update Log Success
+        # Success
         log_entry.status = "success"
         log_entry.end_time = datetime.utcnow()
         log_entry.items_processed = stats["products_linked"]
