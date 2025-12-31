@@ -106,9 +106,26 @@ def run_consolidation(db: Session, dry_run: bool = False):
                 
                 if not existing_game:
                     if not dry_run:
-                        # Pick best metadata
-                        sorted_products = sorted(product_list, key=lambda x: x.release_date or datetime.max.date())
+                    if not dry_run:
+                        # Pick best metadata: Priority to NTSC / Clean Titles
+                        # We want the Global Page to look like "Super Mario 64" not "Super Mario 64 (PAL)"
+                        def content_priority(p):
+                            score = 0
+                            # Cleaner titles (NTSC usually) get higher score
+                            if "(PAL)" not in p.product_name and "(JP)" not in p.product_name:
+                                score += 10
+                            if "import" not in p.product_name.lower():
+                                score += 5
+                            # Fallback to release date (older is usually original)
+                            if p.release_date:
+                                # Convert date to timestamp for sorting (smaller timestamp = older = better?)
+                                # Actually sticking to "Cleaner is better" is safer for our goal.
+                                pass
+                            return score
+
+                        sorted_products = sorted(product_list, key=content_priority, reverse=True)
                         master_source = sorted_products[0]
+                        
                         existing_game = Game(
                             console_name=console,
                             title=master_source.product_name,

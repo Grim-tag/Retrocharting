@@ -19,6 +19,7 @@ All notable changes to this project will be documented in this file.
 - **Admin Dashboard**: Introduced Tabbed Interface (Dashboard, Amazon, Users, System) to restore missing backend functionality.
 - **Admin Dashboard**: Created `AmazonStats`, `UsersTable`, and `SystemTools` components for modular admin features.
 - **Backend**: Implemented DB-based logging (`ScraperLog`) for Fusion/Consolidation to handle timeout scenarios and ensure results are persisted.
+- **Backend**: Updated Consolidation logic to prioritize **NTSC/Clean Titles** as the source for Global Game Pages. This prevents "(PAL)" or "(JP)" from appearing in the main page title/slug.
 - **Backend**: Fixed critical Memory Leak (Status 134) in Consolidation Job by clearing SQLAlchemy session (`expunge_all`) after each batch.
 - **Backend**: Removed expensive `count()` and `order_by` from Consolidation Job to allow instant start-up on large datasets (126k+), processing in random batches.
 - **Backend**: Optimized `consolidation.py` to use **Batch Processing** (Fetch/Commit loop) instead of Streaming. This fixes the `psycopg2.ProgrammingError` caused by committing inside an active cursor.
