@@ -6,6 +6,7 @@ from app.models.scraper_log import ScraperLog
 from datetime import datetime
 import re
 import json
+import time
 
 def normalize_name(text: str) -> str:
     """
@@ -151,6 +152,17 @@ def run_consolidation(db: Session, dry_run: bool = False):
             log_entry.items_processed = processed_total
             log_entry.error_message = f"Batching: {processed_total} items processed..."
             db.commit() 
+            
+            # MEMORY & CPU MANAGEMENT
+            # 1. Clear Identity Map to prevent OOM on large datasets (126k objects)
+            log_id = log_entry.id
+            db.expunge_all()
+            
+            # 2. Re-fetch Log Entry for next iteration (since it was detached)
+            log_entry = db.query(ScraperLog).filter(ScraperLog.id == log_id).first()
+            
+            # 3. Yield CPU briefly to be nice to the scheduler
+            time.sleep(0.05)
             
             if dry_run:
                 if processed_total >= 5000:
