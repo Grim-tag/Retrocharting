@@ -18,6 +18,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 - **Admin Dashboard**: Introduced Tabbed Interface (Dashboard, Amazon, Users, System) to restore missing backend functionality.
 - **Admin Dashboard**: Created `AmazonStats`, `UsersTable`, and `SystemTools` components for modular admin features.
+- **Backend**: Implemented DB-based logging (`ScraperLog`) for Fusion/Consolidation to handle timeout scenarios and ensure results are persisted.
 - **Documentation**: Initialized `CHANGELOG.md` to track project history.
 
 ## [Previous Sessions]
