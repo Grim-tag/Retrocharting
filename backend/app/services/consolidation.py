@@ -27,6 +27,23 @@ def normalize_name(text: str) -> str:
     text = re.sub(r'[^a-z0-9\s]', '', text)
     return text.strip()
 
+def normalize_console(console_name: str) -> str:
+    """
+    Strips region prefixes to group regional variants under one console family.
+    'PAL Playstation 5' -> 'Playstation 5'
+    'JP Playstation 5' -> 'Playstation 5'
+    'NTSC Playstation 5' -> 'Playstation 5'
+    """
+    if not console_name: return "Unknown"
+    s = console_name.strip()
+    
+    # Common prefixes
+    s = re.sub(r'^(PAL|JP|NTSC|EU|US|UK)\s+', '', s, flags=re.IGNORECASE)
+    # Common suffixes
+    s = re.sub(r'\s+\((PAL|JP|NTSC|EU|US|UK)\)$', '', s, flags=re.IGNORECASE)
+    
+    return s.strip()
+
 def create_slug(console: str, title: str) -> str:
     """
     Creates SEO friendly slug: "nintendo-64-super-mario-64"
@@ -93,14 +110,17 @@ def run_consolidation(db: Session, dry_run: bool = False):
                 norm_name = normalize_name(p.product_name)
                 if not norm_name: continue
                 
-                key = (p.console_name, norm_name)
+                # CRITICAL Fix: Merge PAL/JP/NTSC consoles into one family key
+                family_console = normalize_console(p.console_name)
+                
+                key = (family_console, norm_name)
                 if key not in batch_groups:
                     batch_groups[key] = []
                 batch_groups[key].append(p)
             
             # Commit Batch Groups
-            for (console, norm_name), product_list in batch_groups.items():
-                slug = create_slug(console, norm_name)
+            for (family_console, norm_name), product_list in batch_groups.items():
+                slug = create_slug(family_console, norm_name)
                 
                 # Check DB for existing match (Idempotency)
                 existing_game = db.query(Game).filter(Game.slug == slug).first()
@@ -198,18 +218,19 @@ def run_consolidation(db: Session, dry_run: bool = False):
                 db.commit()
                 
                 for p in orphans:
+                    norm_console = normalize_console(p.console_name)
                     # Fallback Slug
                     # If normalization failed (empty string), use raw product_name + ID to guarantee uniqueness
-                    raw_slug = create_slug(p.console_name, p.product_name)
+                    raw_slug = create_slug(norm_console, p.product_name)
                     if not raw_slug or len(raw_slug) < 3: 
-                        raw_slug = f"{create_slug(p.console_name, 'orphan')}-{p.id}"
+                        raw_slug = f"{create_slug(norm_console, 'orphan')}-{p.id}"
                     
                     # Check existence (rare collision case)
                     existing_game = db.query(Game).filter(Game.slug == raw_slug).first()
                     
                     if not existing_game:
                         existing_game = Game(
-                            console_name=p.console_name,
+                            console_name=norm_console,
                             title=p.product_name, # Use raw name
                             slug=raw_slug,
                             description=p.description,
