@@ -41,24 +41,32 @@ def read_games(
     if sort:
         if sort == 'title_asc': query = query.order_by(Game.title.asc())
         elif sort == 'title_desc': query = query.order_by(Game.title.desc())
-        # Price sorting is harder because price is on Variants.
-        # We might need to join Product or use a pre-calculated 'min_price' on Game if we had it.
-        # For now, simplistic sorting or rely on ID.
         
-    games = query.offset(skip).limit(limit).all()
+    # Eager load products to access image_url and variant count
+    games = query.options(joinedload(Game.products)).offset(skip).limit(limit).all()
     
-    return [
-        {
+    results = []
+    for g in games:
+        # Resolve Image from variants
+        image_url = None
+        if g.products:
+            # Find first check with image
+            for p in g.products:
+                if p.image_url:
+                    image_url = p.image_url
+                    break
+        
+        results.append({
             "id": g.id,
             "title": g.title,
             "slug": g.slug,
             "console": g.console_name,
-            "image_url": g.image_url,
-            "min_price": None, # TODO: We could fetch this efficiently if needed
+            "image_url": image_url,
+            "min_price": None, 
             "variants_count": len(g.products) if g.products else 0
-        }
-        for g in games
-    ]
+        })
+
+    return results
 
 @router.get("/{slug}")
 def get_game_by_slug(slug: str, db: Session = Depends(get_db)):
