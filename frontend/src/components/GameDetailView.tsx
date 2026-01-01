@@ -19,13 +19,15 @@ interface GameDetailViewProps {
     history: any[];
     lang: string;
     dict: any;
+    game?: any; // Unified Game Data
 }
 
 export default function GameDetailView({
     product,
     history,
     lang,
-    dict
+    dict,
+    game
 }: GameDetailViewProps) {
     const gamesSlug = lang === 'en' ? 'games' : 'games'; // TODO: proper routeMap
 
@@ -94,6 +96,40 @@ export default function GameDetailView({
                             <PriceCard label={dict.product.conditions?.box_only || "Box Only"} price={product.box_only_price || 0} color="text-[#f59e0b]" definition={dict.product.conditions?.box_only || "Box Only"} />
                             <PriceCard label={dict.product.conditions?.manual_only || "Manual Only"} price={product.manual_only_price || 0} color="text-[#ef4444]" definition={dict.product.conditions?.manual_only || "Manual Only"} />
                         </div>
+
+                        {/* REGIONAL BREAKDOWN (Unified View Only) */}
+                        {game && game.variants && (
+                            <div className="mb-8 bg-[#1f2533] border border-[#2a3142] rounded p-4">
+                                <h3 className="text-white text-lg font-bold mb-4 flex items-center gap-2">
+                                    <span>🌍</span> Global Market Prices
+                                </h3>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm text-left text-gray-300">
+                                        <thead className="text-xs text-gray-400 uppercase bg-[#0f121e]">
+                                            <tr>
+                                                <th className="px-4 py-3">Region</th>
+                                                <th className="px-4 py-3">Loose</th>
+                                                <th className="px-4 py-3">CIB</th>
+                                                <th className="px-4 py-3">New</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {game.variants.map((v: any) => (
+                                                <tr key={v.id} className="border-b border-[#2a3142] hover:bg-[#2a3142]/50">
+                                                    <td className="px-4 py-3 font-medium text-white flex items-center gap-2">
+                                                        {v.region.includes("PAL") ? "🇪🇺 PAL" : v.region.includes("JP") ? "🇯🇵 JP" : "🇺🇸 NTSC"}
+                                                        <span className="text-xs text-gray-500">({v.product_name})</span>
+                                                    </td>
+                                                    <td className="px-4 py-3">{v.prices.loose ? `${v.prices.currency} ${v.prices.loose}` : '-'}</td>
+                                                    <td className="px-4 py-3">{v.prices.cib ? `${v.prices.currency} ${v.prices.cib}` : '-'}</td>
+                                                    <td className="px-4 py-3">{v.prices.new ? `${v.prices.currency} ${v.prices.new}` : '-'}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
 
                         <div className="mb-6">
                             <h2 className="text-white text-sm font-bold mb-2 uppercase tracking-wider text-gray-400">{dict.product.market.price_trend}</h2>

@@ -199,6 +199,53 @@ export async function getSitemapProducts(limit: number = 10000, skip: number = 0
     }
 }
 
+// --- Games (Unified API) ---
+
+export interface Game {
+    id: number;
+    title: string;
+    slug: string;
+    console: string;
+    description?: string;
+    release_date?: string;
+    developer?: string;
+    publisher?: string;
+    genre?: string;
+    image_url?: string;
+    variants: Array<{
+        id: number;
+        region: string;
+        product_name: string;
+        image?: string;
+        prices: {
+            loose?: number;
+            cib?: number;
+            new?: number;
+            currency?: string;
+        };
+    }>;
+}
+
+export async function getGameBySlug(slug: string): Promise<Game | null> {
+    try {
+        const response = await apiClient.get(`/games/${slug}`);
+        return response.data;
+    } catch (error) {
+        // 404 is expected if using old slug
+        return null;
+    }
+}
+
+export async function getGameHistory(slug: string): Promise<any[]> {
+    try {
+        const response = await apiClient.get(`/games/${slug}/history`);
+        return response.data;
+    } catch (error) {
+        console.error(`Error fetching history for game ${slug}:`, error);
+        return [];
+    }
+}
+
 // --- Auth APIs ---
 
 export async function loginWithGoogle(credential: string): Promise<{ access_token: string, token_type: string } | null> {

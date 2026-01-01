@@ -128,12 +128,50 @@ export default async function Page({
                 </main>
             );
         } else {
-            // --- GAME VIEW (SSR) ---
+            // --- GAME VIEW (Unified + Fallback) ---
+
+            // 1. Try fetching as Unified Game (Slug-based)
+            const { getGameBySlug, getGameHistory } = await import('@/lib/api');
+            const game = await getGameBySlug(slug);
+
+            if (game) {
+                // Unified Game Success!
+                // We need to pick a "Main" product to satisfy the legacy view props.
+                // Priority: NTSC > PAL > JP > Other
+                const mainVariant = game.variants.find((v: any) => v.region.includes("NTSC"))
+                    || game.variants.find((v: any) => v.region.includes("PAL"))
+                    || game.variants[0];
+
+                // Fetch full details for the main variant to get proper fields (desc, etc) that might be light in game object
+                // actually Game object has description.
+                // But GameDetailView needs a "Product" object structure.
+                // We can construct a mock product from game + variant data, or fetch the main variant ID.
+                // Let's fetch the main variant product to be safe and compatible.
+                const [mainProduct, history] = await Promise.all([
+                    getProductById(mainVariant.id),
+                    getGameHistory(slug) // Aggregated history
+                ]);
+
+                if (!mainProduct) return <div className="text-white">Main variant data missing.</div>;
+
+                return (
+                    <GameDetailView
+                        product={mainProduct}
+                        history={history}
+                        lang={lang}
+                        dict={dict}
+                        game={game} // Pass unified data
+                    />
+                );
+            }
+
+            // 2. Fallback: Legacy ID-based Fetch
+            // If slug lookup failed, maybe it's an old link "product-slug-123"
             const id = getIdFromSlug(slug);
 
             if (!id) {
                 return (
-                    <div className="text-white text-center py-20">Invalid Product ID</div>
+                    <div className="text-white text-center py-20">Invalid Product/Game</div>
                 );
             }
 
@@ -143,6 +181,7 @@ export default async function Page({
             ]);
 
             if (!product) {
+                // ... 404 view
                 return (
                     <main className="flex-grow bg-[#0f121e] py-20 text-center text-white">
                         <h1 className="text-3xl font-bold">{dict.product.not_found.title}</h1>
