@@ -55,12 +55,19 @@ export default function GameDetailView({
                         {product.product_name} {shortConsoleName} {dict.product.market.suffix}
                     </h1>
                     <div className="hidden sm:block">
-                        {(product.console_name.includes("PAL") || product.product_name.includes("PAL")) ? (
-                            <div className="bg-blue-600 px-3 py-1 rounded text-xs font-bold text-white uppercase tracking-wider shrink-0 mt-2">🇪🇺 PAL Region</div>
-                        ) : (product.console_name.includes("Japan") || product.console_name.includes("JP")) ? (
-                            <div className="bg-red-600 px-3 py-1 rounded text-xs font-bold text-white uppercase tracking-wider shrink-0 mt-2">🇯🇵 NTSC-J</div>
-                        ) : (
-                            <div className="bg-green-600 px-3 py-1 rounded text-xs font-bold text-white uppercase tracking-wider shrink-0 mt-2">🇺🇸 NTSC-U</div>
+                        {/* Only show specific region badge if NOT in Unified Mode. Unified Mode shows regions in the Global Market table. */}
+                        {!game && (
+                            (product.console_name.includes("PAL") || product.product_name.includes("PAL")) ? (
+                                <div className="bg-blue-600 px-3 py-1 rounded text-xs font-bold text-white uppercase tracking-wider shrink-0 mt-2">🇪🇺 PAL Region</div>
+                            ) : (product.console_name.includes("Japan") || product.console_name.includes("JP")) ? (
+                                <div className="bg-red-600 px-3 py-1 rounded text-xs font-bold text-white uppercase tracking-wider shrink-0 mt-2">🇯🇵 NTSC-J</div>
+                            ) : (
+                                <div className="bg-green-600 px-3 py-1 rounded text-xs font-bold text-white uppercase tracking-wider shrink-0 mt-2">🇺🇸 NTSC-U</div>
+                            )
+                        )}
+                        {/* Option: Show Global Badge if Unified? */}
+                        {game && (
+                            <div className="bg-purple-600 px-3 py-1 rounded text-xs font-bold text-white uppercase tracking-wider shrink-0 mt-2">🌍 Global</div>
                         )}
                     </div>
                 </div>
