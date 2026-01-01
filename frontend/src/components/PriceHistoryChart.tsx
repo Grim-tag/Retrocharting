@@ -58,8 +58,8 @@ export default function PriceHistoryChart({ history, className, dict }: PriceHis
     };
 
     return (
-        <div className={`w-full bg-[#1f2533] border border-[#2a3142] p-4 rounded ${className || 'h-[400px]'}`}>
-            <ResponsiveContainer width="100%" height="100%">
+        <div className={`w-full bg-[#1f2533] border border-[#2a3142] p-4 rounded min-h-[300px] ${className ?? 'h-[400px]'}`}>
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                 <LineChart data={data}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#2a3142" />
                     <XAxis

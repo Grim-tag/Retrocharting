@@ -120,3 +120,16 @@ def enrichment_job(max_duration: int = 600, limit: int = 50, console_filter: str
             pass
     finally:
         db.close()
+
+def refresh_prices_job():
+    """
+    Scheduled job to wake up items for price refresh.
+    Strategy: Mark items as 'needs_update' or simply trigger workers?
+    Actually, Amazon Workers operate autonomously on the queue.
+    This job ensures the queue is populated for old items.
+    """
+    # For now, this function is just a placeholder to prevent ImportError
+    # The real logic is in the worker.py files which scan the DB.
+    # But if we want to force re-scan of OLD prices (> 30 days), we can do it here.
+    print("Scheduler: Price Refresh Job Triggered (Placeholder)")
+    pass
