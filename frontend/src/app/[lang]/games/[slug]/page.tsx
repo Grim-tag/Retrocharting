@@ -192,6 +192,13 @@ export default async function Page({
                 );
             }
 
+            // SEO REDIRECTION (Migration Phase 2)
+            // If this legacy product is now part of a Unified Game, redirect to the Game Page.
+            if (product.game_slug) {
+                const { redirect } = await import('next/navigation');
+                redirect(`/${lang}/games/${product.game_slug}`);
+            }
+
             return (
                 <GameDetailView
                     product={product}

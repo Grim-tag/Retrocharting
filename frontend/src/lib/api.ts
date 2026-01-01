@@ -26,6 +26,7 @@ export interface Product {
     asin?: string;
     release_date?: string; // ISO date string
     sales_count?: number;
+    game_slug?: string; // For Redirection
 }
 
 export interface PriceHistoryPoint {

@@ -23,6 +23,7 @@ class ProductBase(BaseModel):
     asin: Optional[str] = None
     players: Optional[str] = None
     sales_count: Optional[int] = 0
+    game_slug: Optional[str] = None # For Redirection Logic
 
 class ProductCreate(ProductBase):
     pass

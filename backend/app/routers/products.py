@@ -616,6 +616,10 @@ def read_product(
     # Use PriceHistory count as a proxy for "Market Data Points" since SalesTransaction table is not yet live.
     product.sales_count = db.query(PriceHistory).filter(PriceHistory.product_id == product_id).count()
     
+    # Redirection Helper: Populate game_slug
+    if product.game:
+        product.game_slug = product.game.slug
+    
     return product
 
 @router.get("/{product_id}/image", include_in_schema=False)
