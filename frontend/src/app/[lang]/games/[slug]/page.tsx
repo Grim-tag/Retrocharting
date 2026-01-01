@@ -200,6 +200,49 @@ export default async function Page({
                 getProductHistory(id)
             ]);
 
+            // VERIFICATION: Check if loaded product matches the URL slug context
+            // This prevents "Broken Link" issues where old IDs point to new wrong products (due to DB shifts).
+            if (product) {
+                const urlSlug = slug.toLowerCase();
+                const consoleSlug = product.console_name.toLowerCase().replace(/ /g, '-');
+                const titleSlug = product.product_name.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+                // Flexible Check: Does URL contain the Console Name OR a significant part of the Title?
+                // If URL is "fallout-76-ps4..." and Product is "Balloon Kid Gameboy", this fails.
+                // We require at least Console match OR Title match.
+
+                // Simplify: just check if URL contains a fragment of title?
+                // "fallout-76" contains "fallout"? Yes.
+                // "balloon-kid" in "fallout-76..."? No.
+
+                // We accept match if:
+                // 1. Console checks out (roughly)
+                // OR
+                // 2. Title checks out (roughly)
+
+                // Heuristic: If slug is VERY long (legacy), it usually contains console and title.
+                // Let's check for blatant mismatch.
+
+                const isConsoleMismatch = !urlSlug.includes(product.console_name.split(' ')[0].toLowerCase()); // Check "GameBoy" in slug
+                const isTitleMismatch = !urlSlug.includes(product.product_name.split(' ')[0].toLowerCase().replace(/[^a-z0-9]/g, ''));
+
+                if (isConsoleMismatch && isTitleMismatch) {
+                    console.warn(`Legacy ID Mismatch: ID ${id} loaded "${product.product_name}" but URL was "${slug}". Treating as 404.`);
+                    // Force 404
+                    return (
+                        <div className="bg-[#0f121e] min-h-screen flex items-center justify-center text-white py-20 px-4">
+                            <div className="text-center">
+                                <h1 className="text-3xl font-bold mb-4">Link Expired</h1>
+                                <p className="text-gray-400 mb-6">This product link is outdated. Please search for the game again.</p>
+                                <Link href={`/${lang}/games`} className="bg-[#ff6600] text-white px-6 py-2 rounded hover:bg-[#e65c00]">
+                                    Browse Games
+                                </Link>
+                            </div>
+                        </div>
+                    );
+                }
+            }
+
             if (!product) {
                 // ... 404 view
                 return (
