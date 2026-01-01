@@ -84,10 +84,11 @@ def run_consolidation(db: Session, dry_run: bool = False):
             # Process Batch
             batch_groups = {}
             for p in batch:
-                # Veto
-                if "collector" in p.product_name.lower():
-                    stats['skipped'] += 1
-                    continue
+                # Veto removed: "Collector" items caused infinite loop (skipped but never updated).
+                # We will process them normally.
+                # if "collector" in p.product_name.lower():
+                #    stats['skipped'] += 1
+                #    continue
                     
                 norm_name = normalize_name(p.product_name)
                 if not norm_name: continue
