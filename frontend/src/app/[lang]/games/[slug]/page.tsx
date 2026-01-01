@@ -23,6 +23,12 @@ function isSystemSlug(slug: string): string | null {
 }
 
 function getIdFromSlug(slug: string): number {
+    // Try to match the last segment as a number
+    const match = slug.match(/-(\d+)$/);
+    if (match && match[1]) {
+        return parseInt(match[1], 10);
+    }
+    // Fallback: Try split
     const parts = slug.split('-');
     const lastPart = parts[parts.length - 1];
     const id = parseInt(lastPart);
