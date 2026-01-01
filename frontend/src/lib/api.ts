@@ -247,6 +247,35 @@ export async function getGameHistory(slug: string): Promise<any[]> {
     }
 }
 
+export async function getGamesByConsole(consoleName: string, limit = 50, genre?: string, sort?: string, skip = 0, search?: string): Promise<any[]> {
+    try {
+        const response = await apiClient.get(`/games/`, {
+            params: {
+                console: consoleName,
+                limit,
+                genre,
+                sort,
+                skip,
+                search
+            }
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Error fetching games:", error);
+        return [];
+    }
+}
+
+export async function getSitemapGames(limit: number = 10000, skip: number = 0): Promise<any[]> {
+    try {
+        const response = await apiClient.get(`/games/sitemap/list?limit=${limit}&skip=${skip}`);
+        return response.data;
+    } catch (error) {
+        console.error("Error fetching sitemap games:", error);
+        return [];
+    }
+}
+
 // --- Auth APIs ---
 
 export async function loginWithGoogle(credential: string): Promise<{ access_token: string, token_type: string } | null> {

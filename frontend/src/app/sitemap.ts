@@ -81,5 +81,27 @@ export default function sitemap(): MetadataRoute.Sitemap {
         });
     });
 
-    return [...staticRoutes, ...categoryUrls];
+    // 4. Products / Games (Dynamic)
+    const { getSitemapGames } = await import('@/lib/api');
+    // Fetch top games (limit 15000 for now, sitemap max is 50k usually)
+    const games = await getSitemapGames(15000, 0);
+
+    const gameUrls: MetadataRoute.Sitemap = [];
+    games.forEach((game: any) => {
+        langs.forEach(lang => {
+            const gamesBase = routeMap['games']?.[lang] || 'games';
+            const path = lang === 'en'
+                ? `/${gamesBase}/${game.slug}`
+                : `/${lang}/${gamesBase}/${game.slug}`;
+
+            gameUrls.push({
+                url: `${BASE_URL}${path}`,
+                lastModified: new Date(), // or game.last_updated if available
+                changeFrequency: 'weekly',
+                priority: 0.8
+            });
+        });
+    });
+
+    return [...staticRoutes, ...categoryUrls, ...gameUrls];
 }

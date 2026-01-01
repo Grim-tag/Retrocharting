@@ -1,12 +1,64 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
+from sqlalchemy import or_
 from app.db.session import get_db
 from app.models.game import Game
 from app.models.product import Product
 from app.models.price_history import PriceHistory
 
 router = APIRouter()
+
+@router.get("/", response_model=List[dict])
+def read_games(
+    skip: int = 0,
+    limit: int = 50,
+    search: Optional[str] = None,
+    console: Optional[str] = None,
+    genre: Optional[str] = None,
+    sort: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    List Unified Games with filters.
+    Replaces /products for Catalog Views to avoid duplicates.
+    """
+    query = db.query(Game)
+    
+    if search:
+        query = query.filter(Game.title.ilike(f"%{search}%"))
+        
+    if console:
+        # Filter by console name. 
+        # Note: Games have 'console_name' column or similar? 
+        # Checking Game model... Game has 'console_name'.
+        query = query.filter(Game.console_name == console)
+        
+    if genre:
+        query = query.filter(Game.genre.ilike(f"%{genre}%"))
+        
+    # Sorting
+    if sort:
+        if sort == 'title_asc': query = query.order_by(Game.title.asc())
+        elif sort == 'title_desc': query = query.order_by(Game.title.desc())
+        # Price sorting is harder because price is on Variants.
+        # We might need to join Product or use a pre-calculated 'min_price' on Game if we had it.
+        # For now, simplistic sorting or rely on ID.
+        
+    games = query.offset(skip).limit(limit).all()
+    
+    return [
+        {
+            "id": g.id,
+            "title": g.title,
+            "slug": g.slug,
+            "console": g.console_name,
+            "image_url": g.image_url,
+            "min_price": None, # TODO: We could fetch this efficiently if needed
+            "variants_count": len(g.products) if g.products else 0
+        }
+        for g in games
+    ]
 
 @router.get("/{slug}")
 def get_game_by_slug(slug: str, db: Session = Depends(get_db)):
@@ -47,9 +99,6 @@ def get_game_by_slug(slug: str, db: Session = Depends(get_db)):
                 "currency": p.currency
             }
         })
-        
-        # Pick "Global Best Price" (e.g. from NTSC or simply lowest available?)
-        # For now, we just expose the variants. Frontend will decide what to show as "Main".
         
     return {
         "id": game.id,
@@ -93,3 +142,29 @@ def get_game_history(slug: str, db: Session = Depends(get_db)):
             })
             
     return history_data
+
+@router.get("/sitemap/list", response_model=List[dict])
+def sitemap_games(
+    limit: int = 10000, 
+    skip: int = 0,
+    db: Session = Depends(get_db)
+):
+    """
+    Returns lightweight Game data for XML sitemap generation.
+    Replaces product-based sitemap.
+    """
+    games = db.query(Game.slug, Game.title, Game.console_name)\
+        .order_by(Game.id.asc())\
+        .offset(skip)\
+        .limit(limit)\
+        .all()
+    
+    return [
+        {
+            "slug": g.slug,
+            "title": g.title,
+            "console": g.console_name,
+            "updated_at": None # TODO
+        }
+        for g in games
+    ]

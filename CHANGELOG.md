@@ -18,7 +18,9 @@ All notable changes to this project will be documented in this file.
 ## [2026-01-01] Phase 2: Migration & Optimization
 
 ### Added
-- **Frontend / SEO**: Implemented Smart Redirections (307/308) in `page.tsx`. Legacy Product URLs now auto-redirect to the new Unified Game Page if a link exists, preserving SEO juice.
+- **Frontend / SEO**: Updated `sitemap.xml` to list only Unified Game Pages (cleaned up duplicate product variants).
+- **Frontend / UI**: Refactored Category Pages to display unique Games instead of all regional variants.
+- **Frontend / SEO**: Implemented Smart Redirections (307/308) in `page.tsx`. Legacy Product URLs now auto-redirect to the new Unified Game Page if a link exists.
 - **Backend / API**: Enriched `/products/{id}` response with `game_slug` to facilitate frontend redirections.
 - **Backend / API**: Implemented new `/games` Router (`GET /api/v1/games/{slug}`) to serve unified Game Pages with aggregated regional variants.
 - **Backend / Fusion**: Implemented "Broom Sweep" logic in Consolidation Engine to forces the creation of a Game entry for "Orphan" items, ensuring 100% database coverage.
