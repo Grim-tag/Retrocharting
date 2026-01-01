@@ -59,6 +59,20 @@ export async function generateMetadata({ params, searchParams }: { params: Promi
             };
         }
 
+        // 1. Try unified game (slug based)
+        // If slug has no ID at end, or we want to prioritize game lookups
+        const { getGameBySlug } = await import('@/lib/api');
+        const game = await getGameBySlug(slug);
+
+        if (game) {
+            const shortConsoleName = formatConsoleName(game.console || "");
+            return {
+                title: `${game.title} ${shortConsoleName} ${dict.product.market.suffix} | RetroCharting`,
+                description: game.description || `Current market value for ${game.title} on ${game.console}`
+            };
+        }
+
+        // 2. Fallback Legacy
         const id = getIdFromSlug(slug);
         const product = await getProductById(id);
 
