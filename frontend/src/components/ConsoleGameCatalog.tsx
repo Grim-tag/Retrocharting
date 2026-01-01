@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Product, getGamesByConsole } from '@/lib/api';
+import { Product, getGamesByConsole, getProductsByConsole } from '@/lib/api';
 import { getGameUrl } from '@/lib/utils';
 import JsonLd, { generateItemListSchema } from '@/components/seo/JsonLd';
 import { generateConsoleSeo, FaqItem } from '@/lib/seo-utils';
@@ -77,53 +77,64 @@ export default function ConsoleGameCatalog({
         let isMounted = true;
 
         const fetchProgressively = async () => {
+            let useLegacyApi = false;
             try {
-                // Step 1: Fast Chunk (Next 200 items)
-                // Offset starts at 40 (since we have 40 from server)
-                // NOTE: We fetch 200 items.
                 setIsLoadingFull(true);
-                // Use productType prop here!
-                // SWITCH TO GAMES API
-                const fastChunk = await getGamesByConsole(systemName, 200, undefined, undefined, 40, undefined);
+
+                // --- STEP 1: Fast Chunk (First 200) ---
+                // Try Unified Games API first
+                let fastChunk: any[] = await getGamesByConsole(systemName, 200, undefined, undefined, 40, undefined);
+
+                // Fallback Detection
+                if (!fastChunk || fastChunk.length === 0) {
+                    console.warn("Games API returned 0 items. Falling back to Legacy Products API.");
+                    useLegacyApi = true;
+                    // Fetch legacy products
+                    fastChunk = await getProductsByConsole(systemName, 200, undefined, 'game', undefined, 40, undefined);
+                }
 
                 if (!isMounted) return;
 
                 if (fastChunk && fastChunk.length > 0) {
                     setAllProducts(prev => {
-                        // Adapt Games to Products
+                        // Adapt Games/Products to unified structure
                         const adapted: Product[] = fastChunk.map((g: any) => ({
                             id: g.id,
                             pricecharting_id: 0,
-                            product_name: g.title,
-                            console_name: g.console,
-                            loose_price: g.min_price || 0, // Placeholder
-                            cib_price: 0,
-                            new_price: 0,
+                            product_name: useLegacyApi ? g.product_name : g.title,
+                            console_name: useLegacyApi ? g.console_name : g.console,
+                            loose_price: useLegacyApi ? g.loose_price : (g.min_price || 0),
+                            cib_price: useLegacyApi ? g.cib_price : 0,
+                            new_price: useLegacyApi ? g.new_price : 0,
                             image_url: g.image_url,
                             genre: g.genre || "Unknown",
-                            updated_at: "", // dummy
-                            // Critical: We need to ensure links work.
-                            // getGameUrl uses slug? Or constructs it?
-                            // If we have game_slug, we should pass it.
-                            game_slug: g.slug
-                        } as unknown as Product));
+                            game_slug: useLegacyApi ? undefined : g.slug // Only Games have slugs
+                        }));
 
-                        // deduplicate just in case
+                        // Deduplicate
                         const existingIds = new Set(prev.map(p => p.id));
                         const newItems = adapted.filter(p => !existingIds.has(p.id));
                         return [...prev, ...newItems];
                     });
+                } else {
+                    // If absolutely nothing found even after fallback
+                    setIsLoadingFull(false);
+                    return;
                 }
 
-                // Step 2: Background Chunks (Recursively fetch the rest until empty)
-                // We fetched 40 (Server) + 200 (Fast) = 240. Next offset = 240.
-                // We assume max 2500 games total for now to allow full fetch.
+                // --- STEP 2: Background Loop ---
                 let currentOffset = 240;
                 const BATCH_SIZE = 500;
                 let hasNextBatch = true;
 
                 while (hasNextBatch && isMounted) {
-                    const batch = await getGamesByConsole(systemName, BATCH_SIZE, undefined, undefined, currentOffset, undefined);
+                    let batch: any[] = [];
+
+                    if (useLegacyApi) {
+                        batch = await getProductsByConsole(systemName, BATCH_SIZE, undefined, 'game', undefined, currentOffset, undefined);
+                    } else {
+                        batch = await getGamesByConsole(systemName, BATCH_SIZE, undefined, undefined, currentOffset, undefined);
+                    }
 
                     if (!isMounted) break;
 
@@ -132,16 +143,15 @@ export default function ConsoleGameCatalog({
                             const adapted: Product[] = batch.map((g: any) => ({
                                 id: g.id,
                                 pricecharting_id: 0,
-                                product_name: g.title,
-                                console_name: g.console,
-                                loose_price: g.min_price || 0,
-                                cib_price: 0,
-                                new_price: 0,
+                                product_name: useLegacyApi ? g.product_name : g.title,
+                                console_name: useLegacyApi ? g.console_name : g.console,
+                                loose_price: useLegacyApi ? g.loose_price : (g.min_price || 0),
+                                cib_price: useLegacyApi ? g.cib_price : 0,
+                                new_price: useLegacyApi ? g.new_price : 0,
                                 image_url: g.image_url,
                                 genre: g.genre || "Unknown",
-                                game_slug: g.slug
-                            } as unknown as Product));
-
+                                game_slug: useLegacyApi ? undefined : g.slug
+                            }));
                             const existingIds = new Set(prev.map(p => p.id));
                             const newItems = adapted.filter(p => !existingIds.has(p.id));
                             return [...prev, ...newItems];
@@ -152,7 +162,7 @@ export default function ConsoleGameCatalog({
                         hasNextBatch = false;
                     }
 
-                    // Small breathing room for UI thread
+                    // Throttle
                     await new Promise(r => setTimeout(r, 100));
                 }
 
