@@ -200,10 +200,14 @@ export default async function Page({
 
             // SEO REDIRECTION (Migration Phase 2)
             // If this legacy product is now part of a Unified Game, redirect to the Game Page.
+            /* 
+            // DISABLE REDIRECT TEMP: Backend API seems not ready/deployed yet. 
+            // Keeping users on legacy page to avoid 404s.
             if (product.game_slug) {
                 const { redirect } = await import('next/navigation');
                 redirect(`/${lang}/games/${product.game_slug}`);
             }
+            */
 
             return (
                 <GameDetailView
