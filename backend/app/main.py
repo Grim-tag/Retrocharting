@@ -100,7 +100,7 @@ app.include_router(collection.router, prefix="/api/v1/collection", tags=["collec
 app.include_router(sniper.router, prefix="/api/v1/sniper", tags=["sniper"])
 app.include_router(portfolio.router, prefix="/api/v1/portfolio", tags=["portfolio"])
 from app.routers import users
-print("Loading Public Profile Router...") # Force Rebuild 1
+print("Loading Public Profile Router... Force Deploy 2")
 app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
 from app.routers import comments
 app.include_router(comments.router, prefix="/api/v1/comments", tags=["comments"])
