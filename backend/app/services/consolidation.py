@@ -87,13 +87,15 @@ def run_consolidation(db: Session, dry_run: bool = False):
         
         processed_total = 0
         BATCH_SIZE = 1000 
+        last_id = 0
         
         while True:
-            # Fetch Batch (No Sort for Speed)
+            # Fetch Batch (ID Pagination for Re-runs)
+            # We process ALL products to ensure logic updates (like console normalization) apply to existing data.
             batch = db.query(Product).filter(
-                Product.game_id == None,
+                Product.id > last_id,
                 Product.product_name != None
-            ).limit(BATCH_SIZE).all()
+            ).order_by(Product.id.asc()).limit(BATCH_SIZE).all()
             
             if not batch:
                 break
@@ -101,6 +103,7 @@ def run_consolidation(db: Session, dry_run: bool = False):
             # Process Batch
             batch_groups = {}
             for p in batch:
+                last_id = p.id # Track progress
                 # Veto removed: "Collector" items caused infinite loop (skipped but never updated).
                 # We will process them normally.
                 # if "collector" in p.product_name.lower():
