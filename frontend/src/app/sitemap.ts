@@ -8,7 +8,7 @@ export const revalidate = 3600;
 const BASE_URL = 'https://retrocharting.com';
 
 // Simplified static sitemap generator
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const staticRoutes: MetadataRoute.Sitemap = [];
     const langs = ['en', 'fr'];
     const mainPages = ['', 'login', 'register'];

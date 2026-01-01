@@ -3,24 +3,19 @@
 import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Product, getGamesByConsole } from '@/lib/api'; // using Product interface compatible with Game list or need new one?
-// Actually api.ts 'Game' interface is what we get. But props.products might be 'Product[]'
-// We need to map or adapt.
-// For Catalog View, 'Game' has: id, title, slug, image_url, console.
-// 'Product' has: id, product_name, image_url, etc.
-// The component uses 'product_name', 'loose_price'.
-// 'Game' list response from backend has 'min_price' (placeholder).
-// We might need to update the frontend Component to accept 'Game[]' or adapt 'Game' to look like 'Product'.
-// Strategy: Adapt 'Game' to 'Product' shape for now to minimize component refactor.
-// Game list returns: { id, title, slug, console, image_url, min_price }
-// WeMap title -> product_name.
-// We map slug -> (used in getGameUrl? getGameUrl expects product).
-// Let's look at getGameUrl in lib/utils.
-
-// First, fix the import.
 import { Product, getGamesByConsole } from '@/lib/api';
-
-// ...
+import { getGameUrl } from '@/lib/utils';
+import JsonLd, { generateItemListSchema } from '@/components/seo/JsonLd';
+import { generateConsoleSeo, FaqItem } from '@/lib/seo-utils';
+import {
+    MagnifyingGlassIcon,
+    Squares2X2Icon,
+    ListBulletIcon,
+    ArrowsUpDownIcon
+} from '@heroicons/react/24/outline';
+import TableActions from '@/components/ui/TableActions';
+import { useCurrency } from '@/context/CurrencyContext';
+import { formatPrice } from '@/lib/currency';
 
 useEffect(() => {
     // If we already have a large list from props (e.g. dev mode or previous nav), skip.
