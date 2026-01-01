@@ -209,6 +209,10 @@ export default async function Page({
             );
         }
     } catch (error: any) {
+        // Next.js redirect() throws an error that should not be caught
+        if (error?.message === 'NEXT_REDIRECT' || error?.digest?.startsWith('NEXT_REDIRECT')) {
+            throw error;
+        }
         console.error("Critical Error in Page:", error);
         return (
             <div className="bg-[#0f121e] min-h-screen flex items-center justify-center text-white p-4">
