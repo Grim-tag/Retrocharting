@@ -19,6 +19,7 @@ All notable changes to this project will be documented in this file.
 - **Admin Dashboard**: Introduced Tabbed Interface (Dashboard, Amazon, Users, System) to restore missing backend functionality.
 - **Admin Dashboard**: Created `AmazonStats`, `UsersTable`, and `SystemTools` components for modular admin features.
 - **Backend**: Implemented DB-based logging (`ScraperLog`) for Fusion/Consolidation to handle timeout scenarios and ensure results are persisted.
+- **Backend**: Implemented "Broom Sweep" logic in Consolidation Engine to handle Orphans. It forces the creation of a Game entry for items that failed strict normalization, ensuring 100% database coverage.
 - **Backend**: Restored missing `refresh_prices_job` in `enrichment.py` to fix `ImportError` crashing the Scheduler on startup.
 - **Backend**: Removed "Collector" keyword veto logic which was causing an **Infinite Loop** (6M+ items processed). Skipped items were never updated in DB, causing them to be re-fetched indefinitely.
 - **Backend**: Updated Consolidation logic to prioritize **NTSC/Clean Titles** as the source for Global Game Pages. This prevents "(PAL)" or "(JP)" from appearing in the main page title/slug.

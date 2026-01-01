@@ -188,6 +188,47 @@ def run_consolidation(db: Session, dry_run: bool = False):
                     db.commit()
                     break
         
+        # BROOM PHASE: SWEEP ORPHANS
+        # Process items that failed normalization or were skipped.
+        # We force-create a Game for them using raw product_name/slug.
+        if not dry_run:
+            orphans = db.query(Product).filter(Product.game_id == None).all()
+            if orphans:
+                log_entry.error_message = f"Broom Sweep: Processing {len(orphans)} orphans..."
+                db.commit()
+                
+                for p in orphans:
+                    # Fallback Slug
+                    # If normalization failed (empty string), use raw product_name + ID to guarantee uniqueness
+                    raw_slug = create_slug(p.console_name, p.product_name)
+                    if not raw_slug or len(raw_slug) < 3: 
+                        raw_slug = f"{create_slug(p.console_name, 'orphan')}-{p.id}"
+                    
+                    # Check existence (rare collision case)
+                    existing_game = db.query(Game).filter(Game.slug == raw_slug).first()
+                    
+                    if not existing_game:
+                        existing_game = Game(
+                            console_name=p.console_name,
+                            title=p.product_name, # Use raw name
+                            slug=raw_slug,
+                            description=p.description,
+                            genre=p.genre,
+                            developer=p.developer,
+                            publisher=p.publisher,
+                            release_date=p.release_date
+                        )
+                        db.add(existing_game)
+                        db.flush()
+                        stats["games_created"] += 1
+                        stats["orphans_found"] = "Swept"
+                    
+                    p.game_id = existing_game.id
+                    p.variant_type = "Standard" # Default for orphans
+                    stats["products_linked"] += 1
+                
+                db.commit()
+        
         # Success
         log_entry.status = "success"
         log_entry.end_time = datetime.utcnow()
