@@ -82,6 +82,17 @@ export default function SystemTools() {
                         desc="Add missing columns (EAN, Publisher...)."
                         onClick={() => runAction('db/migrate', 'POST')}
                     />
+                    <div className="h-px bg-[#2a3142] my-2" />
+                    <ToolButton
+                        label="👻 Cleanup Ghost Games"
+                        desc="Delete 30k+ empty games lingering after fusion."
+                        onClick={() => runAction('consolidation/cleanup-ghosts', 'DELETE')}
+                    />
+                    <ToolButton
+                        label="💰 Price Recovery (N64..)"
+                        desc="Fetch missing CIB/New prices from PriceCharting."
+                        onClick={() => runAction('enrich/price-recovery', 'POST')}
+                    />
                 </div>
 
                 {actionMsg && (
@@ -117,7 +128,7 @@ export default function SystemTools() {
                                     <td className="p-3 text-white font-bold">{log.source}</td>
                                     <td className="p-3">
                                         <span className={`px-1 rounded ${log.status === 'success' ? 'bg-green-900 text-green-200' :
-                                                log.status === 'error' ? 'bg-red-900 text-red-200' : 'bg-yellow-900 text-yellow-200'
+                                            log.status === 'error' ? 'bg-red-900 text-red-200' : 'bg-yellow-900 text-yellow-200'
                                             }`}>
                                             {log.status}
                                         </span>

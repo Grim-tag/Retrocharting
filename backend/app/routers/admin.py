@@ -476,3 +476,21 @@ def cleanup_ghost_games(db: Session = Depends(get_db)):
         "deleted_ghosts": deleted_count,
         "message": f"Successfully removed {deleted_ghosts} ghost games."
     }
+
+@router.post("/enrich/price-recovery", dependencies=[Depends(get_admin_access)])
+def trigger_price_recovery(
+    limit: int = 500,
+    background_tasks: BackgroundTasks = None
+):
+    """
+    Triggers Phase 2: Price Recovery.
+    Fetches missing CIB/New prices from PriceCharting for items that have a Loose price but no CIB data.
+    """
+    from app.services.price_recovery import recover_missing_prices
+    
+    if background_tasks:
+        background_tasks.add_task(recover_missing_prices, limit=limit)
+        return {"message": f"Price Recovery started (Limit: {limit}). This may take a while."}
+    else:
+        recover_missing_prices(limit=limit)
+        return {"message": "Price Recovery completed (Sync Mode)."}
