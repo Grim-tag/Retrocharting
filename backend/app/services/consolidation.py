@@ -222,18 +222,19 @@ def run_consolidation(db: Session, dry_run: bool = False):
                             release_date=master_source.release_date
                         )
                         db.add(existing_game)
-                        db.flush() 
-                        # Update local map so next item with same slug (unlikely if grouped) finds it
-                        existing_games_map[slug] = existing_game
+                        # REMOVED db.flush() - Let SQLAlchemy handle FK resolution via relationship
                         
-                    stats["games_created"] += 1
+                        # Update local map so next item with same slug finds this UNCOMMITTED object
+                        existing_games_map[slug] = existing_game
+                        stats["games_created"] += 1
 
                 
                 # Link
                 if existing_game or dry_run:
                     for p in product_list:
                         if not dry_run:
-                            p.game_id = existing_game.id
+                            # Use Relationship to avoid needing .id (which requires flush)
+                            p.game = existing_game
                         
                         # Set Variant
                         if "(PAL)" in p.product_name or "PAL" in (p.product_name or ""):
