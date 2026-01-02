@@ -15,6 +15,18 @@ All notable changes to this project will be documented in this file.
 - **Routing**: Middleware now correctly rewrites default locale paths (missing prefix) to internal `/en/...` paths.
 - **Routing**: Fixed `middleware.ts` to properly exclude `sitemap.xml` and `robots.txt` from localization logic.
 
+## [2026-01-02] Post-Fusion Optimization & Price Recovery
+
+### Added
+- **Backend / Price Recovery**: Implemented `price_recovery` service to fetch missing CIB/New prices for N64/Retro games from PriceCharting (Unit: Cents management fixed).
+- **Backend / Cleanup**: Implemented `cleanup_ghosts` endpoint to remove "Ghost" Games (orphaned during fusion re-runs). 30k+ ghosts cleaned.
+- **Admin UI**: Added "Cleanup Ghost Games" and "Price Recovery (Batch 5000)" buttons to System Tools.
+- **Backend / Fusion**: Implemented "Turbo Mode" (Batch 2000), "Safe Mode" (Batch 50), and finally "Balanced Mode" (Batch 500) strategies to stabilize memory usage on Render Free Tier.
+
+### Fixed
+- **Fusion**: Fixed OOM crashes by optimizing `defer(Product.image_blob)` to prevent loading 126k images into RAM during logic checks.
+- **Admin**: Fixed variable name typo in ghost cleanup response (`deleted_ghosts` -> `deleted_count`).
+
 ## [2026-01-01] Phase 2: Migration & Optimization
 
 ### Added
