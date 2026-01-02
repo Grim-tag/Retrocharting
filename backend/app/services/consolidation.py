@@ -127,7 +127,7 @@ def run_consolidation(db: Session, dry_run: bool = False):
         }
         
         processed_total = 0
-        BATCH_SIZE = 1000 
+        BATCH_SIZE = 100  # Reduced from 1000 to prevent OOM/Stalls on Render Free Tier
         last_id = 0
         
         while True:
