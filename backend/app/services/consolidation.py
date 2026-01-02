@@ -127,7 +127,7 @@ def run_consolidation(db: Session, dry_run: bool = False):
         }
         
         processed_total = 0
-        BATCH_SIZE = 100  # Reduced from 1000 to prevent OOM/Stalls on Render Free Tier
+        BATCH_SIZE = 2000  # TURBO MODE: Now safe because we defer() images
         last_id = 0
         
         while True:
