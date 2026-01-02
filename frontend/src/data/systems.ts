@@ -41,34 +41,34 @@ export const groupedSystems: Record<string, string[]> = {
         "NES", "Super Nintendo", "Nintendo 64", "Gamecube", "Wii", "Wii U", "Nintendo Switch", "Nintendo Switch 2",
         "GameBoy", "GameBoy Color", "GameBoy Advance", "Nintendo DS", "Nintendo 3DS", "Virtual Boy", "Game & Watch",
         "Amiibo", "Amiibo Cards", "Pokemon Mini", "Club Nintendo Magazine", "Nintendo Power", "Official Nintendo Magazine",
-        "PAL NES", "PAL Super Nintendo", "PAL Nintendo 64", "PAL Gamecube", "PAL Wii", "PAL Wii U", "PAL Nintendo Switch", "PAL Nintendo Switch 2",
-        "PAL GameBoy", "PAL GameBoy Color", "PAL GameBoy Advance", "PAL Nintendo DS", "PAL Nintendo 3DS",
-        "Famicom", "Famicom Disk System", "Super Famicom", "JP Nintendo Switch", "JP Nintendo Switch 2", "JP Wii", "JP Wii U", "JP Gamecube", "JP Nintendo 64",
-        "JP Nintendo 3DS", "JP Nintendo DS", "JP GameBoy", "JP GameBoy Color", "JP GameBoy Advance", "JP Virtual Boy",
-        "Asian English Switch", "Asian English Switch 2", "Asian English Nintendo 3DS"
+        // "PAL NES", "PAL Super Nintendo", "PAL Nintendo 64", "PAL Gamecube", "PAL Wii", "PAL Wii U", "PAL Nintendo Switch", "PAL Nintendo Switch 2",
+        // "PAL GameBoy", "PAL GameBoy Color", "PAL GameBoy Advance", "PAL Nintendo DS", "PAL Nintendo 3DS",
+        // "Famicom", "Famicom Disk System", "Super Famicom", "JP Nintendo Switch", "JP Nintendo Switch 2", "JP Wii", "JP Wii U", "JP Gamecube", "JP Nintendo 64",
+        // "JP Nintendo 3DS", "JP Nintendo DS", "JP GameBoy", "JP GameBoy Color", "JP GameBoy Advance", "JP Virtual Boy",
+        // "Asian English Switch", "Asian English Switch 2", "Asian English Nintendo 3DS"
     ],
     "PlayStation": [
         "Playstation", "Playstation 2", "Playstation 3", "Playstation 4", "Playstation 5", "PSP", "Playstation Vita", "Pippin",
         "Official US Playstation Magazine",
-        "PAL Playstation", "PAL Playstation 2", "PAL Playstation 3", "PAL Playstation 4", "PAL Playstation 5", "PAL PSP", "PAL Playstation Vita",
-        "JP Playstation", "JP Playstation 2", "JP Playstation 3", "JP Playstation 4", "JP Playstation 5", "JP PSP", "JP Playstation Vita",
-        "Asian English Playstation 2", "Asian English Playstation 3", "Asian English Playstation 4", "Asian English Playstation 5", "Asian English Playstation Vita", "Asian English PSP"
+        // "PAL Playstation", "PAL Playstation 2", "PAL Playstation 3", "PAL Playstation 4", "PAL Playstation 5", "PAL PSP", "PAL Playstation Vita",
+        // "JP Playstation", "JP Playstation 2", "JP Playstation 3", "JP Playstation 4", "JP Playstation 5", "JP PSP", "JP Playstation Vita",
+        // "Asian English Playstation 2", "Asian English Playstation 3", "Asian English Playstation 4", "Asian English Playstation 5", "Asian English Playstation Vita", "Asian English PSP"
     ],
     "Xbox": [
         "Xbox", "Xbox 360", "Xbox One", "Xbox Series X",
-        "PAL Xbox", "PAL Xbox 360", "PAL Xbox One", "PAL Xbox Series X",
-        "JP Xbox", "JP Xbox 360", "JP Xbox One", "JP Xbox Series X",
-        "Asian English Xbox", "Asian Xbox 360"
+        // "PAL Xbox", "PAL Xbox 360", "PAL Xbox One", "PAL Xbox Series X",
+        // "JP Xbox", "JP Xbox 360", "JP Xbox One", "JP Xbox Series X",
+        // "Asian English Xbox", "Asian Xbox 360"
     ],
     "Sega": [
         "Sega Master System", "Sega Genesis", "Sega Mega Drive", "Sega Saturn", "Sega Dreamcast", "Sega Game Gear", "Sega CD", "Sega 32X", "Sega Pico",
         "Sega Saturn Magazine", "Dreamcast Magazine",
-        "PAL Sega Master System", "PAL Sega Mega Drive", "PAL Sega Saturn", "PAL Sega Dreamcast", "PAL Sega Game Gear", "PAL Sega Mega CD", "PAL Sega Pico", "PAL Mega Drive 32X",
-        "JP Sega Mega Drive", "JP Sega Saturn", "JP Sega Dreamcast", "JP Sega Game Gear", "JP Sega Mega CD", "JP Sega Mark III", "JP Sega Pico", "JP Super 32X"
+        // "PAL Sega Master System", "PAL Sega Mega Drive", "PAL Sega Saturn", "PAL Sega Dreamcast", "PAL Sega Game Gear", "PAL Sega Mega CD", "PAL Sega Pico", "PAL Mega Drive 32X",
+        // "JP Sega Mega Drive", "JP Sega Saturn", "JP Sega Dreamcast", "JP Sega Game Gear", "JP Sega Mega CD", "JP Sega Mark III", "JP Sega Pico", "JP Super 32X"
     ],
     "Atari": [
         "Atari 2600", "Atari 2800", "Atari 5200", "Atari 7800", "Atari 400", "Atari 800", "Atari XE", "Atari ST", "Atari Lynx", "Jaguar", "Jaguar CD",
-        "PAL Atari 2600", "PAL Atari 7800"
+        // "PAL Atari 2600", "PAL Atari 7800"
     ],
     "Other": [
         "3DO", "Neo Geo AES", "Neo Geo CD", "Neo Geo MVS", "Neo Geo Pocket Color",
@@ -85,10 +85,10 @@ export const groupedSystems: Record<string, string[]> = {
         "Macintosh", "Mattel Aquarius", "MegaZone", "Microvision", "Mini Arcade", "RCA Studio II", "Rumble U",
         "Sharp X68000", "Sinclair ZX81", "Stoneheart", "Supervision", "TI-99", "TRS-80", "Tiger R-Zone",
         "VTech Socrates", "Wholesale", "ZX Spectrum",
-        "PAL 3DO", "PAL Neo Geo Pocket", "PAL Neo Geo Pocket Color", "PAL Amiga CD32", "PAL Vectrex",
-        "PAL N-Gage", "PAL Evercade", "PAL Amstrad GX4000", "PAL MSX", "PAL MSX2",
-        "JP 3DO", "JP Neo Geo AES", "JP Neo Geo CD", "JP Neo Geo MVS", "JP Neo Geo Pocket", "JP Neo Geo Pocket Color",
-        "JP PC Engine", "JP PC Engine CD", "JP LaserActive", "JP MSX", "JP MSX2"
+        // "PAL 3DO", "PAL Neo Geo Pocket", "PAL Neo Geo Pocket Color", "PAL Amiga CD32", "PAL Vectrex",
+        // "PAL N-Gage", "PAL Evercade", "PAL Amstrad GX4000", "PAL MSX", "PAL MSX2",
+        // "JP 3DO", "JP Neo Geo AES", "JP Neo Geo CD", "JP Neo Geo MVS", "JP Neo Geo Pocket", "JP Neo Geo Pocket Color",
+        // "JP PC Engine", "JP PC Engine CD", "JP LaserActive", "JP MSX", "JP MSX2"
     ]
 };
 
