@@ -107,7 +107,7 @@ export default function ConsoleGameCatalog({
                             cib_price: useLegacyApi ? g.cib_price : 0,
                             new_price: useLegacyApi ? g.new_price : 0,
                             image_url: g.image_url,
-                            genre: g.genre || "Unknown",
+                            genre: g.genre || "",
                             game_slug: useLegacyApi ? undefined : g.slug // Only Games have slugs
                         }));
 
@@ -149,7 +149,7 @@ export default function ConsoleGameCatalog({
                                 cib_price: useLegacyApi ? g.cib_price : 0,
                                 new_price: useLegacyApi ? g.new_price : 0,
                                 image_url: g.image_url,
-                                genre: g.genre || "Unknown",
+                                genre: g.genre || "",
                                 game_slug: useLegacyApi ? undefined : g.slug
                             }));
                             const existingIds = new Set(prev.map(p => p.id));
