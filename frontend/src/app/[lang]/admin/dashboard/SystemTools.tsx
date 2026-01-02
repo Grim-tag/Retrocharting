@@ -90,8 +90,8 @@ export default function SystemTools() {
                     />
                     <ToolButton
                         label="💰 Price Recovery (N64..)"
-                        desc="Fetch missing CIB/New prices from PriceCharting."
-                        onClick={() => runAction('enrich/price-recovery', 'POST')}
+                        desc="Fetch missing CIB/New prices (Batch 5000)."
+                        onClick={() => runAction('enrich/price-recovery?limit=5000', 'POST')}
                     />
                 </div>
 
