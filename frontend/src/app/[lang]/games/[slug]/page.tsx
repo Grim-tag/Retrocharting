@@ -148,6 +148,17 @@ export default async function Page({
                 </main>
             );
         } else {
+            // CHECK REGIONAL REDIRECTS (Migration Phase 2)
+            // If user searches for /games/pal-playstation-5, we redirect to /games/playstation-5
+            if (slug.startsWith('pal-') || slug.startsWith('jp-') || slug.startsWith('asian-english-') || slug.startsWith('asian-')) {
+                const cleanSlug = slug.replace(/^(pal-|jp-|asian-english-|asian-)/, '');
+                // Verify the target actually exists
+                if (isSystemSlug(cleanSlug)) {
+                    const { redirect } = await import('next/navigation');
+                    redirect(`/${lang}/games/${cleanSlug}`);
+                }
+            }
+
             // --- GAME VIEW (Unified + Fallback) ---
 
             // 1. Try fetching as Unified Game (Slug-based)
