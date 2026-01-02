@@ -44,14 +44,55 @@ def normalize_console(console_name: str) -> str:
     
     return s.strip()
 
+def short_console_name(console_name: str) -> str:
+    """
+    Maps simplified console names to short codes for URLs.
+    """
+    s = console_name.lower().replace(" ", "").replace("-", "")
+    
+    mapping = {
+        "playstation5": "ps5",
+        "playstation4": "ps4",
+        "playstation3": "ps3",
+        "playstation2": "ps2",
+        "playstation1": "ps1",
+        "playstation": "ps1",
+        "xboxseriesx": "xbox-series-x",
+        "xboxone": "xbox-one",
+        "xbox360": "xbox-360",
+        "xbox": "xbox",
+        "nintendoswitch": "switch",
+        "nintendo64": "n64",
+        "gameboy": "gameboy",
+        "gameboyadvance": "gba",
+        "gameboycolor": "gbc",
+        "nintendods": "ds",
+        "nintendo3ds": "3ds",
+        "gamecube": "gamecube",
+        "supernintendo": "snes",
+        "nes": "nes",
+        "wii": "wii",
+        "wiiu": "wii-u",
+        "segafirst": "sega", # TODO: Better mapping
+    }
+    
+    for key, val in mapping.items():
+        if key in s:
+            return val
+            
+    # Fallback to normalized name if not mapped
+    return re.sub(r'[^a-z0-9]', '-', console_name.lower()).strip('-')
+
 def create_slug(console: str, title: str) -> str:
     """
-    Creates SEO friendly slug: "nintendo-64-super-mario-64"
+    Creates Unified URL: "title-shortconsole-prices-value"
+    Example: "aliens-vs-predator-ps3-prices-value"
     """
-    clean_console = re.sub(r'[^a-z0-9]', '-', console.lower()).strip('-')
+    clean_console = short_console_name(console)
     clean_title = re.sub(r'[^a-z0-9]', '-', title.lower()).strip('-')
     while '--' in clean_title: clean_title = clean_title.replace('--', '-')
-    return f"{clean_console}-{clean_title}"
+    
+    return f"{clean_title}-{clean_console}-prices-value"
 
 def run_consolidation(db: Session, dry_run: bool = False):
     """
