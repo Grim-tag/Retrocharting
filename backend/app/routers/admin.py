@@ -452,3 +452,27 @@ def run_consolidation_job(
         from app.services.consolidation import run_consolidation
         stats = run_consolidation(db, dry_run=dry_run)
         return {"status": "success", "mode": "dry_run" if dry_run else "live", "stats": stats}
+
+@router.delete("/consolidation/cleanup-ghosts", dependencies=[Depends(get_admin_access)])
+def cleanup_ghost_games(db: Session = Depends(get_db)):
+    """
+    Deletes 'Ghost' Games (Games with 0 variants/products).
+    These are leftovers from previous fusion runs or URL-structure changes.
+    """
+    from app.models.game import Game
+    from app.models.product import Product
+    
+    # Identify Ghosts: Games that have NO products check
+    # subquery: ids of games that ARE used
+    used_game_ids = db.query(Product.game_id).filter(Product.game_id != None).distinct()
+    
+    # Delete games NOT IN used_game_ids
+    deleted_count = db.query(Game).filter(not_(Game.id.in_(used_game_ids))).delete(synchronize_session=False)
+    
+    db.commit()
+    
+    return {
+        "status": "success",
+        "deleted_ghosts": deleted_count,
+        "message": f"Successfully removed {deleted_ghosts} ghost games."
+    }
