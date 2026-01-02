@@ -150,7 +150,7 @@ def run_consolidation(db: Session, dry_run: bool = False):
                         master_source = sorted_products[0]
                         
                         existing_game = Game(
-                            console_name=console,
+                            console_name=family_console,
                             title=master_source.product_name,
                             slug=slug,
                             description=master_source.description,
