@@ -474,7 +474,7 @@ def cleanup_ghost_games(db: Session = Depends(get_db)):
     return {
         "status": "success",
         "deleted_ghosts": deleted_count,
-        "message": f"Successfully removed {deleted_ghosts} ghost games."
+        "message": f"Successfully removed {deleted_count} ghost games."
     }
 
 @router.post("/enrich/price-recovery", dependencies=[Depends(get_admin_access)])
