@@ -127,7 +127,7 @@ def run_consolidation(db: Session, dry_run: bool = False):
         }
         
         processed_total = 0
-        BATCH_SIZE = 50  # SAFE MODE: Drastically reduced to pass the 76k bottleneck
+        BATCH_SIZE = 500  # BALANCED MODE: Compromise between Speed (2000) and Safety (50)
         last_id = 0
         
         while True:
