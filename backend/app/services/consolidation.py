@@ -163,11 +163,32 @@ def run_consolidation(db: Session, dry_run: bool = False):
                 batch_groups[key].append(p)
             
             # Commit Batch Groups
+            # OPTIMIZATION: Prefetch existing games for this batch to reduce DB roundtrips (N+1 Selects)
+            
+            # 1. Calc Slugs
+            slug_map = {} # (family_console, norm_name) -> slug
+            all_slugs = set()
+            
+            for key, _ in batch_groups.items():
+                (f_console, f_name) = key
+                s = create_slug(f_console, f_name)
+                slug_map[key] = s
+                all_slugs.add(s)
+            
+            # 2. Fetch Existing
+            existing_games_map = {} # slug -> Game Object
+            if all_slugs:
+                # Chunk slug lookup if too large (Postgres limit ~65k params, but safe side 1000 is fine)
+                found_games = db.query(Game).filter(Game.slug.in_(list(all_slugs))).all()
+                for fg in found_games:
+                    existing_games_map[fg.slug] = fg
+
+            # 3. Process Logic
             for (family_console, norm_name), product_list in batch_groups.items():
-                slug = create_slug(family_console, norm_name)
+                slug = slug_map[(family_console, norm_name)]
                 
-                # Check DB for existing match (Idempotency)
-                existing_game = db.query(Game).filter(Game.slug == slug).first()
+                # Check Local Map first
+                existing_game = existing_games_map.get(slug)
                 
                 if not existing_game:
                     if not dry_run:
@@ -202,6 +223,9 @@ def run_consolidation(db: Session, dry_run: bool = False):
                         )
                         db.add(existing_game)
                         db.flush() 
+                        # Update local map so next item with same slug (unlikely if grouped) finds it
+                        existing_games_map[slug] = existing_game
+                        
                     stats["games_created"] += 1
 
                 
