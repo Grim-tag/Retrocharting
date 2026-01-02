@@ -47,14 +47,25 @@ def read_games(
     
     results = []
     for g in games:
-        # Resolve Image from variants
+        # Resolve Image & Prices from variants
         image_url = None
+        min_loose = None
+        min_cib = None
+        min_new = None
+        
         if g.products:
-            # Find first check with image
+            # Sort by NTSC preference for image? Or just picking first valid.
             for p in g.products:
-                if p.image_url:
+                if not image_url and p.image_url:
                     image_url = p.image_url
-                    break
+                
+                # Calculate simple min prices across all regions
+                if p.loose_price and (min_loose is None or p.loose_price < min_loose):
+                    min_loose = p.loose_price
+                if p.cib_price and (min_cib is None or p.cib_price < min_cib):
+                    min_cib = p.cib_price
+                if p.new_price and (min_new is None or p.new_price < min_new):
+                    min_new = p.new_price
         
         results.append({
             "id": g.id,
@@ -62,7 +73,9 @@ def read_games(
             "slug": g.slug,
             "console": g.console_name,
             "image_url": image_url,
-            "min_price": None, 
+            "min_price": min_loose, # Legacy field for loose
+            "cib_price": min_cib,   # New exposed field
+            "new_price": min_new,   # New exposed field
             "variants_count": len(g.products) if g.products else 0
         })
 
