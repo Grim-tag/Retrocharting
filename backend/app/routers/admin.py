@@ -480,6 +480,7 @@ def cleanup_ghost_games(db: Session = Depends(get_db)):
 @router.post("/enrich/price-recovery", dependencies=[Depends(get_admin_access)])
 def trigger_price_recovery(
     limit: int = 500,
+    continuous: bool = False,
     background_tasks: BackgroundTasks = None
 ):
     """
@@ -489,8 +490,9 @@ def trigger_price_recovery(
     from app.services.price_recovery import recover_missing_prices
     
     if background_tasks:
-        background_tasks.add_task(recover_missing_prices, limit=limit)
-        return {"message": f"Price Recovery started (Limit: {limit}). This may take a while."}
+        background_tasks.add_task(recover_missing_prices, limit=limit, continuous=continuous)
+        mode_str = "Continuous Auto-Loop" if continuous else "Single Batch"
+        return {"message": f"Price Recovery started ({mode_str}, Limit: {limit}). Watch logs for progress."}
     else:
-        recover_missing_prices(limit=limit)
+        recover_missing_prices(limit=limit, continuous=continuous)
         return {"message": "Price Recovery completed (Sync Mode)."}

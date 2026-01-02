@@ -89,9 +89,9 @@ export default function SystemTools() {
                         onClick={() => runAction('consolidation/cleanup-ghosts', 'DELETE')}
                     />
                     <ToolButton
-                        label="💰 Price Recovery (N64..)"
-                        desc="Fetch missing CIB/New prices (Batch 5000)."
-                        onClick={() => runAction('enrich/price-recovery?limit=5000', 'POST')}
+                        label="🚀 Auto-Recover Prices"
+                        desc="Run in background with safety pauses until done."
+                        onClick={() => runAction('enrich/price-recovery?limit=2000&continuous=true', 'POST')}
                     />
                 </div>
 
