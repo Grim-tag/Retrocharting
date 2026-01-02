@@ -133,7 +133,11 @@ def run_consolidation(db: Session, dry_run: bool = False):
         while True:
             # Fetch Batch (ID Pagination for Re-runs)
             # We process ALL products to ensure logic updates (like console normalization) apply to existing data.
-            batch = db.query(Product).filter(
+            # OPTIMIZATION: Defer large binary columns (images) that kill performance on bulk fetches
+            batch = db.query(Product).options(
+                defer(Product.image_blob),
+                defer(Product.back_image_blob)
+            ).filter(
                 Product.id > last_id,
                 Product.product_name != None
             ).order_by(Product.id.asc()).limit(BATCH_SIZE).all()
