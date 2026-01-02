@@ -43,9 +43,10 @@ import { routeMap } from "./route-config";
 
 // --- URL Generation Helper ---
 // Generates: /[lang]/[games-slug]/[game-title]-[console]-[id]
+// OR Unified: /[lang]/[games-slug]/[unified-slug]
 // Example EN: /games/metal-gear-solid-ps1-4402
 // Example FR: /fr/jeux-video/metal-gear-solid-ps1-4402
-export function getGameUrl(product: { id: number; product_name: string; console_name: string; genre?: string }, lang: string = 'en') {
+export function getGameUrl(product: { id: number; product_name: string; console_name: string; genre?: string; game_slug?: string }, lang: string = 'en') {
     // 1. Determine base key (games vs accessories vs consoles)
     let baseKey = 'games';
     if (product.genre && ['Accessories', 'Controllers'].includes(product.genre)) {
@@ -55,6 +56,14 @@ export function getGameUrl(product: { id: number; product_name: string; console_
     }
 
     const baseSlug = routeMap[baseKey]?.[lang] || baseKey;
+
+    // 0. Priority: Unified Game Slug (New System)
+    if (product.game_slug) {
+        if (lang === 'en') {
+            return `/${baseSlug}/${product.game_slug}`;
+        }
+        return `/${lang}/${baseSlug}/${product.game_slug}`;
+    }
 
     // 2. Generate clean product slug (title-console)
     // We treat title as universal (no translation), just slugified
