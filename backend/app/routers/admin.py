@@ -462,13 +462,35 @@ def cleanup_ghost_games(db: Session = Depends(get_db)):
     from app.models.game import Game
     from app.models.product import Product
     
-    # Identify Ghosts: Games that have NO products check
-    # subquery: ids of games that ARE used
-    used_game_ids = db.query(Product.game_id).filter(Product.game_id != None).distinct()
+    # Identify Ghosts: Games that have NO products
+    # Fetch ALL Game IDs
+    all_game_ids = set(flat_id for (flat_id,) in db.query(Game.id).all())
     
-    # Delete games NOT IN used_game_ids
-    deleted_count = db.query(Game).filter(not_(Game.id.in_(used_game_ids))).delete(synchronize_session=False)
+    # Fetch USED Game IDs
+    used_game_ids = set(flat_id for (flat_id,) in db.query(Product.game_id).filter(Product.game_id != None).distinct().all())
     
+    # Calculate GHOSTS (All - Used)
+    ghost_ids = list(all_game_ids - used_game_ids)
+    
+    if not ghost_ids:
+        return {
+            "status": "success",
+            "deleted_ghosts": 0,
+            "message": "No ghost games found."
+        }
+    
+    # Batch delete to avoid massive query issues (optional, but safer)
+    # db.query(Game).filter(Game.id.in_(ghost_ids)).delete(synchronize_session=False)
+    
+    # Safe Delete Loop (Chunked 1000)
+    chunk_size = 1000
+    deleted_count = 0
+    
+    for i in range(0, len(ghost_ids), chunk_size):
+        chunk = ghost_ids[i:i + chunk_size]
+        count = db.query(Game).filter(Game.id.in_(chunk)).delete(synchronize_session=False)
+        deleted_count += count
+        
     db.commit()
     
     return {
