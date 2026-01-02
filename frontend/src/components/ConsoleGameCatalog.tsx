@@ -83,14 +83,25 @@ export default function ConsoleGameCatalog({
 
                 // --- STEP 1: Fast Chunk (First 200) ---
                 // Try Unified Games API first
-                let fastChunk: any[] = await getGamesByConsole(systemName, 200, undefined, undefined, 40, undefined);
+                // Determine Genre Filter based on productType
+                let genreFilter: string | undefined = undefined;
+                if (productType === 'console') genreFilter = 'Systems';
+                else if (productType === 'accessory') genreFilter = 'Accessories';
+                // If productType is 'game', we might want to EXCLUDE systems?
+                // For now, 'undefined' usually returns mostly games if the DB is dominated by games.
+                // But typically we don't want consoles in the game list either. 
+                // However, 'read_games' filter is 'ilike %genre%'. Excluding is harder without a specific flag.
+                // Let's assume 'game' type implies no specific filter, or maybe we should filter 'Game'?
+                // For now, fixing the Console tab (Systems) is the priority.
+
+                let fastChunk: any[] = await getGamesByConsole(systemName, 200, genreFilter, undefined, 40, undefined);
 
                 // Fallback Detection
                 if (!fastChunk || fastChunk.length === 0) {
                     console.warn("Games API returned 0 items. Falling back to Legacy Products API.");
                     useLegacyApi = true;
-                    // Fetch legacy products
-                    fastChunk = await getProductsByConsole(systemName, 200, undefined, 'game', undefined, 40, undefined);
+                    // Fetch legacy products matching the type
+                    fastChunk = await getProductsByConsole(systemName, 200, undefined, productType, undefined, 40, undefined);
                 }
 
                 if (!isMounted) return;
@@ -131,9 +142,9 @@ export default function ConsoleGameCatalog({
                     let batch: any[] = [];
 
                     if (useLegacyApi) {
-                        batch = await getProductsByConsole(systemName, BATCH_SIZE, undefined, 'game', undefined, currentOffset, undefined);
+                        batch = await getProductsByConsole(systemName, BATCH_SIZE, undefined, productType, undefined, currentOffset, undefined);
                     } else {
-                        batch = await getGamesByConsole(systemName, BATCH_SIZE, undefined, undefined, currentOffset, undefined);
+                        batch = await getGamesByConsole(systemName, BATCH_SIZE, genreFilter, undefined, currentOffset, undefined);
                     }
 
                     if (!isMounted) break;
