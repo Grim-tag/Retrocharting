@@ -122,6 +122,8 @@ def recover_missing_prices(limit: int = 500, continuous: bool = False):
             # Refresh DB session to avoid staleness issues in long loops
             db.close()
             db = SessionLocal()
+            # Re-attach log_entry to the new session
+            log_entry = db.merge(log_entry)
         
         log_entry.status = "success"
         log_entry.items_processed = total_processed
