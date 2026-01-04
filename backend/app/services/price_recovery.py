@@ -30,14 +30,28 @@ def recover_missing_prices(limit: int = 500, continuous: bool = False):
     try:
         while True:
             # Target: Items with Valid PC ID but Missing/Zero CIB Price
+            # PRIORITIZE: Items that have NEVER been scraped (last_scraped is None)
+            # OR Items that haven't been scraped in a long time (asc order)
+            from sqlalchemy import asc
+            
             candidates = db.query(Product).filter(
                 Product.pricecharting_id != None,
                 (Product.cib_price == None) | (Product.cib_price == 0.0)
-            ).limit(limit).all()
+            ).order_by(asc(Product.last_scraped)).limit(limit).all()
             
             if not candidates:
                 print("Price Recovery: No more candidates found.")
                 break
+            
+            # Additional check: If the 'oldest' candidate was just scraped recently (e.g. < 1 hour ago),
+            # it means we are looping over the same unsolvable items.
+            # We should stop or wait.
+            first_candidate = candidates[0]
+            if first_candidate.last_scraped:
+                time_since_scrape = (datetime.utcnow() - first_candidate.last_scraped).total_seconds()
+                if time_since_scrape < 3600: # 1 Hour
+                    print(f"Price Recovery: remaining candidates were scraped recently ({int(time_since_scrape)}s ago). Stopping to avoid hot-loop.")
+                    break
                 
             print(f"Price Recovery: Processing batch of {len(candidates)} items...")
             
@@ -45,12 +59,16 @@ def recover_missing_prices(limit: int = 500, continuous: bool = False):
             
             for p in candidates:
                 try:
+                    # ALWAYS update last_scraped to prevent sticking at top of queue
+                    p.last_scraped = datetime.utcnow()
+                    
                     # Rate Limiting (Conservative for PriceCharting)
                     time.sleep(1.0) 
                     
                     details = pricecharting_client.get_product(str(p.pricecharting_id))
                     if not details:
                         print(f" - [{p.product_name}] Failed to fetch details")
+                        # We still commit the last_scraped update so we don't retry immediately
                         continue
                         
                     def parse_price(val):
@@ -71,7 +89,6 @@ def recover_missing_prices(limit: int = 500, continuous: bool = False):
                     if "manual-only-price" in details:
                         p.manual_only_price = parse_price(details.get("manual-only-price"))
                         
-                    p.last_scraped = datetime.utcnow()
                     updated_count += 1
                     total_processed += 1
                     
