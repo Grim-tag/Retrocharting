@@ -59,6 +59,8 @@ def recover_missing_prices(limit: int = 500, continuous: bool = False):
             
             for p in candidates:
                 try:
+                    total_processed += 1
+                    
                     # ALWAYS update last_scraped to prevent sticking at top of queue
                     p.last_scraped = datetime.utcnow()
                     
@@ -66,34 +68,34 @@ def recover_missing_prices(limit: int = 500, continuous: bool = False):
                     time.sleep(1.0) 
                     
                     details = pricecharting_client.get_product(str(p.pricecharting_id))
-                    if not details:
+                    
+                    if details:
+                        def parse_price(val):
+                            if val is None: return 0.0
+                            return float(val) / 100.0 # Cents to Unit
+                        
+                        # Update Logic
+                        if "cib-price" in details:
+                            p.cib_price = parse_price(details.get("cib-price"))
+                        if "new-price" in details:
+                            p.new_price = parse_price(details.get("new-price"))
+                        if "loose-price" in details:
+                            p.loose_price = parse_price(details.get("loose-price"))
+                        
+                        # New fields
+                        if "box-only-price" in details:
+                            p.box_only_price = parse_price(details.get("box-only-price"))
+                        if "manual-only-price" in details:
+                            p.manual_only_price = parse_price(details.get("manual-only-price"))
+                            
+                        updated_count += 1
+                    else:
                         print(f" - [{p.product_name}] Failed to fetch details")
-                        # We still commit the last_scraped update so we don't retry immediately
-                        continue
-                        
-                    def parse_price(val):
-                        if val is None: return 0.0
-                        return float(val) / 100.0 # Cents to Unit
-                    
-                    # Update Logic
-                    if "cib-price" in details:
-                        p.cib_price = parse_price(details.get("cib-price"))
-                    if "new-price" in details:
-                        p.new_price = parse_price(details.get("new-price"))
-                    if "loose-price" in details:
-                        p.loose_price = parse_price(details.get("loose-price"))
-                    
-                    # New fields
-                    if "box-only-price" in details:
-                        p.box_only_price = parse_price(details.get("box-only-price"))
-                    if "manual-only-price" in details:
-                        p.manual_only_price = parse_price(details.get("manual-only-price"))
-                        
-                    updated_count += 1
-                    total_processed += 1
-                    
-                    # Commit frequently to save progress
-                    if updated_count % 10 == 0:
+
+                    # Periodic Commit & Log Update (Every 10 items, success or fail)
+                    if total_processed % 10 == 0:
+                        log_entry.items_processed = total_processed
+                        log_entry.error_message = f"In Progress: {total_processed} items..."
                         db.commit()
                         
                 except Exception as e:
