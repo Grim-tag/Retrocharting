@@ -124,7 +124,7 @@ export default function GameDetailView({
                                             {game.variants.map((v: any) => (
                                                 <tr key={v.id} className="border-b border-[#2a3142] hover:bg-[#2a3142]/50">
                                                     <td className="px-4 py-3 font-medium text-white flex items-center gap-2">
-                                                        {v.region.includes("PAL") ? "🇪🇺 PAL" : v.region.includes("JP") ? "🇯🇵 JP" : "🇺🇸 NTSC"}
+                                                        {v.region.includes("PAL") ? "🇪🇺 PAL" : v.region.includes("JP") ? "🇯🇵 JP" : (v.region === "Standard" || v.region.includes("NTSC")) ? "🇺🇸 NTSC" : v.region}
                                                         <span className="text-xs text-gray-500">({v.product_name})</span>
                                                     </td>
                                                     <td className="px-4 py-3">{v.prices.loose ? `${v.prices.currency} ${v.prices.loose}` : '-'}</td>

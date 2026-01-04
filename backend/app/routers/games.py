@@ -117,6 +117,8 @@ def get_game_by_slug(slug: str, db: Session = Depends(get_db)):
                 "loose": p.loose_price,
                 "cib": p.cib_price,
                 "new": p.new_price,
+                "box_only": p.box_only_price,
+                "manual_only": p.manual_only_price,
                 # Infer currency since Product model doesn't store it yet
                 "currency": "EUR" if p.variant_type == "PAL" else "JPY" if p.variant_type == "JP" else "USD"
             }
