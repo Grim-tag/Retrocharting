@@ -108,10 +108,24 @@ def get_game_by_slug(slug: str, db: Session = Depends(get_db)):
     )
     
     for p in sorted_products:
+        # Dynamic Region Detection
+        region = p.variant_type or "Unknown"
+        if region in ["Standard", "Unknown"]:
+            c_name = (p.console_name or "").upper()
+            p_name = (p.product_name or "").upper()
+            
+            if "PAL" in c_name or "PAL" in p_name:
+                region = "PAL"
+            elif "JP" in c_name or "JAPAN" in c_name or "JP" in p_name:
+                region = "JP"
+            elif "NTSC" in c_name: # Explicit NTSC
+                region = "NTSC"
+            # Else remains "Standard" (which frontend treats as NTSC)
+
         variants.append({
             "id": p.id,
-            "region": p.variant_type or "Unknown",
-            "product_name": p.product_name,
+            "region": region,
+            "product_name": p.product_name, # Original name for precision
             "image": p.image_url,
             "prices": {
                 "loose": p.loose_price,
