@@ -13,6 +13,7 @@ import WhyThisPrice from '@/components/WhyThisPrice';
 import { formatConsoleName, getGameUrl } from '@/lib/utils';
 import { generateVideoGameSchema } from '@/components/seo/JsonLd';
 import JsonLd from '@/components/seo/JsonLd';
+import GlobalMarketTable from '@/components/GlobalMarketTable';
 
 interface GameDetailViewProps {
     product: any;
@@ -103,10 +104,6 @@ export default function GameDetailView({
                             <PriceCard label={dict.product.conditions?.box_only || "Box Only"} price={product.box_only_price || 0} color="text-[#f59e0b]" definition={dict.product.conditions?.box_only || "Box Only"} />
                             <PriceCard label={dict.product.conditions?.manual_only || "Manual Only"} price={product.manual_only_price || 0} color="text-[#ef4444]" definition={dict.product.conditions?.manual_only || "Manual Only"} />
                         </div>
-
-                        import GlobalMarketTable from '@/components/GlobalMarketTable';
-
-                        // ... (inside the component)
 
                         {/* REGIONAL BREAKDOWN (Unified View Only) */}
                         {game && game.variants && (
