@@ -166,6 +166,20 @@ def analyze_images_endpoint(db: Session = Depends(get_db)):
         "examples_secured": examples_list
     }
 
+@router.get("/maintenance/debug-blob/{product_id}", dependencies=[Depends(get_admin_access)])
+def debug_blob_endpoint(product_id: int, db: Session = Depends(get_db)):
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        return {"error": "Product not found"}
+        
+    return {
+        "id": product.id,
+        "name": product.product_name,
+        "image_url": product.image_url,
+        "has_blob": product.image_blob is not None,
+        "blob_size": len(product.image_blob) if product.image_blob else 0
+    }
+
 @router.get("/stats", dependencies=[Depends(get_admin_access)])
 def get_admin_stats(db: Session = Depends(get_db)):
     """
