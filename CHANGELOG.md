@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-01-05 Phase 2b] Final Polish: SEO, Fusion & Redirection
+
+### Fixed
+- **Frontend / SEO**: Cleaned up Game Page Headers and Breadcrumbs. Removed "JP"/"PAL" regional tags from the main title to display properly Unified Names (e.g., "Air Boarder 64" instead of "Air Boarder 64 JP").
+- **Frontend / SEO**: Fixed bug where `GameDetailView` was using `console_name` (undefined) instead of `console`, falling back to legacy data.
+- **Backend / Database**: Added `game_slug` column to `Product` table (Schema Update) to enable efficient redirection from legacy URLs.
+- **Backend / Admin**: Added `/maintenance/fix-game-slugs` endpoint to backfill missing redirection data via SQL Join.
+- **SEO / Sitemap**: Enforced Canonical `/fr/games/` URLs in sitemap output, replacing mixed legacy directories.
+
+### Changed
+- **Strategy**: Pivoted from blocking on "Price Recovery" to prioritizing "Fusion" to unblock User Experience improvements immediately.
+- **Documentation**: Verified functionality of live redirects (JP -> Global) via specific testing on production.
+
 ## [2026-01-05] Sitemap, Consolidation & Stability
 
 ### Fixed
