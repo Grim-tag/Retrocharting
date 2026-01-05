@@ -32,6 +32,7 @@ class Product(Base):
 
     # Consolidation Fields
     game_id = Column(Integer, ForeignKey('games.id'), nullable=True, index=True) # Foreign Key to Game
+    game_slug = Column(String, nullable=True, index=True) # Redundant but fast field for URL redirects (avoid Join)
     variant_type = Column(String, default="Standard")   # Standard, Collector, etc.
 
     # Relationships

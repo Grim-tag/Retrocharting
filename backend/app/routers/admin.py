@@ -267,6 +267,7 @@ def migrate_db_schema(db: Session = Depends(get_db)):
             "ALTER TABLE products ADD COLUMN IF NOT EXISTS gtin VARCHAR",
             "ALTER TABLE products ADD COLUMN IF NOT EXISTS publisher VARCHAR",
             "ALTER TABLE products ADD COLUMN IF NOT EXISTS developer VARCHAR",
+            "ALTER TABLE products ADD COLUMN IF NOT EXISTS game_slug VARCHAR",
         ]
         
         results = []
