@@ -115,8 +115,8 @@ export default function ConsoleGameCatalog({
                             product_name: useLegacyApi ? g.product_name : g.title,
                             console_name: useLegacyApi ? g.console_name : g.console,
                             loose_price: useLegacyApi ? g.loose_price : (g.min_price || 0),
-                            cib_price: useLegacyApi ? g.cib_price : 0,
-                            new_price: useLegacyApi ? g.new_price : 0,
+                            cib_price: useLegacyApi ? g.cib_price : (g.cib_price || 0),
+                            new_price: useLegacyApi ? g.new_price : (g.new_price || 0),
                             image_url: g.image_url,
                             genre: g.genre || "",
                             game_slug: useLegacyApi ? undefined : g.slug // Only Games have slugs
@@ -157,8 +157,8 @@ export default function ConsoleGameCatalog({
                                 product_name: useLegacyApi ? g.product_name : g.title,
                                 console_name: useLegacyApi ? g.console_name : g.console,
                                 loose_price: useLegacyApi ? g.loose_price : (g.min_price || 0),
-                                cib_price: useLegacyApi ? g.cib_price : 0,
-                                new_price: useLegacyApi ? g.new_price : 0,
+                                cib_price: useLegacyApi ? g.cib_price : (g.cib_price || 0),
+                                new_price: useLegacyApi ? g.new_price : (g.new_price || 0),
                                 image_url: g.image_url,
                                 genre: g.genre || "",
                                 game_slug: useLegacyApi ? undefined : g.slug

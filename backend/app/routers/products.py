@@ -138,7 +138,8 @@ def get_genres(
     query = db.query(ProductModel.genre).filter(ProductModel.genre != None, ProductModel.genre != "")
     
     if console:
-        query = query.filter(ProductModel.console_name == console)
+        # Fuzzy match to handle "Nintendo 64" vs "JP Nintendo 64"
+        query = query.filter(ProductModel.console_name.ilike(f"%{console}%"))
         
     genres = query.distinct().order_by(ProductModel.genre).all()
     # Flatten list of tuples [('Action',), ('Adventure',)] -> ['Action', 'Adventure']

@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 ## [2026-01-05 Phase 2b] Final Polish: SEO, Fusion & Redirection
 
 ### Fixed
+- **Frontend / Catalog**: Fixed `ConsoleGameCatalog.tsx` hardcoding CIB/New prices to 0.00 when using Unified API. Now correctly displays backend price data.
+- **Backend / Catalog**: Fixed `get_genres` endpoint to use Fuzzy Matching (`ilike`), restoring the Genre Filter which was empty due to "Nintendo 64" vs "JP Nintendo 64" mismatches.
 - **Frontend / SEO**: Cleaned up Game Page Headers and Breadcrumbs. Removed "JP"/"PAL" regional tags from the main title to display properly Unified Names (e.g., "Air Boarder 64" instead of "Air Boarder 64 JP").
 - **Frontend / SEO**: Fixed bug where `GameDetailView` was using `console_name` (undefined) instead of `console`, falling back to legacy data.
 - **Backend / Database**: Added `game_slug` column to `Product` table (Schema Update) to enable efficient redirection from legacy URLs.
