@@ -86,11 +86,16 @@ export default function MarketAnalysis({ product, dict, lang }: MarketAnalysisPr
         : '';
 
     // 3. Generate Text
+    // Clean Console Name (Strip regions)
+    const cleanConsoleName = product.console_name
+        ? product.console_name.replace(/\(?(PAL|NTSC-U|NTSC-J|NTSC|JP|Japan|USA|EUR)\)?/gi, '').trim()
+        : 'Console';
+
     const generateText = (template: string) => {
         return template
             .replace(/{{name}}/g, product.product_name)
-            .replace(/{{console}}/g, product.console_name)
-            .replace(/{{platform}}/g, product.console_name) // Alias
+            .replace(/{{console}}/g, cleanConsoleName)
+            .replace(/{{platform}}/g, cleanConsoleName) // Alias
             .replace(/{{date_part}}/g, datePart)
             // .replace(/{{year}}/g, releaseYear) -- Removed as we use date_part now for the sentence context
             .replace(/{{loose_price}}/g, formatPrice(loosePrice))
