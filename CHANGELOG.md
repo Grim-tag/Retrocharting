@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [2026-01-05 Phase 2b] Final Polish: SEO, Fusion & Redirection
 
 ### Fixed
+- **Frontend / Config**: Added `rewrites` in `next.config.js` to proxy `/api/v1/*` requests to the Backend. This fixes the Broken Images (404) for stored blobs, which were trying to load from the frontend domain.
 - **Frontend / Catalog**: Fixed `ConsoleGameCatalog.tsx` hardcoding CIB/New prices to 0.00 when using Unified API. Now correctly displays backend price data.
 - **Backend / Catalog**: Fixed `get_genres` endpoint to use Fuzzy Matching (`ilike`), restoring the Genre Filter which was empty due to "Nintendo 64" vs "JP Nintendo 64" mismatches.
 - **Frontend / SEO**: Cleaned up Game Page Headers and Breadcrumbs. Removed "JP"/"PAL" regional tags from the main title to display properly Unified Names (e.g., "Air Boarder 64" instead of "Air Boarder 64 JP").
