@@ -81,6 +81,39 @@ def read_games(
 
     return results
 
+@router.get("/count")
+def count_games(db: Session = Depends(get_db)):
+    """
+    Returns total number of games.
+    """
+    return db.query(Game).count()
+
+@router.get("/sitemap/list", response_model=List[dict])
+def sitemap_games(
+    limit: int = 10000, 
+    skip: int = 0,
+    db: Session = Depends(get_db)
+):
+    """
+    Returns lightweight Game data for XML sitemap generation.
+    Replaces product-based sitemap.
+    """
+    games = db.query(Game.slug, Game.title, Game.console_name)\
+        .order_by(Game.id.asc())\
+        .offset(skip)\
+        .limit(limit)\
+        .all()
+    
+    return [
+        {
+            "slug": g.slug,
+            "title": g.title,
+            "console": g.console_name,
+            "updated_at": None # TODO
+        }
+        for g in games
+    ]
+
 @router.get("/{slug}")
 def get_game_by_slug(slug: str, db: Session = Depends(get_db)):
     """
@@ -180,36 +213,3 @@ def get_game_history(slug: str, db: Session = Depends(get_db)):
             })
             
     return history_data
-
-@router.get("/count")
-def count_games(db: Session = Depends(get_db)):
-    """
-    Returns total number of games.
-    """
-    return db.query(Game).count()
-
-@router.get("/sitemap/list", response_model=List[dict])
-def sitemap_games(
-    limit: int = 10000, 
-    skip: int = 0,
-    db: Session = Depends(get_db)
-):
-    """
-    Returns lightweight Game data for XML sitemap generation.
-    Replaces product-based sitemap.
-    """
-    games = db.query(Game.slug, Game.title, Game.console_name)\
-        .order_by(Game.id.asc())\
-        .offset(skip)\
-        .limit(limit)\
-        .all()
-    
-    return [
-        {
-            "slug": g.slug,
-            "title": g.title,
-            "console": g.console_name,
-            "updated_at": None # TODO
-        }
-        for g in games
-    ]

@@ -210,55 +210,29 @@ async def startup_event():
     except Exception as e:
         print(f"Startup Thread Error: {e}")
 
-    # 2. Initialize Scheduler (Crucial)
+    # 2. Initialize Scheduler (Disabled for Quiet Mode)
     try:
         from apscheduler.schedulers.background import BackgroundScheduler
-        from app.services.scraper import scrape_missing_data, backfill_history, backfill_ean_job
-        from app.services.enrichment import enrichment_job, refresh_prices_job
-        from app.services.pc_games_scraper import scrape_pc_games_bg_wrapper
-        from app.services.image_migration import migrate_images_job
+        # IMPORTS COMMENTED OUT TO AVOID UNUSED IMPORT ERRORS
+        # from app.services.scraper import scrape_missing_data, backfill_history, backfill_ean_job
+        # from app.services.enrichment import enrichment_job, refresh_prices_job
+        # from app.services.pc_games_scraper import scrape_pc_games_bg_wrapper
+        # from app.services.image_migration import migrate_images_job
 
         scheduler = BackgroundScheduler()
-        # SCRAPER: 2 workers max (defined in scraper.py), run every 1 min
-        scheduler.add_job(scrape_missing_data, 'interval', minutes=1, args=[110, 200], id='auto_scrape', replace_existing=True)
-        # PRICE REFRESH: Every 10 mins (Fast API)
-        scheduler.add_job(refresh_prices_job, 'interval', minutes=10, args=[300], id='price_refresh', replace_existing=True)
-        # HISTORY BACKFILL: Every 5 mins (Slow HTML)
-        scheduler.add_job(backfill_history, 'interval', minutes=5, args=[10], id='history_backfill', replace_existing=True)
-        scheduler.add_job(backfill_ean_job, 'interval', minutes=2, args=[50], id='ean_backfill', replace_existing=True)
-        # ENRICHMENT: Every 2 mins
-        scheduler.add_job(enrichment_job, 'interval', minutes=2, args=[110, 50], id='auto_enrich', replace_existing=True)
-        # PC GAMES: Every 12 hours
-        scheduler.add_job(scrape_pc_games_bg_wrapper, 'interval', hours=12, args=[200], id='pc_games_scrape', replace_existing=True)
-        # IMAGE MIGRATION: Every 5 mins
-        scheduler.add_job(migrate_images_job, 'interval', minutes=5, args=[50], id='auto_image_migrate', replace_existing=True)
+        # All jobs disabled...
         
-        # DISABLED FOR STABILITY/MIGRATION PHASE:
-        # User requested to stop all auto-scrapers while checking SEO/Migration.
         # scheduler.start()
         print("APScheduler configured but NOT STARTED (Quiet Mode).")
     except Exception as e:
         print(f"Failed to start scheduler: {e}")
 
     # 3. Quick Schema Check (Minimal)
-    # Removed synchronous call to prevent startup timeout/lock. 
-    # Handled by background thread now.
     pass
 
-    # 4. Start Amazon Workers (Free Tier Hack: Run inside Main Process)
+    # 4. Amazon Workers (Disabled)
     try:
-        from app.workers.amazon_worker import AmazonWorker
-        
-        def start_worker(region, console_filter=None):
-            worker = AmazonWorker(region, console_filter)
-            worker.run()
-
-        # Start 3 threads for PAL, NTSC, JP targeting Playstation 5 initially
-        # DISABLED FOR STABILITY: Launching 3 concurrent scrapers on startup causes OOM on 512MB instances.
-        # These should be triggered via Admin API or Scheduler one by one.
-        # threading.Thread(target=start_worker, args=("PAL", "Playstation 5"), daemon=True).start()
-        # threading.Thread(target=start_worker, args=("NTSC", "Playstation 5"), daemon=True).start()
-        # threading.Thread(target=start_worker, args=("JP", "Playstation 5"), daemon=True).start()
+        # from app.workers.amazon_worker import AmazonWorker
         
         print("Startup: Amazon Workers (auto-start disabled for stability). Use Admin Panel to trigger.")
     except Exception as e:
