@@ -23,7 +23,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
         // Hardcoded for robustness
         const staticUrls = [
             '/', '/en', '/fr',
-            '/games', '/fr/jeux-video',
+            '/games', '/fr/games',
             '/consoles', '/fr/consoles',
         ];
 
@@ -53,7 +53,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
                     const path = lang === 'en'
                         ? `/games/${game.slug}`
-                        : `/fr/jeux-video/${game.slug}`; // Hardcoded 'jeux-video' for safety
+                        : `/fr/games/${game.slug}`; // Changed to /games/ for canonical URL
 
                     xml += '  <url>\n';
                     xml += `    <loc>${BASE_URL}${path}</loc>\n`;
