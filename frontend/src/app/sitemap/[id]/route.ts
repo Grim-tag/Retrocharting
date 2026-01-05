@@ -5,7 +5,10 @@ import { systems } from '@/data/systems';
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
-    const id = parseInt(params.id);
+    // Check for potential .xml extension if URL rewriting didn't strip it? 
+    // Actually, [id] captures "0.xml".
+    const idStr = params.id.replace('.xml', '');
+    const id = parseInt(idStr);
     const BASE_URL = 'https://retrocharting.com';
     const limit = 10000;
     const skip = id * limit;

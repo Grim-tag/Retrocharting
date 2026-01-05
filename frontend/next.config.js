@@ -15,6 +15,11 @@ const nextConfig = {
                 destination: '/fr/games/:slug*',
                 permanent: true,
             },
+            {
+                source: '/sitemap_index.xml',
+                destination: '/sitemap.xml',
+                permanent: true,
+            },
         ];
     },
 };
