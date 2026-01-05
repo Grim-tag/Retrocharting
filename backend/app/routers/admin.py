@@ -135,6 +135,32 @@ def enrich_pc_games_endpoint(
     background_tasks.add_task(enrichment_job, max_duration=1200, limit=limit, console_filter="PC Games")
     return {"status": "success", "message": f"Started IGDB enrichment for {limit} PC games (background)."}
 
+@router.get("/maintenance/analyze-images", dependencies=[Depends(get_admin_access)])
+def analyze_images_endpoint(db: Session = Depends(get_db)):
+    """
+    Report on Image Source Distribution (Local vs Cloudinary vs External).
+    """
+    total = db.query(Product).filter(Product.image_url != None).count()
+    local = db.query(Product).filter(Product.image_url.contains("retrocharting")).count()
+    cloudinary = db.query(Product).filter(Product.image_url.contains("cloudinary")).count()
+    pricecharting = db.query(Product).filter(Product.image_url.contains("pricecharting")).count()
+    igdb = db.query(Product).filter(Product.image_url.contains("igdb")).count()
+    
+    # Safety Net: Blob exists but URL is external
+    blob_recoverable = db.query(Product).filter(
+        Product.image_blob != None,
+        ~Product.image_url.contains("retrocharting")
+    ).count()
+    
+    return {
+        "total": total,
+        "local_secured": local,
+        "broken_cloudinary": cloudinary,
+        "external_pc": pricecharting,
+        "external_igdb": igdb,
+        "recoverable_blobs": blob_recoverable
+    }
+
 @router.get("/stats", dependencies=[Depends(get_admin_access)])
 def get_admin_stats(db: Session = Depends(get_db)):
     """
