@@ -32,11 +32,14 @@ export default function GameDetailView({
 }: GameDetailViewProps) {
     const gamesSlug = lang === 'en' ? 'games' : 'games'; // TODO: proper routeMap
 
-    const shortConsoleName = formatConsoleName(product.console_name);
+    const displayTitle = game?.title || product.product_name;
+    const displayConsole = game?.console_name || product.console_name;
+    const shortConsoleName = formatConsoleName(displayConsole);
+
     const breadcrumbItems = [
         { label: dict.header.nav.video_games, href: `/${lang}/${gamesSlug}` },
-        { label: product.console_name, href: `/${lang}/${gamesSlug}/${product.console_name.toLowerCase().replace(/ /g, '-')}` },
-        { label: product.product_name, href: getGameUrl(product, lang) }
+        { label: displayConsole, href: `/${lang}/${gamesSlug}/${displayConsole.toLowerCase().replace(/ /g, '-')}` },
+        { label: displayTitle, href: getGameUrl(product, lang) }
     ];
     const schema = generateVideoGameSchema(product, `https://retrocharting.com${getGameUrl(product, lang)}`);
 
@@ -53,7 +56,7 @@ export default function GameDetailView({
                 {/* --- HEADER --- */}
                 <div className="flex items-start justify-between gap-4 mb-6">
                     <h1 className="text-2xl sm:text-4xl font-bold text-white leading-tight">
-                        {product.product_name} {shortConsoleName} {dict.product.market.suffix}
+                        {displayTitle} {shortConsoleName} {dict.product.market.suffix}
                     </h1>
                     <div className="hidden sm:block">
                         {/* Only show specific region badge if NOT in Unified Mode. Unified Mode shows regions in the Global Market table. */}
