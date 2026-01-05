@@ -2,7 +2,7 @@ import { MetadataRoute } from 'next';
 import { routeMap } from '@/lib/route-config';
 import { systems } from '@/data/systems';
 
-export const dynamic = 'force-static';
+// export const dynamic = 'force-static'; // Removed to allow ISR with API
 export const revalidate = 3600;
 
 const BASE_URL = 'https://retrocharting.com';
