@@ -15,6 +15,23 @@ All notable changes to this project will be documented in this file.
 - **Routing**: Middleware now correctly rewrites default locale paths (missing prefix) to internal `/en/...` paths.
 - **Routing**: Fixed `middleware.ts` to properly exclude `sitemap.xml` and `robots.txt` from localization logic.
 
+## [2026-01-04] Debugging Price Display & Recovery
+
+### Fixed
+- **Frontend / Pricing**: Resolved issue where `box_only_price` and `manual_only_price` were not displayed on Product Pages.
+- **Frontend / Market Table**: Fixed "Global Market Prices" table to correctly display listings from all regions (PAL/NTSC/JP), not just NTSC.
+- **Backend / API**: Updated `games.py` to expose full price data (CIB, Loose, New, Box Only, Manual Only) and regional variants in the API response.
+- **SEO / Redirections**: Added permanent 301 redirection for legacy `/fr/jeux-video/*` URLs to `/fr/games/*` to rescue SEO ranking.
+- **SEO / Robots**: Fixed `robots.txt` conflict (removed static file) and pointed `robots.ts` to the correct `sitemap.xml`.
+- **SEO / Sitemap**: Removed broken `sitemap_index.xml` implementation and consolidated on standard `sitemap.ts`.
+- **SEO / Sitemap**: Implemented **Next.js `generateSitemaps`** to split sitemap into 10k-game chunks (supporting 84k+ games / 168k URLs).
+
+### Added
+- **Backend / API**: Added `GET /api/v1/games/count` endpoint to support scalable sitemap generation.
+
+### Changed
+- **Price Recovery**: ongoing monitoring of the `price_recovery_auto` task (30k+ items processed).
+
 ## [2026-01-02] Post-Fusion Optimization & Price Recovery
 
 ### Added

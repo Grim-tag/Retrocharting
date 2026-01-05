@@ -7,86 +7,102 @@ export const revalidate = 3600;
 
 const BASE_URL = 'https://retrocharting.com';
 
+// Next.js 13+ generateSitemaps
+export async function generateSitemaps() {
+    const { getGamesCount } = await import('@/lib/api');
+    const total = await getGamesCount();
+    const limit = 10000;
+    const numSitemaps = Math.ceil(total / limit);
+
+    // Returns [{ id: 0 }, { id: 1 }, ...]
+    return Array.from({ length: numSitemaps }, (_, i) => ({ id: i }));
+}
+
 // Simplified static sitemap generator
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+export default async function sitemap({ id }: { id: number }): Promise<MetadataRoute.Sitemap> {
     const staticRoutes: MetadataRoute.Sitemap = [];
-    const langs = ['en', 'fr'];
-    const mainPages = ['', 'login', 'register'];
+    const limit = 10000;
+    const skip = id * limit;
 
-    // 1. Home / Login / Register
-    langs.forEach(lang => {
-        mainPages.forEach(page => {
-            const path = page === '' ? (lang === 'en' ? '/' : `/${lang}`) : `/${lang}/${page}`;
-            const url = page === '' && lang === 'en' ? BASE_URL : `${BASE_URL}${path}`;
+    // Only include static pages in the first sitemap (id=0) to avoid duplication
+    if (id === 0) {
+        const langs = ['en', 'fr'];
+        const mainPages = ['', 'login', 'register'];
 
-            staticRoutes.push({
-                url,
-                lastModified: new Date(),
-                changeFrequency: 'daily',
-                priority: page === '' ? 1.0 : 0.5,
-            });
-        });
-
-        // 2. Main Categories (Games, Consoles, etc)
-        ['games', 'consoles', 'accessories', 'collectibles'].forEach(key => {
-            const slug = routeMap[key]?.[lang] || key;
-            const path = lang === 'en' ? `/${slug}` : `/${lang}/${slug}`;
-            staticRoutes.push({
-                url: `${BASE_URL}${path}`,
-                lastModified: new Date(),
-                changeFrequency: 'daily',
-                priority: 0.9,
-            });
-        });
-    });
-
-    // 3. System Category Pages (Games / hardware / accessories per console)
-    const categoryUrls: MetadataRoute.Sitemap = [];
-    const systemSlugs = systems.map(s => s.toLowerCase().replace(/ /g, '-').replace(/&/g, '%26'));
-
-    systemSlugs.forEach(systemSlug => {
+        // 1. Home / Login / Register
         langs.forEach(lang => {
-            // Games Catalog
-            const gamesBase = routeMap['games']?.[lang] || 'games';
-            const gamesPath = lang === 'en' ? `/${gamesBase}/${systemSlug}` : `/${lang}/${gamesBase}/${systemSlug}`;
-            categoryUrls.push({
-                url: `${BASE_URL}${gamesPath}`,
-                lastModified: new Date(),
-                changeFrequency: 'daily',
-                priority: 0.9,
+            mainPages.forEach(page => {
+                const path = page === '' ? (lang === 'en' ? '/' : `/${lang}`) : `/${lang}/${page}`;
+                const url = page === '' && lang === 'en' ? BASE_URL : `${BASE_URL}${path}`;
+
+                staticRoutes.push({
+                    url,
+                    lastModified: new Date(),
+                    changeFrequency: 'daily',
+                    priority: page === '' ? 1.0 : 0.5,
+                });
             });
 
-            // Hardware Catalog
-            const consolesBase = routeMap['consoles']?.[lang] || 'consoles';
-            const consolesPath = lang === 'en' ? `/${consolesBase}/${systemSlug}` : `/${lang}/${consolesBase}/${systemSlug}`;
-            categoryUrls.push({
-                url: `${BASE_URL}${consolesPath}`,
-                lastModified: new Date(),
-                changeFrequency: 'weekly',
-                priority: 0.9,
-            });
-
-            // Accessories Catalog
-            const accessoriesBase = routeMap['accessories']?.[lang] || 'accessories';
-            const accessoriesPath = lang === 'en'
-                ? `/${accessoriesBase}/console/${systemSlug}`
-                : `/${lang}/${accessoriesBase}/console/${systemSlug}`;
-
-            categoryUrls.push({
-                url: `${BASE_URL}${accessoriesPath}`,
-                lastModified: new Date(),
-                changeFrequency: 'weekly',
-                priority: 0.8,
+            // 2. Main Categories (Games, Consoles, etc)
+            ['games', 'consoles', 'accessories', 'collectibles'].forEach(key => {
+                const slug = routeMap[key]?.[lang] || key;
+                const path = lang === 'en' ? `/${slug}` : `/${lang}/${slug}`;
+                staticRoutes.push({
+                    url: `${BASE_URL}${path}`,
+                    lastModified: new Date(),
+                    changeFrequency: 'daily',
+                    priority: 0.9,
+                });
             });
         });
-    });
 
-    // 4. Products / Games (Dynamic)
+        // 3. System Category Pages (Games / hardware / accessories per console)
+        const systemSlugs = systems.map(s => s.toLowerCase().replace(/ /g, '-').replace(/&/g, '%26'));
+        systemSlugs.forEach(systemSlug => {
+            langs.forEach(lang => {
+                // Games Catalog
+                const gamesBase = routeMap['games']?.[lang] || 'games';
+                const gamesPath = lang === 'en' ? `/${gamesBase}/${systemSlug}` : `/${lang}/${gamesBase}/${systemSlug}`;
+                staticRoutes.push({
+                    url: `${BASE_URL}${gamesPath}`,
+                    lastModified: new Date(),
+                    changeFrequency: 'daily',
+                    priority: 0.9,
+                });
+
+                // Hardware Catalog
+                const consolesBase = routeMap['consoles']?.[lang] || 'consoles';
+                const consolesPath = lang === 'en' ? `/${consolesBase}/${systemSlug}` : `/${lang}/${consolesBase}/${systemSlug}`;
+                staticRoutes.push({
+                    url: `${BASE_URL}${consolesPath}`,
+                    lastModified: new Date(),
+                    changeFrequency: 'weekly',
+                    priority: 0.9,
+                });
+
+                // Accessories Catalog
+                const accessoriesBase = routeMap['accessories']?.[lang] || 'accessories';
+                const accessoriesPath = lang === 'en'
+                    ? `/${accessoriesBase}/console/${systemSlug}`
+                    : `/${lang}/${accessoriesBase}/console/${systemSlug}`;
+
+                staticRoutes.push({
+                    url: `${BASE_URL}${accessoriesPath}`,
+                    lastModified: new Date(),
+                    changeFrequency: 'weekly',
+                    priority: 0.8,
+                });
+            });
+        });
+    }
+
+    // 4. Products / Games (Dynamic) - Fetched per chunk based on ID
     const { getSitemapGames } = await import('@/lib/api');
-    // Fetch top games (limit 15000 for now, sitemap max is 50k usually)
-    const games = await getSitemapGames(15000, 0);
+    const games = await getSitemapGames(limit, skip);
 
     const gameUrls: MetadataRoute.Sitemap = [];
+    const langs = ['en', 'fr'];
+
     games.forEach((game: any) => {
         langs.forEach(lang => {
             const gamesBase = routeMap['games']?.[lang] || 'games';
@@ -96,12 +112,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
             gameUrls.push({
                 url: `${BASE_URL}${path}`,
-                lastModified: new Date(), // or game.last_updated if available
+                lastModified: new Date(), // updated_at if available
                 changeFrequency: 'weekly',
                 priority: 0.8
             });
         });
     });
 
-    return [...staticRoutes, ...categoryUrls, ...gameUrls];
+    return [...staticRoutes, ...gameUrls];
 }

@@ -266,6 +266,16 @@ export async function getGamesByConsole(consoleName: string, limit = 50, genre?:
     }
 }
 
+export async function getGamesCount(): Promise<number> {
+    try {
+        const response = await apiClient.get(`/games/count`);
+        return response.data;
+    } catch (error) {
+        console.error("Error fetching game count:", error);
+        return 0;
+    }
+}
+
 export async function getSitemapGames(limit: number = 10000, skip: number = 0): Promise<any[]> {
     try {
         const response = await apiClient.get(`/games/sitemap/list?limit=${limit}&skip=${skip}`);

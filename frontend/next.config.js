@@ -8,6 +8,15 @@ const nextConfig = {
     },
     productionBrowserSourceMaps: false,
     images: { unoptimized: true },
+    async redirects() {
+        return [
+            {
+                source: '/fr/jeux-video/:slug*',
+                destination: '/fr/games/:slug*',
+                permanent: true,
+            },
+        ];
+    },
 };
 
 module.exports = nextConfig;

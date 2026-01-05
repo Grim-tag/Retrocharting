@@ -181,6 +181,13 @@ def get_game_history(slug: str, db: Session = Depends(get_db)):
             
     return history_data
 
+@router.get("/count")
+def count_games(db: Session = Depends(get_db)):
+    """
+    Returns total number of games.
+    """
+    return db.query(Game).count()
+
 @router.get("/sitemap/list", response_model=List[dict])
 def sitemap_games(
     limit: int = 10000, 
