@@ -511,10 +511,13 @@ def trigger_price_recovery(
     """
     from app.services.price_recovery import recover_missing_prices
     
+    # SAFETY CAP: Enforce max 500 items per batch to prevent OOM on standard instances (512MB RAM)
+    safe_limit = min(limit, 500)
+    
     if background_tasks:
-        background_tasks.add_task(recover_missing_prices, limit=limit, continuous=continuous)
+        background_tasks.add_task(recover_missing_prices, limit=safe_limit, continuous=continuous)
         mode_str = "Continuous Auto-Loop" if continuous else "Single Batch"
-        return {"message": f"Price Recovery started ({mode_str}, Limit: {limit}). Watch logs for progress."}
+        return {"message": f"Price Recovery started ({mode_str}, Limit: {safe_limit} [Capped]). Watch logs for progress."}
     else:
-        recover_missing_prices(limit=limit, continuous=continuous)
+        recover_missing_prices(limit=safe_limit, continuous=continuous)
         return {"message": "Price Recovery completed (Sync Mode)."}

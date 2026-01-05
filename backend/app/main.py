@@ -233,8 +233,10 @@ async def startup_event():
         # IMAGE MIGRATION: Every 5 mins
         scheduler.add_job(migrate_images_job, 'interval', minutes=5, args=[50], id='auto_image_migrate', replace_existing=True)
         
-        scheduler.start()
-        print("APScheduler started.")
+        # DISABLED FOR STABILITY/MIGRATION PHASE:
+        # User requested to stop all auto-scrapers while checking SEO/Migration.
+        # scheduler.start()
+        print("APScheduler configured but NOT STARTED (Quiet Mode).")
     except Exception as e:
         print(f"Failed to start scheduler: {e}")
 
@@ -252,11 +254,13 @@ async def startup_event():
             worker.run()
 
         # Start 3 threads for PAL, NTSC, JP targeting Playstation 5 initially
-        threading.Thread(target=start_worker, args=("PAL", "Playstation 5"), daemon=True).start()
-        threading.Thread(target=start_worker, args=("NTSC", "Playstation 5"), daemon=True).start()
-        threading.Thread(target=start_worker, args=("JP", "Playstation 5"), daemon=True).start()
+        # DISABLED FOR STABILITY: Launching 3 concurrent scrapers on startup causes OOM on 512MB instances.
+        # These should be triggered via Admin API or Scheduler one by one.
+        # threading.Thread(target=start_worker, args=("PAL", "Playstation 5"), daemon=True).start()
+        # threading.Thread(target=start_worker, args=("NTSC", "Playstation 5"), daemon=True).start()
+        # threading.Thread(target=start_worker, args=("JP", "Playstation 5"), daemon=True).start()
         
-        print("Startup: Amazon Workers (PAL/NTSC/JP) started in background threads.")
+        print("Startup: Amazon Workers (auto-start disabled for stability). Use Admin Panel to trigger.")
     except Exception as e:
         print(f"Startup: Failed to start Amazon Workers: {e}")
 
