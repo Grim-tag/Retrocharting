@@ -8,14 +8,24 @@ export const revalidate = 3600;
 const BASE_URL = 'https://retrocharting.com';
 
 // Next.js 13+ generateSitemaps
+// Next.js 13+ generateSitemaps
 export async function generateSitemaps() {
-    const { getGamesCount } = await import('@/lib/api');
-    const total = await getGamesCount();
-    const limit = 10000;
-    const numSitemaps = Math.ceil(total / limit);
+    try {
+        const { getGamesCount } = await import('@/lib/api');
+        const total = await getGamesCount();
+        const limit = 10000;
+        const numSitemaps = Math.ceil(total / limit);
 
-    // Returns [{ id: 0 }, { id: 1 }, ...]
-    return Array.from({ length: numSitemaps }, (_, i) => ({ id: i }));
+        // Safety check
+        if (numSitemaps <= 0) return [{ id: 0 }];
+
+        // Returns [{ id: 0 }, { id: 1 }, ...]
+        return Array.from({ length: numSitemaps }, (_, i) => ({ id: i }));
+    } catch (error) {
+        console.error("Sitemap Generation Error (Count):", error);
+        // Fallback: Just return one sitemap (id=0) containing static routes so we verify XML works
+        return [{ id: 0 }];
+    }
 }
 
 // Simplified static sitemap generator
@@ -97,27 +107,32 @@ export default async function sitemap({ id }: { id: number }): Promise<MetadataR
     }
 
     // 4. Products / Games (Dynamic) - Fetched per chunk based on ID
-    const { getSitemapGames } = await import('@/lib/api');
-    const games = await getSitemapGames(limit, skip);
-
     const gameUrls: MetadataRoute.Sitemap = [];
-    const langs = ['en', 'fr'];
+    try {
+        const { getSitemapGames } = await import('@/lib/api');
+        const games = await getSitemapGames(limit, skip);
 
-    games.forEach((game: any) => {
-        langs.forEach(lang => {
-            const gamesBase = routeMap['games']?.[lang] || 'games';
-            const path = lang === 'en'
-                ? `/${gamesBase}/${game.slug}`
-                : `/${lang}/${gamesBase}/${game.slug}`;
+        const langs = ['en', 'fr'];
 
-            gameUrls.push({
-                url: `${BASE_URL}${path}`,
-                lastModified: new Date(), // updated_at if available
-                changeFrequency: 'weekly',
-                priority: 0.8
+        games.forEach((game: any) => {
+            langs.forEach(lang => {
+                const gamesBase = routeMap['games']?.[lang] || 'games';
+                const path = lang === 'en'
+                    ? `/${gamesBase}/${game.slug}`
+                    : `/${lang}/${gamesBase}/${game.slug}`;
+
+                gameUrls.push({
+                    url: `${BASE_URL}${path}`,
+                    lastModified: new Date(), // updated_at if available
+                    changeFrequency: 'weekly',
+                    priority: 0.8
+                });
             });
         });
-    });
+    } catch (e) {
+        console.error(`Sitemap Data Error (ID ${id}):`, e);
+        // Continue with just static routes
+    }
 
     return [...staticRoutes, ...gameUrls];
 }
