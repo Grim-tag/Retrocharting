@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-01-05] Sitemap, Consolidation & Stability
+
+### Fixed
+- **SEO / Sitemap**: Completely replaced Next.js `sitemap.ts` (which caused HTML vs XML conflicts) with manual **Route Handlers** (`sitemap.xml/route.ts` and `sitemap/[id]/route.ts`).
+    - Benefit: Guarantees valid XML output and robust handling of 84k+ URLs.
+- **SEO / Sitemap**: Fixed 404 errors on child sitemaps by correctly formatting Dynamic Route folders (`sitemap/[id]` instead of `[id].xml`).
+- **SEO / Redirections**: Added 301 Redirect for legacy `/sitemap_index.xml` -> `/sitemap.xml`.
+- **Game Consolidation**: Updated `consolidation.py` with aggressive regex to strip "JP", "PAL", "Version" suffixes from Product Names.
+    - Result: "Air Boarder 64 JP" will now correctly merge into "Air Boarder 64" (Global Game).
+
+### Added
+- **Backend / Stability**: Created `reset_games_layer.py` script to allow a **Safe Wipe & Rebuild** of the Games table without touching scraped Product data or User Collections.
+- **Backend / Analysis**: Created `count_missing_prices.py` to accurately track the Price Recovery backlog (confirmed ~20k items / 10h remaining).
+
+### Changed
+- **Backend / Performance**: Disabled "Auto-Start" of heavy background workers (Amazon, Scheduler) in `main.py` to prevent OOM errors during deployment. Workers are now triggered manually via Admin Panel.
+
 ## [Unreleased] - 2024-12-31
 
 ### Security
