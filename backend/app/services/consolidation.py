@@ -13,15 +13,20 @@ def normalize_name(text: str) -> str:
     Simpler normalization for matching.
     "Super Mario 64" -> "super mario 64"
     "Super Mario 64 (PAL)" -> "super mario 64"
+    "Air Boarder 64 JP" -> "air boarder 64"
     """
     if not text: return ""
     text = text.lower().strip()
     
     # Remove Region tags strictly for matching
-    text = re.sub(r'\(pal\)', '', text)
-    text = re.sub(r'\(ntsc\)', '', text)
-    text = re.sub(r'\(jp\)', '', text)
+    # 1. Parentheses
+    text = re.sub(r'\((pal|ntsc|jp|eu|us|uk|jap|japan|usa|eur)\)', '', text)
     text = re.sub(r'\[.*?\]', '', text) # Remove [Import] etc
+    
+    # 2. Suffixes/Prefixes (Safe ones)
+    # "Air Boarder 64 JP" -> "Air Boarder 64"
+    # Be careful not to strip legitimate words, but 2-letter codes at end of string are usually regions in this context.
+    text = re.sub(r'\s+(jp|pal|ntsc|eu|us|uk|jap|japan|usa|eur|version)$', '', text, flags=re.IGNORECASE)
     
     # Remove special chars
     text = re.sub(r'[^a-z0-9\s]', '', text)
@@ -30,17 +35,17 @@ def normalize_name(text: str) -> str:
 def normalize_console(console_name: str) -> str:
     """
     Strips region prefixes to group regional variants under one console family.
-    'PAL Playstation 5' -> 'Playstation 5'
-    'JP Playstation 5' -> 'Playstation 5'
-    'NTSC Playstation 5' -> 'Playstation 5'
+    'PAL Nintendo 64' -> 'Nintendo 64'
+    'Nintendo 64 JP' -> 'Nintendo 64'
     """
     if not console_name: return "Unknown"
     s = console_name.strip()
     
     # Common prefixes
-    s = re.sub(r'^(PAL|JP|NTSC|EU|US|UK)\s+', '', s, flags=re.IGNORECASE)
-    # Common suffixes
-    s = re.sub(r'\s+\((PAL|JP|NTSC|EU|US|UK)\)$', '', s, flags=re.IGNORECASE)
+    s = re.sub(r'^(PAL|JP|NTSC|EU|US|UK|JAP|JAPAN|USA|EUR)\s+', '', s, flags=re.IGNORECASE)
+    # Common suffixes (with or without parens)
+    s = re.sub(r'\s+\((PAL|JP|NTSC|EU|US|UK|JAP|JAPAN|USA|EUR)\)$', '', s, flags=re.IGNORECASE)
+    s = re.sub(r'\s+(PAL|JP|NTSC|EU|US|UK|JAP|JAPAN|USA|EUR)$', '', s, flags=re.IGNORECASE)
     
     return s.strip()
 
@@ -215,9 +220,22 @@ def run_consolidation(db: Session, dry_run: bool = False):
                         sorted_products = sorted(product_list, key=content_priority, reverse=True)
                         master_source = sorted_products[0]
                         
+                        # Use cleaned title for the Global Game Name
+                        # We strip region tags but attempt to preserve original casing if possible.
+                        # Since normalize_name is lowercased, we might want a case-preserving cleaner.
+                        def clean_display_title(text):
+                            if not text: return "Unknown"
+                            # Strip Regions (Case Insensitive)
+                            text = re.sub(r'\((PAL|JP|NTSC|EU|US|UK|JAP|JAPAN|USA|EUR)\)', '', text, flags=re.IGNORECASE)
+                            text = re.sub(r'\[.*?\]', '', text)
+                            text = re.sub(r'\s+(JP|PAL|NTSC|EU|US|UK|JAP|JAPAN|USA|EUR)$', '', text, flags=re.IGNORECASE)
+                            return text.strip()
+
+                        clean_title = clean_display_title(master_source.product_name)
+
                         existing_game = Game(
                             console_name=family_console,
-                            title=master_source.product_name,
+                            title=clean_title,
                             slug=slug,
                             description=master_source.description,
                             genre=master_source.genre,
