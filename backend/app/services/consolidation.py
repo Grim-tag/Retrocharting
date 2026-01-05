@@ -257,6 +257,8 @@ def run_consolidation(db: Session, dry_run: bool = False):
                         if not dry_run:
                             # Use Relationship to avoid needing .id (which requires flush)
                             p.game = existing_game
+                            # CRITICAL: Populate game_slug for frontend redirects
+                            p.game_slug = existing_game.slug
                         
                         # Set Variant
                         if "(PAL)" in p.product_name or "PAL" in (p.product_name or ""):

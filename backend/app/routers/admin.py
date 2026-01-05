@@ -100,7 +100,27 @@ def fix_pc_genres_endpoint(
             updated_count += 1
             
     db.commit()
+    db.commit()
     return {"status": "success", "fixed_count": updated_count}
+
+@router.post("/maintenance/fix-game-slugs", dependencies=[Depends(get_admin_access)])
+def fix_game_slugs_endpoint(db: Session = Depends(get_db)):
+    """
+    Backfill product.game_slug from linked Game.slug.
+    Crucial for Frontend Redirects (Legacy URL -> Unified URL).
+    """
+    try:
+        from sqlalchemy import text
+        # Fast SQL Update (Postgres Syntax)
+        # UPDATE products SET game_slug = games.slug FROM games WHERE products.game_id = games.id AND products.game_slug IS NULL
+        stmt = text("UPDATE products SET game_slug = games.slug FROM games WHERE products.game_id = games.id AND products.game_slug IS NULL")
+        result = db.execute(stmt)
+        count = result.rowcount
+        db.commit()
+        return {"status": "success", "updated_count": count, "message": "Game Slugs backfilled."}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/enrich-pc-games")
 def enrich_pc_games_endpoint(
