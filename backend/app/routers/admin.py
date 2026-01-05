@@ -146,6 +146,10 @@ def analyze_images_endpoint(db: Session = Depends(get_db)):
     pricecharting = db.query(Product).filter(Product.image_url.contains("pricecharting")).count()
     igdb = db.query(Product).filter(Product.image_url.contains("igdb")).count()
     
+    # Examples
+    secured_examples = db.query(Product.product_name, Product.game_slug).filter(Product.image_url.contains("retrocharting")).limit(5).all()
+    examples_list = [{"name": e[0], "slug": e[1]} for e in secured_examples]
+
     # Safety Net: Blob exists but URL is external
     blob_recoverable = db.query(Product).filter(
         Product.image_blob != None,
@@ -158,7 +162,8 @@ def analyze_images_endpoint(db: Session = Depends(get_db)):
         "broken_cloudinary": cloudinary,
         "external_pc": pricecharting,
         "external_igdb": igdb,
-        "recoverable_blobs": blob_recoverable
+        "recoverable_blobs": blob_recoverable,
+        "examples_secured": examples_list
     }
 
 @router.get("/stats", dependencies=[Depends(get_admin_access)])
