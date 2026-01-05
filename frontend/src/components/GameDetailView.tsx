@@ -33,7 +33,7 @@ export default function GameDetailView({
     const gamesSlug = lang === 'en' ? 'games' : 'games'; // TODO: proper routeMap
 
     const displayTitle = game?.title || product.product_name;
-    const displayConsole = game?.console_name || product.console_name;
+    const displayConsole = game?.console || product.console_name;
     const shortConsoleName = formatConsoleName(displayConsole);
 
     const breadcrumbItems = [
