@@ -91,7 +91,7 @@ export default function SystemTools() {
                     <ToolButton
                         label="🚀 Auto-Recover Prices"
                         desc="Run in background with safety pauses until done."
-                        onClick={() => runAction('enrich/price-recovery?limit=2000&continuous=true', 'POST')}
+                        onClick={() => runAction('enrich/price-recovery?limit=500&continuous=true', 'POST')}
                     />
                 </div>
 
