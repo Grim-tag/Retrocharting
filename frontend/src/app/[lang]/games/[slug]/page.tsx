@@ -66,9 +66,18 @@ export async function generateMetadata({ params, searchParams }: { params: Promi
 
         if (game) {
             const shortConsoleName = formatConsoleName(game.console || "");
+            const canonicalPath = `/${lang === 'en' ? 'games' : 'fr/games'}/${game.slug}`;
             return {
                 title: `${game.title} ${shortConsoleName} ${dict.product.market.suffix} | RetroCharting`,
-                description: game.description || `Current market value for ${game.title} on ${game.console}`
+                description: game.description || `Current market value for ${game.title} on ${game.console}`,
+                alternates: {
+                    canonical: canonicalPath,
+                    languages: {
+                        'en': `/games/${game.slug}`,
+                        'fr': `/fr/games/${game.slug}`,
+                        'x-default': `/games/${game.slug}`
+                    }
+                }
             };
         }
 
@@ -79,9 +88,15 @@ export async function generateMetadata({ params, searchParams }: { params: Promi
         if (!product) return { title: "Product Not Found" };
 
         const shortConsoleName = formatConsoleName(product.console_name);
+        // Legacy canonical might be tricky if we want to enforce unified, but for now just point to self
+        const canonicalPath = `/${lang === 'en' ? 'games' : 'fr/games'}/${slug}`;
+
         return {
             title: `${product.product_name} ${shortConsoleName} ${dict.product.market.suffix} | RetroCharting`,
-            description: `Current market value for ${product.product_name}`
+            description: `Current market value for ${product.product_name}`,
+            alternates: {
+                canonical: canonicalPath
+            }
         };
     } catch (error) {
         console.error("Error generating metadata:", error);
