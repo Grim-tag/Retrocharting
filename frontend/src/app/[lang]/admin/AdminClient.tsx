@@ -169,6 +169,27 @@ export default function AdminDashboardClient() {
                                 >
                                     🔗 UNIFY ACCESSORIES
                                 </button>
+
+                                <button
+                                    onClick={async () => {
+                                        if (!confirm("Start Unification for Consoles/Hardware?")) return;
+                                        setProcessing(true);
+                                        try {
+                                            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://retrocharting.com'}/api/v1/admin/unify-consoles`, {
+                                                method: 'POST',
+                                                headers: { 'Authorization': `Bearer ${token}` }
+                                            });
+                                            const data = await res.json();
+                                            alert(data.message || "Unification Started!");
+                                            fetchStats();
+                                        } catch (e: any) { alert(e.message); }
+                                        finally { setProcessing(false); }
+                                    }}
+                                    disabled={processing}
+                                    className="px-6 py-2 bg-purple-600 hover:bg-purple-500 rounded font-bold transition-colors disabled:opacity-50"
+                                >
+                                    🎮 UNIFY CONSOLES
+                                </button>
                             </div>
 
                             {fusionResult && (
