@@ -18,8 +18,10 @@ def unify_consoles_logic(db: Session) -> dict:
     # 1. Find target products
     products = db.query(Product).filter(
         Product.genre == 'Systems',
-        Product.game_slug == None
+        (Product.game_slug == None) | (Product.game_slug == "")
     ).all()
+    
+    print(f"DEBUG: Found {len(products)} consoles to unify.")
     
     if not products:
         return {"message": "No consoles needing unification found.", "created": 0, "updated": 0}
