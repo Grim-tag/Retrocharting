@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, defer
 from typing import List, Optional
 from sqlalchemy import or_
 from app.db.session import get_db
@@ -45,8 +45,13 @@ def read_games(
         if sort == 'title_asc': query = query.order_by(Game.title.asc())
         elif sort == 'title_desc': query = query.order_by(Game.title.desc())
         
-    # Eager load products to access image_url and variant count
-    games = query.options(joinedload(Game.products)).offset(skip).limit(limit).all()
+    # Eager load products but DEFER large columns (blobs, descriptions) for performance
+    games = query.options(
+        joinedload(Game.products)
+        .defer(Product.image_blob)
+        .defer(Product.back_image_blob)
+        .defer(Product.description)
+    ).offset(skip).limit(limit).all()
     
     results = []
     for g in games:
