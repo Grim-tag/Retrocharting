@@ -162,9 +162,8 @@ export default async function Page({
         const canonicalSlug = canonicalPath.split('/').pop();
 
         if (canonicalSlug && slug !== canonicalSlug) {
-            // Only redirect if it's strictly mismatched and likely an old URL
-            // redirect(canonicalPath); 
-            // Commented out to ensure stability for now, or use with caution.
+            // Permanent Redirect to Clean URL if available
+            permanentRedirect(canonicalPath);
         }
 
         // For consistency, we could use GameDetailView here too, but ConsoleProductView is existing.
