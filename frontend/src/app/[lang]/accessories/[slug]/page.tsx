@@ -127,7 +127,39 @@ export default async function AccessoriesConsolePage({
         );
     }
 
-    // --- CASE 2: PRODUCT DETAIL VIEW ---
+    // --- CASE 2: UNIFIED GAME/ACCESSORY VIEW (Slug-based) ---
+    // Try fetching as Unified Game (Slug-based) - Required for French URLs without ID
+    const { getGameBySlug, getGameHistory } = await import('@/lib/api');
+    const { formatConsoleName } = await import('@/lib/utils');
+    const game = await getGameBySlug(slug);
+
+    if (game) {
+        // Unified Success!
+        // We need to pick a "Main" product to satisfy the legacy view props.
+        const mainVariant = game.variants.find((v: any) => v.region.includes("NTSC"))
+            || game.variants.find((v: any) => v.region.includes("PAL"))
+            || game.variants[0];
+
+        // Fetch full details for the main variant
+        const [mainProduct, history] = await Promise.all([
+            getProductById(mainVariant.id),
+            getGameHistory(slug)
+        ]);
+
+        if (mainProduct) {
+            return (
+                <GameDetailView
+                    product={mainProduct}
+                    history={history}
+                    lang={lang}
+                    dict={dict}
+                    game={game} // Pass unified data
+                />
+            );
+        }
+    }
+
+    // --- CASE 3: PRODUCT DETAIL VIEW (Legacy ID-based) ---
     const id = getIdFromSlug(slug);
     if (id) {
         try {
