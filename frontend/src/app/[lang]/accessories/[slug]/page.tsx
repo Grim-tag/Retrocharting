@@ -161,32 +161,42 @@ export default async function AccessoriesConsolePage({
     }
 
     // --- CASE 3: PRODUCT DETAIL VIEW (Legacy ID-based) ---
+    // --- CASE 3: PRODUCT DETAIL VIEW (Legacy ID-based) ---
     const id = getIdFromSlug(slug);
+    let legacyProduct = null;
+    let legacyHistory = null;
+    let shouldRedirectTo = null;
+
     if (id) {
         try {
             const [product, history] = await Promise.all([
                 getProductById(id),
                 getProductHistory(id)
             ]);
+            legacyProduct = product;
+            legacyHistory = history;
 
-            if (product) {
-                // REDIRECT TO UNIFIED PAGE IF EXISTS
-                if (product.game_slug) {
-                    redirect(`/${lang}/${accessoriesSlug}/${product.game_slug}`);
-                }
-
-                return (
-                    <GameDetailView
-                        product={product}
-                        history={history}
-                        lang={lang}
-                        dict={dict}
-                    />
-                );
+            if (product && product.game_slug) {
+                shouldRedirectTo = `/${lang}/${accessoriesSlug}/${product.game_slug}`;
             }
         } catch (error) {
             console.error("Error loading accessory product:", error);
         }
+    }
+
+    if (shouldRedirectTo) {
+        redirect(shouldRedirectTo);
+    }
+
+    if (legacyProduct) {
+        return (
+            <GameDetailView
+                product={legacyProduct}
+                history={legacyHistory || []}
+                lang={lang}
+                dict={dict}
+            />
+        );
     }
 
     // REDIRECT CHECK (After ID lookup fails or is done) for Legacy -> Unified
