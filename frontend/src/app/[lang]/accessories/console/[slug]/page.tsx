@@ -57,10 +57,18 @@ export default async function AccessoriesConsolePage({
 
     // Reuse ConsoleGameCatalog but for accessories? 
     // The API `getProductsByConsole` has a `type` parameter.
-    const [products, genres] = await Promise.all([
-        getProductsByConsole(systemName, 40, genre, 'accessory', sort, 0, searchQuery), // Type = accessory
-        getGenres(systemName) // Genres might not apply to accessories, but keep for type consistency or ignore
-    ]);
+    let products: any[] = [];
+    let genres: string[] = [];
+
+    try {
+        [products, genres] = await Promise.all([
+            getProductsByConsole(systemName, 40, genre, 'accessory', sort, 0, searchQuery), // Type = accessory
+            getGenres(systemName)
+        ]);
+    } catch (error) {
+        console.error("Error loading accessory catalog data:", error);
+        // Fallback to empty to prevent 500 Page Crash
+    }
 
     const breadcrumbItems = [
         { label: dict.header.nav.accessories, href: `/${lang}/${accessoriesSlug}` },

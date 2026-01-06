@@ -49,7 +49,7 @@ export default async function AccessoriesPage({ params }: { params: Promise<{ la
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                                 {(() => {
                                     let lastRegion = "";
-                                    return systems.map((system) => {
+                                    return systems.filter(s => s !== "PC Games").map((system) => {
                                         const region = getRegion(system);
                                         const showSeparator = region !== lastRegion;
                                         lastRegion = region;
