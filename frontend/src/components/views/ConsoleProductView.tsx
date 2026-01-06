@@ -201,6 +201,10 @@ export default async function ConsoleProductView({ slug, lang }: ConsoleProductV
                             />
                         </div>
 
+                        {/* REGIONAL BREAKDOWN (Unified View Only - or if we fetch variants for console) */}
+                        {/* Consoles are often region specific products, so Global Table might be overkill unless we unify them first. */}
+                        {/* Currently ConsoleProductView is for SINGLE product ID. */}
+
                         <div className="mb-6">
                             <h2 className="text-white text-sm font-bold mb-2 uppercase tracking-wider text-gray-400">{dict.product.market.price_trend}</h2>
                             <PriceHistoryChart history={history} className="h-[200px]" dict={dict} />
