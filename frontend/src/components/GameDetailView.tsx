@@ -35,10 +35,20 @@ export default function GameDetailView({
     const displayConsole = game?.console || product.console_name;
     const shortConsoleName = formatConsoleName(displayConsole);
 
-    const isAccessory = product.genre === 'Accessories' || product.genre === 'Controllers';
-    const baseKey = isAccessory ? 'accessories' : 'games';
+    const genreLower = (product.genre || '').toLowerCase();
+    const isAccessory = genreLower === 'accessories' || genreLower === 'controllers';
+    const isConsole = genreLower === 'systems' || genreLower === 'console' || genreLower === 'consoles'; // Robust check
+
+
+    let baseKey = 'games';
+    if (isAccessory) baseKey = 'accessories';
+    else if (isConsole) baseKey = 'consoles';
+
     const baseSlug = routeMap[baseKey]?.[lang] || baseKey;
-    const baseLabel = isAccessory ? dict.header.nav.accessories : dict.header.nav.video_games;
+
+    let baseLabel = dict.header.nav.video_games;
+    if (isAccessory) baseLabel = dict.header.nav.accessories;
+    else if (isConsole) baseLabel = dict.header.nav.consoles;
 
     const navSlug = baseSlug;
     const gamesSlug = navSlug;
