@@ -2,9 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2026-01-05 Phase 2b] Final Polish: SEO, Fusion & Redirection
+## [2026-01-06 Phase 2c] Sitemap & Catalog Unification
 
 ### Fixed
+- **Frontend / Accessories**: Unified the Accessory Catalog (`/accessories`). Removed regional duplicates and established a global view grouped by Console model.
+- **Frontend / Accessories**: Removed cluttering Regional Headers ("North America", etc.) from the main accessories page for a cleaner UI.
+- **Frontend / Redirection**: Implemented intelligent redirection for Legacy Accessory URLs to their new Unified Game counterparts.
+- **SEO / Sitemap**: Updated `sitemap.xml` generation logic to correctly classify Unified Items into `/games/`, `/consoles/`, or `/accessories/` URLs based on genre.
+- **SEO / Sitemap**: Excluded unified products from the legacy products sitemap to prevent SEO cannibalization.
+- **SEO / Content**: Enriched the SEO text descriptions for the Consoles Catalog page in both English and French.
+
+### Added
+- **Backend / API**: Updated `/games` endpoint to support filtering by `type='accessory'`, enabling the frontend unification.
+- **Backend / Monitoring**: Created scripts to accurately track the remaining count of the "Price Recovery" task (confirmed ~20k items remaining).
+
+### Changed
+- **Strategy**: Validated accurate Price Recovery progress (22k items processed in one night) and communicated timeline to user.
 - **Frontend / Config**: Added `rewrites` in `next.config.js` to proxy `/api/v1/*` requests to the Backend. This fixes the Broken Images (404) for stored blobs, which were trying to load from the frontend domain.
 - **Frontend / Catalog**: Fixed `ConsoleGameCatalog.tsx` hardcoding CIB/New prices to 0.00 when using Unified API. Now correctly displays backend price data.
 - **Backend / Catalog**: Fixed `get_genres` endpoint to use Fuzzy Matching (`ilike`), restoring the Genre Filter which was empty due to "Nintendo 64" vs "JP Nintendo 64" mismatches.
@@ -12,6 +25,8 @@ All notable changes to this project will be documented in this file.
 - **Frontend / SEO**: Fixed bug where `GameDetailView` was using `console_name` (undefined) instead of `console`, falling back to legacy data.
 - **Backend / Database**: Added `game_slug` column to `Product` table (Schema Update) to enable efficient redirection from legacy URLs.
 - **Backend / Admin**: Added `/maintenance/fix-game-slugs` endpoint to backfill missing redirection data via SQL Join.
+- **Backend / Admin**: Added `/maintenance/analyze-images` endpoint to report on Image Source Health (Cloudinary vs Local Blob).
+- **Backend / Admin**: Added `/maintenance/debug-blob/{id}` to diagnose specific missing images on Production.
 - **SEO / Sitemap**: Enforced Canonical `/fr/games/` URLs in sitemap output, replacing mixed legacy directories.
 
 ### Changed

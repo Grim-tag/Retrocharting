@@ -1,10 +1,12 @@
+from typing import List, Tuple
 from app.db.session import SessionLocal
+from sqlalchemy.orm import Session
 from app.models.product import Product as ProductModel
 from app.models.listing import Listing
 from app.services.ebay_client import ebay_client
 from app.services.amazon_client import amazon_client
 from app.services.listing_classifier import ListingClassifier
-from datetime import datetime
+from datetime import datetime, timedelta
 
 class PricingService:
     @staticmethod
@@ -63,3 +65,24 @@ class PricingService:
             db.rollback()
         finally:
             db.close()
+
+    @staticmethod
+    def get_listings_with_cache_check(db: Session, product_id: int) -> Tuple[List[Listing], bool]:
+        """
+        Returns active listings and a boolean indicating if a background refresh is needed.
+        MOVED from app/routers/products.py
+        """
+        listings = db.query(Listing).filter(
+            Listing.product_id == product_id,
+            Listing.status == 'active'
+        ).all()
+
+        if not listings:
+             return [], True # Empty -> Needs fetch
+             
+        # Check staleness
+        latest_update = max(l.last_updated for l in listings)
+        if latest_update < datetime.utcnow() - timedelta(minutes=15):
+             return listings, True # Stale -> Needs refresh
+             
+        return listings, False # Fresh
