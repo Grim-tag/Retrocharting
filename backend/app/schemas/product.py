@@ -50,6 +50,7 @@ class ProductList(BaseModel):
     esrb_rating: Optional[str] = None
     players: Optional[str] = None
     sales_count: Optional[int] = 0
+    game_slug: Optional[str] = None
 
     class Config:
         from_attributes = True

@@ -125,17 +125,39 @@ export default function ConsoleGameCatalog({
                             game_slug: useLegacyApi ? undefined : g.slug // Only Games have slugs
                         }));
 
-                        // Deduplicate by ID AND Name (to handle Game/Product mix-ups or DB dupes)
-                        const existingIds = new Set(prev.map(p => p.id));
-                        const existingNames = new Set(prev.map(p => p.product_name));
+                        // Deduplicate & Prioritize Unified Items
+                        // Strategies:
+                        // 1. If ID exists -> Skip (unless we want to update? But ID is unique usually)
+                        // 2. If Name exists -> Check if we have a better version (e.g. Unified vs Legacy). 
+                        //    Unified items have 'game_slug'. Legacy items might not (or might be raw products).
+                        //    We want to PREFER items with game_slug.
 
-                        const newItems = adapted.filter(p => {
-                            if (existingIds.has(p.id)) return false;
-                            if (existingNames.has(p.product_name)) return false;
-                            return true;
+                        // Map of Name -> Product
+                        const productMap = new Map<string, Product>();
+
+                        // Initialize with previous items
+                        prev.forEach(p => productMap.set(p.product_name, p));
+
+                        // Process new items (Adapted Games)
+                        adapted.forEach(newItem => {
+                            const existing = productMap.get(newItem.product_name);
+                            if (!existing) {
+                                productMap.set(newItem.product_name, newItem);
+                            } else {
+                                // Collision. Choose the "Better" one.
+                                // If new item has game_slug and existing doesn't, take new.
+                                if (newItem.game_slug && !existing.game_slug) {
+                                    productMap.set(newItem.product_name, newItem);
+                                }
+                                // Else keep existing (preserving order or data)
+                            }
                         });
 
-                        return [...prev, ...newItems];
+                        // Convert back to array, preserving original order as much as possible?
+                        // Actually, map iteration order is insertion order. 
+                        // But we want to append new items?
+                        // Let's just return values.
+                        return Array.from(productMap.values());
                     });
                 } else {
                     // If absolutely nothing found even after fallback
@@ -173,15 +195,26 @@ export default function ConsoleGameCatalog({
                                 genre: g.genre || "",
                                 game_slug: useLegacyApi ? undefined : g.slug
                             }));
-                            const existingIds = new Set(prev.map(p => p.id));
-                            const existingNames = new Set(prev.map(p => p.product_name));
+                            // Deduplicate & Prioritize Unified Items (Map Logic)
+                            const productMap = new Map<string, Product>();
 
-                            const newItems = adapted.filter(p => {
-                                if (existingIds.has(p.id)) return false;
-                                if (existingNames.has(p.product_name)) return false;
-                                return true;
+                            // Initialize with previous items
+                            prev.forEach(p => productMap.set(p.product_name, p));
+
+                            // Process new items (Adapted Games)
+                            adapted.forEach(newItem => {
+                                const existing = productMap.get(newItem.product_name);
+                                if (!existing) {
+                                    productMap.set(newItem.product_name, newItem);
+                                } else {
+                                    // Collision. Preseve Unified.
+                                    if (newItem.game_slug && !existing.game_slug) {
+                                        productMap.set(newItem.product_name, newItem);
+                                    }
+                                }
                             });
-                            return [...prev, ...newItems];
+
+                            return Array.from(productMap.values());
                         });
                         currentOffset += BATCH_SIZE;
                         if (batch.length < BATCH_SIZE) hasNextBatch = false;
