@@ -587,3 +587,14 @@ def trigger_price_recovery(
     else:
         recover_missing_prices(limit=safe_limit, continuous=continuous)
         return {"message": "Price Recovery completed (Sync Mode)."}
+
+@router.post("/consolidation/unify-accessories", dependencies=[Depends(get_admin_access)])
+def trigger_accessory_unification(background_tasks: BackgroundTasks):
+    """
+    Triggers the One-Off Accessory Unification Script.
+    Groups Accessories/Controllers by name into Unified Games.
+    """
+    from app.services.accessory_unification import unify_accessories
+    
+    background_tasks.add_task(unify_accessories)
+    return {"status": "success", "message": "Accessory Unification started in background."}

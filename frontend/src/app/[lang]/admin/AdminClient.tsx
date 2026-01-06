@@ -148,6 +148,27 @@ export default function AdminDashboardClient() {
                                 >
                                     {processing ? 'Processing...' : '⚡ RUN LIVE FUSION'}
                                 </button>
+
+                                <button
+                                    onClick={async () => {
+                                        if (!confirm("Create Unified Pages for Accessories & Controllers?")) return;
+                                        setProcessing(true);
+                                        try {
+                                            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://retrocharting.com'}/api/v1/admin/consolidation/unify-accessories`, {
+                                                method: 'POST',
+                                                headers: { 'Authorization': `Bearer ${token}` }
+                                            });
+                                            const data = await res.json();
+                                            alert(data.message);
+                                            fetchStats();
+                                        } catch (e: any) { alert(e.message); }
+                                        finally { setProcessing(false); }
+                                    }}
+                                    disabled={processing}
+                                    className="px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded font-bold transition-colors disabled:opacity-50"
+                                >
+                                    🔗 UNIFY ACCESSORIES
+                                </button>
                             </div>
 
                             {fusionResult && (
@@ -177,8 +198,8 @@ function TabButton({ label, id, active, onClick }: { label: string, id: Tab, act
         <button
             onClick={() => onClick(id)}
             className={`px-4 py-2 font-medium border-b-2 transition-colors whitespace-nowrap ${active === id
-                    ? 'border-[#ff6600] text-white'
-                    : 'border-transparent text-gray-400 hover:text-white'
+                ? 'border-[#ff6600] text-white'
+                : 'border-transparent text-gray-400 hover:text-white'
                 }`}
         >
             {label}
