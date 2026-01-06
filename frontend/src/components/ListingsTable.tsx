@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { getListings } from "@/lib/api";
 import { formatPrice, convertPriceToUSD } from "@/lib/currency";
 import { useCurrency } from "@/context/CurrencyContext";
+import Image from "next/image";
 
 interface Listing {
     id: number;
@@ -161,7 +162,15 @@ export default function ListingsTable({ productId, dict, genre }: { productId: n
                                 <tr key={item.id} className="hover:bg-[#2a3142] transition-colors">
                                     <td className="px-4 py-3">
                                         {item.image_url ? (
-                                            <img src={item.image_url} alt={item.title} className="w-12 h-12 object-cover rounded" />
+                                            <div className="relative w-12 h-12 rounded overflow-hidden bg-[#0f121e]">
+                                                <Image
+                                                    src={item.image_url}
+                                                    alt={item.title}
+                                                    fill
+                                                    className="object-cover"
+                                                    sizes="48px"
+                                                />
+                                            </div>
                                         ) : (
                                             <div className="w-12 h-12 bg-[#0f121e] rounded flex items-center justify-center text-xs">{dict.product.listings.table.no_pic}</div>
                                         )}
