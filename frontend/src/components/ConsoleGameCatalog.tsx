@@ -94,7 +94,10 @@ export default function ConsoleGameCatalog({
                 // Let's assume 'game' type implies no specific filter, or maybe we should filter 'Game'?
                 // For now, fixing the Console tab (Systems) is the priority.
 
-                let fastChunk: any[] = await getGamesByConsole(systemName, 200, genreFilter, undefined, 40, undefined);
+                // Match type for backend
+                const apiType = (productType === 'accessory' || productType === 'game') ? productType : undefined;
+
+                let fastChunk: any[] = await getGamesByConsole(systemName, 200, genreFilter, undefined, 40, undefined, apiType);
 
                 // Fallback Detection
                 if (!fastChunk || fastChunk.length === 0) {
@@ -144,7 +147,7 @@ export default function ConsoleGameCatalog({
                     if (useLegacyApi) {
                         batch = await getProductsByConsole(systemName, BATCH_SIZE, undefined, productType, undefined, currentOffset, undefined);
                     } else {
-                        batch = await getGamesByConsole(systemName, BATCH_SIZE, genreFilter, undefined, currentOffset, undefined);
+                        batch = await getGamesByConsole(systemName, BATCH_SIZE, genreFilter, undefined, currentOffset, undefined, apiType);
                     }
 
                     if (!isMounted) break;

@@ -247,13 +247,14 @@ export async function getGameHistory(slug: string): Promise<any[]> {
     }
 }
 
-export async function getGamesByConsole(consoleName: string, limit = 50, genre?: string, sort?: string, skip = 0, search?: string): Promise<any[]> {
+export async function getGamesByConsole(consoleName: string, limit = 50, genre?: string, sort?: string, skip = 0, search?: string, type?: 'game' | 'accessory'): Promise<any[]> {
     try {
         const response = await apiClient.get(`/games/`, {
             params: {
                 console: consoleName,
                 limit,
                 genre,
+                type,
                 sort,
                 skip,
                 search

@@ -70,11 +70,19 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
             games.forEach((game: any) => {
                 langs.forEach(lang => {
-                    const gamesBase = routeMap['games']?.[lang] || 'games';
-                    // Unified Game URL: /games/[slug]
+                    let routeKey = 'games';
+                    if (game.genre === 'Accessories' || game.genre === 'Controllers') {
+                        routeKey = 'accessories';
+                    } else if (game.genre === 'Systems') {
+                        routeKey = 'consoles';
+                    }
+
+                    const base = routeMap[routeKey]?.[lang] || routeKey;
+
+                    // Unified URL Construction
                     const path = lang === 'en'
-                        ? `/games/${game.slug}`
-                        : `/${lang}/${gamesBase}/${game.slug}`;
+                        ? `/${routeKey}/${game.slug}`
+                        : `/${lang}/${base}/${game.slug}`;
 
                     xml += '  <url>\n';
                     xml += `    <loc>${BASE_URL}${path}</loc>\n`;

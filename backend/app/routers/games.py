@@ -16,6 +16,7 @@ def read_games(
     search: Optional[str] = None,
     console: Optional[str] = None,
     genre: Optional[str] = None,
+    type: Optional[str] = None, # 'game' or 'accessory'
     sort: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
@@ -29,10 +30,12 @@ def read_games(
         query = query.filter(Game.title.ilike(f"%{search}%"))
         
     if console:
-        # Filter by console name. 
-        # Note: Games have 'console_name' column or similar? 
-        # Checking Game model... Game has 'console_name'.
         query = query.filter(Game.console_name == console)
+        
+    if type == 'accessory':
+        query = query.filter(Game.genre.in_(['Accessories', 'Controllers']))
+    elif type == 'game':
+        query = query.filter(Game.genre.notin_(['Accessories', 'Controllers']))
         
     if genre:
         query = query.filter(Game.genre.ilike(f"%{genre}%"))
@@ -54,7 +57,7 @@ def read_games(
         min_new = None
         
         if g.products:
-            # Sort by NTSC preference for image? Or just picking first valid.
+            # Sort by NTSC preference for image
             for p in g.products:
                 if not image_url and p.image_url:
                     image_url = p.image_url
@@ -73,10 +76,11 @@ def read_games(
             "slug": g.slug,
             "console": g.console_name,
             "image_url": image_url,
-            "min_price": min_loose, # Legacy field for loose
-            "cib_price": min_cib,   # New exposed field
-            "new_price": min_new,   # New exposed field
-            "variants_count": len(g.products) if g.products else 0
+            "min_price": min_loose,
+            "cib_price": min_cib,
+            "new_price": min_new,
+            "variants_count": len(g.products) if g.products else 0,
+            "genre": g.genre 
         })
 
     return results
@@ -96,9 +100,9 @@ def sitemap_games(
 ):
     """
     Returns lightweight Game data for XML sitemap generation.
-    Replaces product-based sitemap.
+    Includes genre to determine URL prefix (games/ vs accessories/).
     """
-    games = db.query(Game.slug, Game.title, Game.console_name)\
+    games = db.query(Game.slug, Game.title, Game.console_name, Game.genre)\
         .order_by(Game.id.asc())\
         .offset(skip)\
         .limit(limit)\
@@ -109,7 +113,8 @@ def sitemap_games(
             "slug": g.slug,
             "title": g.title,
             "console": g.console_name,
-            "updated_at": None # TODO
+            "genre": g.genre,
+            "updated_at": None
         }
         for g in games
     ]

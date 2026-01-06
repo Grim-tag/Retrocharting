@@ -107,9 +107,10 @@ def sitemap_products(
     Limited to top matching items to prevent timeout.
     """
     # Prefer products with images or prices as they are 'high quality' pages
+    # Filter out products that are part of a Unified Game (game_slug is not null)
+    # These are covered by sitemap_games
     products = db.query(ProductModel.id, ProductModel.product_name, ProductModel.console_name, ProductModel.genre, ProductModel.loose_price)\
-    # Sort by ID for stability and performance (Primary Key Scan)
-    products = db.query(ProductModel.id, ProductModel.product_name, ProductModel.console_name, ProductModel.genre, ProductModel.loose_price)\
+        .filter(ProductModel.game_slug == None)\
         .order_by(ProductModel.id.asc())\
         .offset(skip)\
         .limit(limit)\

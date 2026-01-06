@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { getProductsByConsole, getGenres, getProductById, getProductHistory } from "@/lib/api";
+import { getProductsByConsole, getGenres, getProductById, getProductHistory, getGamesByConsole } from "@/lib/api";
 import ConsoleGameCatalog from "@/components/ConsoleGameCatalog";
 import GameDetailView from "@/components/GameDetailView";
 import { groupedSystems } from '@/data/systems';
@@ -93,11 +93,26 @@ export default async function AccessoriesConsolePage({
         // let genres: string[] = []; // Unused for now
 
         try {
-            const [fetchedProducts] = await Promise.all([
-                getProductsByConsole(systemName, 40, genre, 'accessory', sort, 0, searchQuery),
-                // getGenres(systemName) // Genres not really used for accessories main view usually
+            const [games, fetchedGenres] = await Promise.all([
+                getGamesByConsole(systemName, 40, genre, sort, 0, searchQuery, 'accessory'),
+                getGenres(systemName)
             ]);
-            products = fetchedProducts;
+
+            // Adapt Games to Product Interface for Catalog Component
+            products = games.map((g: any) => ({
+                id: g.id,
+                pricecharting_id: 0, // Mock
+                product_name: g.title,
+                console_name: g.console,
+                loose_price: g.min_price || 0,
+                cib_price: g.cib_price || 0,
+                new_price: g.new_price || 0,
+                image_url: g.image_url,
+                genre: g.genre,
+                game_slug: g.slug
+            }));
+
+            // genres = fetchedGenres; // If we used local var
         } catch (error) {
             console.error("Error loading accessory catalog data:", error);
         }
