@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { routeMap } from '@/lib/route-config';
 import Breadcrumbs from '@/components/seo/Breadcrumbs';
 import ProductActions from '@/components/ProductActions';
 import ProductDetails from '@/components/ProductDetails';
@@ -30,15 +31,21 @@ export default function GameDetailView({
     dict,
     game
 }: GameDetailViewProps) {
-    const gamesSlug = lang === 'en' ? 'games' : 'games'; // TODO: proper routeMap
-
     const displayTitle = game?.title || product.product_name;
     const displayConsole = game?.console || product.console_name;
     const shortConsoleName = formatConsoleName(displayConsole);
 
+    const isAccessory = product.genre === 'Accessories' || product.genre === 'Controllers';
+    const baseKey = isAccessory ? 'accessories' : 'games';
+    const baseSlug = routeMap[baseKey]?.[lang] || baseKey;
+    const baseLabel = isAccessory ? dict.header.nav.accessories : dict.header.nav.video_games;
+
+    const navSlug = baseSlug;
+    const gamesSlug = navSlug;
+
     const breadcrumbItems = [
-        { label: dict.header.nav.video_games, href: `/${lang}/${gamesSlug}` },
-        { label: displayConsole, href: `/${lang}/${gamesSlug}/${displayConsole.toLowerCase().replace(/ /g, '-')}` },
+        { label: baseLabel, href: `/${lang}/${navSlug}` },
+        { label: displayConsole, href: `/${lang}/${navSlug}/${displayConsole.toLowerCase().replace(/ /g, '-')}` },
         { label: displayTitle, href: getGameUrl(product, lang) }
     ];
     const schema = generateVideoGameSchema(product, `https://retrocharting.com${getGameUrl(product, lang)}`);
