@@ -155,6 +155,26 @@ def get_game_by_slug(slug: str, db: Session = Depends(get_db)):
                 region = "NTSC"
             # Else remains "Standard" (which frontend treats as NTSC)
 
+        # -- FILTERING SPECIAL EDITIONS FOR STANDARD CONSOLES --
+        # User Request: Hide Bundles/Sets from "Standard" Console pages (e.g. N64 System)
+        # Only apply if the MAIN GAME TITLE is "Standard" (doesn't have the keywords itself)
+        is_console_game = game.genre and (game.genre.lower() in ["systems", "console", "consoles"])
+        if is_console_game:
+            keywords = ["bundle", "pack", "set", "edition", "limited", "ltd"]
+            game_title_lower = game.title.lower()
+            product_name_lower = p.product_name.lower()
+
+            # Check if Game Title is "clean" (doesn't look like a bundle itself)
+            # If Game Title mentions "Bundle", we SHOW bundles.
+            # If Game Title is "Nintendo 64 System", we HIDE "Pokemon Stadium Set".
+            game_has_keyword = any(k in game_title_lower for k in keywords)
+
+            if not game_has_keyword:
+                # Game is standard. Check if product is special.
+                has_special_keyword = any(k in product_name_lower for k in keywords)
+                if has_special_keyword:
+                    continue # Skip this variant
+
         variants.append({
             "id": p.id,
             "region": region,
