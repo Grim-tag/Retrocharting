@@ -15,6 +15,9 @@ function isSystemSlug(slug: string): string | null {
 }
 
 // Generate Static Params for ACCESSORIES consoles (ISR Priming)
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function generateStaticParams() {
     // Return empty to disable build-time generation to prevent API timeouts.
     return [];
