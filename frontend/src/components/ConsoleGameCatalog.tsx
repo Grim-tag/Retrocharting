@@ -125,9 +125,16 @@ export default function ConsoleGameCatalog({
                             game_slug: useLegacyApi ? undefined : g.slug // Only Games have slugs
                         }));
 
-                        // Deduplicate
+                        // Deduplicate by ID AND Name (to handle Game/Product mix-ups or DB dupes)
                         const existingIds = new Set(prev.map(p => p.id));
-                        const newItems = adapted.filter(p => !existingIds.has(p.id));
+                        const existingNames = new Set(prev.map(p => p.product_name));
+
+                        const newItems = adapted.filter(p => {
+                            if (existingIds.has(p.id)) return false;
+                            if (existingNames.has(p.product_name)) return false;
+                            return true;
+                        });
+
                         return [...prev, ...newItems];
                     });
                 } else {
@@ -167,7 +174,13 @@ export default function ConsoleGameCatalog({
                                 game_slug: useLegacyApi ? undefined : g.slug
                             }));
                             const existingIds = new Set(prev.map(p => p.id));
-                            const newItems = adapted.filter(p => !existingIds.has(p.id));
+                            const existingNames = new Set(prev.map(p => p.product_name));
+
+                            const newItems = adapted.filter(p => {
+                                if (existingIds.has(p.id)) return false;
+                                if (existingNames.has(p.product_name)) return false;
+                                return true;
+                            });
                             return [...prev, ...newItems];
                         });
                         currentOffset += BATCH_SIZE;
