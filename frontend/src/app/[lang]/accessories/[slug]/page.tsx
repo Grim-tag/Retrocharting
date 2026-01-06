@@ -21,18 +21,23 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({ params, searchParams }: { params: Promise<{ slug: string; lang: string }>; searchParams: Promise<{ genre?: string, sort?: string }> }): Promise<Metadata> {
-    const { slug, lang } = await params;
-    const { genre, sort } = await searchParams;
+    try {
+        const { slug, lang } = await params;
+        const { genre, sort } = await searchParams;
 
-    const systemName = isSystemSlug(slug);
-    if (!systemName) return { title: 'Accessories Not Found' };
+        const systemName = isSystemSlug(slug);
+        if (!systemName) return { title: 'Accessories Not Found' };
 
-    const seo = generateConsoleSeo(systemName, genre, sort, 0, lang); // Reuse console SEO logic roughly or adapt
+        const seo = generateConsoleSeo(systemName, genre, sort, 0, lang);
 
-    return {
-        title: `${systemName} Accessories & Peripherals | RetroCharting`,
-        description: `Buy and sell ${systemName} controllers, cables, memory cards and other accessories. Check current market prices.`
-    };
+        return {
+            title: `${systemName} Accessories & Peripherals | RetroCharting`,
+            description: `Buy and sell ${systemName} controllers, cables, memory cards and other accessories. Check current market prices.`
+        };
+    } catch (error) {
+        console.error("Error generating metadata for accessories:", error);
+        return { title: 'Accessories - RetroCharting' };
+    }
 }
 
 export default async function AccessoriesConsolePage({

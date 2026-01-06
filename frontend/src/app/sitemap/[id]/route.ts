@@ -20,11 +20,11 @@ export async function GET(request: Request, { params }: { params: { id: string }
     // --- STATIC CONTENT (Only for ID 0) ---
     if (id === 0) {
         // Simple static routes (Homepage, Categories)
-        // Hardcoded for robustness
         const staticUrls = [
             '/', '/en', '/fr',
             '/games', '/fr/games',
             '/consoles', '/fr/consoles',
+            '/accessories', '/fr/accessories',
         ];
 
         staticUrls.forEach(u => {
@@ -33,6 +33,29 @@ export async function GET(request: Request, { params }: { params: { id: string }
             xml += '    <changefreq>daily</changefreq>\n';
             xml += '    <priority>0.9</priority>\n';
             xml += '  </url>\n';
+        });
+
+        // Add Accessories Console Pages (Static list from systems.ts)
+        const langs = ['en', 'fr'];
+
+        // Flatten grouped systems
+        const allSystems = Object.values(systems).flat(); // systems is array from systems.ts? No, it's exported as 'systems' array and 'groupedSystems' object.
+        // systems variable in this file might be the array.
+        // Checking import: import { systems } from '@/data/systems'; -> This is the array.
+
+        systems.forEach(sys => {
+            const cleanSlug = sys.toLowerCase().replace(/ /g, '-');
+            langs.forEach(lang => {
+                // e.g. /accessories/xbox-one
+                const base = routeMap['accessories']?.[lang] || 'accessories';
+                const path = lang === 'en' ? `/${base}/${cleanSlug}` : `/${lang}/${base}/${cleanSlug}`;
+
+                xml += '  <url>\n';
+                xml += `    <loc>${BASE_URL}${path}</loc>\n`;
+                xml += '    <changefreq>monthly</changefreq>\n';
+                xml += '    <priority>0.8</priority>\n';
+                xml += '  </url>\n';
+            });
         });
     }
 
@@ -48,12 +71,10 @@ export async function GET(request: Request, { params }: { params: { id: string }
             games.forEach((game: any) => {
                 langs.forEach(lang => {
                     const gamesBase = routeMap['games']?.[lang] || 'games';
-                    // routeMap might be client side lib, let's hardcode for safety if import fails? 
-                    // No, import works in route handlers.
-
+                    // Unified Game URL: /games/[slug]
                     const path = lang === 'en'
                         ? `/games/${game.slug}`
-                        : `/fr/games/${game.slug}`; // Changed to /games/ for canonical URL
+                        : `/${lang}/${gamesBase}/${game.slug}`;
 
                     xml += '  <url>\n';
                     xml += `    <loc>${BASE_URL}${path}</loc>\n`;
@@ -64,7 +85,6 @@ export async function GET(request: Request, { params }: { params: { id: string }
         }
     } catch (e) {
         console.error(`Sitemap Child ${id} Error:`, e);
-        // Return whatever static content we added
     }
 
     xml += '</urlset>';
