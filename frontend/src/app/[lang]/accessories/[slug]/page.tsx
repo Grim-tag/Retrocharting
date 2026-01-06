@@ -72,7 +72,7 @@ export default async function AccessoriesConsolePage({
 
     const breadcrumbItems = [
         { label: dict.header.nav.accessories, href: `/${lang}/${accessoriesSlug}` },
-        { label: systemName, href: `/${lang}/${accessoriesSlug}/console/${slug}` }
+        { label: systemName, href: `/${lang}/${accessoriesSlug}/${slug}` } // Updated Link
     ];
 
     return (
