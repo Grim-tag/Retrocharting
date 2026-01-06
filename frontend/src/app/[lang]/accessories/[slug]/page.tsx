@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation';
 import { getProductsByConsole, getGenres, getProductById, getProductHistory } from "@/lib/api";
 import ConsoleGameCatalog from "@/components/ConsoleGameCatalog";
 import GameDetailView from "@/components/GameDetailView";
@@ -169,6 +170,11 @@ export default async function AccessoriesConsolePage({
             ]);
 
             if (product) {
+                // REDIRECT TO UNIFIED PAGE IF EXISTS
+                if (product.game_slug) {
+                    redirect(`/${lang}/${accessoriesSlug}/${product.game_slug}`);
+                }
+
                 return (
                     <GameDetailView
                         product={product}
@@ -183,7 +189,10 @@ export default async function AccessoriesConsolePage({
         }
     }
 
-    // --- 404 NOT FOUND ---
+    // REDIRECT CHECK (After ID lookup fails or is done) for Legacy -> Unified
+    // If we found a product but didn't return (e.g. falling through, though above returns)
+    // Actually we should check INSIDE the ID block.
+
     return (
         <main className="flex-grow bg-[#0f121e] py-20 text-center text-white">
             <h1 className="text-3xl font-bold">{dict.product.not_found.title}</h1>
