@@ -42,3 +42,7 @@ class Product(Base):
     sales_transactions = relationship("SalesTransaction", back_populates="product", cascade="all, delete-orphan")
     comments = relationship("Comment", back_populates="product", cascade="all, delete-orphan")
 
+    @property
+    def sales_count(self):
+        return 0
+
