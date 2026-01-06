@@ -107,11 +107,28 @@ export default async function Page({
         const systemName = isSystemSlug(slug);
 
         if (systemName) {
-            // --- CONSOLE VIEW (CLIENT-ONLY STABILITY MODE) ---
-            // We skip server-side fetching to prevent 500 errors.
-            // The client component will fetch data on mount.
+            // --- CONSOLE VIEW (SSR RESTORED) ---
+            // Backend 500 fixed (sales_count), so we can safely fetch SSR data again.
 
             const gamesSlug = lang === 'en' ? 'games' : 'games';
+
+            let products: any[] = [];
+            let genres: string[] = [];
+
+            try {
+                // Fetch initial data concurrently for speed
+                const [fetchedProducts, fetchedGenres] = await Promise.all([
+                    // Fetch top 50 games (SSR) to populate initial view and SEO
+                    // If this fails, client side will retry, but page won't 500 thanks to catch.
+                    getProductsByConsole(systemName, 50, genre, 'game', sort, 0, search),
+                    getGenres(systemName)
+                ]);
+                products = fetchedProducts || [];
+                genres = fetchedGenres || [];
+            } catch (error) {
+                console.error("SSR Data Fetch Failed (Graceful Fallback):", error);
+                // We fallback to empty arrays. Client wrapper will attempt to fetch if empty.
+            }
 
             return (
                 <main className="flex-grow bg-[#0f121e] py-8">
@@ -133,8 +150,8 @@ export default async function Page({
                         </div>
 
                         <ConsoleGameCatalogWrapper
-                            products={[]}
-                            genres={[]}
+                            products={products}
+                            genres={genres}
                             systemName={systemName}
                             lang={lang}
                             gamesSlug={gamesSlug}
