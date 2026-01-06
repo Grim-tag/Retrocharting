@@ -7,7 +7,15 @@ const nextConfig = {
         ignoreDuringBuilds: true,
     },
     productionBrowserSourceMaps: false,
-    images: { unoptimized: true },
+    images: {
+        remotePatterns: [
+            { protocol: 'https', hostname: 'i.ebayimg.com' },
+            { protocol: 'https', hostname: 'm.media-amazon.com' },
+            { protocol: 'https', hostname: 'www.pricecharting.com' },
+            { protocol: 'https', hostname: 'images-na.ssl-images-amazon.com' },
+            { protocol: 'https', hostname: 'res.cloudinary.com' }
+        ],
+    },
     async redirects() {
         return [
             {
