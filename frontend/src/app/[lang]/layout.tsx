@@ -63,6 +63,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { CurrencyProvider } from "@/context/CurrencyContext";
 import { LanguageAlternateProvider } from "@/context/LanguageAlternateContext";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
+import NextTopLoader from 'nextjs-toploader';
 
 export default async function PublicLayout({
     children,
@@ -82,6 +83,18 @@ export default async function PublicLayout({
                     <LanguageAlternateProvider>
                         <AuthProvider>
                             <Header dict={dict} lang={lang} />
+
+                            <NextTopLoader
+                                color="#ff6600"
+                                initialPosition={0.08}
+                                crawlSpeed={200}
+                                height={3}
+                                crawl={true}
+                                showSpinner={false}
+                                easing="ease"
+                                speed={200}
+                                shadow="0 0 10px #ff6600,0 0 5px #ff6600"
+                            />
 
                             <ProductSearch placeholder={dict.header.search_placeholder} lang={lang} />
 
