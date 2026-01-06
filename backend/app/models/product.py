@@ -44,5 +44,9 @@ class Product(Base):
 
     @property
     def sales_count(self):
-        return 0
+        return getattr(self, '_sales_count', 0)
+
+    @sales_count.setter
+    def sales_count(self, value):
+        self._sales_count = value
 
