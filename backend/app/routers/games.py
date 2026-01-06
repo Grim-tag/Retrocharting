@@ -130,7 +130,12 @@ def get_game_by_slug(slug: str, db: Session = Depends(get_db)):
     Get Unified Game Page Data.
     Aggregates data from all specific regional products (variants).
     """
-    game = db.query(Game).filter(Game.slug == slug).options(joinedload(Game.products)).first()
+    game = db.query(Game).filter(Game.slug == slug).options(
+        joinedload(Game.products)
+        .defer(Product.image_blob)
+        .defer(Product.back_image_blob)
+        .defer(Product.description)
+    ).first()
     
     if not game:
         raise HTTPException(status_code=404, detail="Game not found")
