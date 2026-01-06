@@ -635,3 +635,14 @@ def trigger_accessory_unification(background_tasks: BackgroundTasks):
     
     background_tasks.add_task(unify_accessories)
     return {"status": "success", "message": "Accessory Unification started in background."}
+
+@router.post("/unify-consoles", dependencies=[Depends(get_admin_access)])
+async def trigger_console_unification(background_tasks: BackgroundTasks):
+    """
+    Triggers the Console/Hardware Unification.
+    Creates Game entities for hardware products to generate clean slugs.
+    """
+    from app.services.unification import unify_consoles_logic
+    
+    background_tasks.add_task(unify_consoles_logic)
+    return {"status": "success", "message": "Console/Hardware Unification started in background."}
