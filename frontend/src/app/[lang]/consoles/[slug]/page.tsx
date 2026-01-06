@@ -1,16 +1,17 @@
 import { Metadata } from 'next';
 import { getDictionary } from '@/lib/get-dictionary';
-import { getProductById } from '@/lib/cached-api';
 import { formatConsoleName, getGameUrl } from '@/lib/utils';
 import { groupedSystems } from '@/data/systems';
 import { redirect, permanentRedirect } from 'next/navigation';
 import { routeMap } from '@/lib/route-config';
 
-// Import Views (Assuming they exist, based on original file)
+// Import Views
 import ConsoleCategoryView from '@/components/views/ConsoleCategoryView';
 import ConsoleProductView from '@/components/views/ConsoleProductView';
+import GameDetailView from '@/components/GameDetailView';
+import { getProductById, getProductHistory, getGameBySlug, getGameHistory } from '@/lib/api';
 
-// --- Helper to extract ID from slug ---
+// --- Helpers ---
 function getIdFromSlug(slug: string): number {
     const parts = slug.split('-');
     const lastPart = parts[parts.length - 1];
@@ -18,7 +19,6 @@ function getIdFromSlug(slug: string): number {
     return isNaN(id) ? 0 : id;
 }
 
-// Dispatcher Helper
 function isSystemSlug(slug: string): string | null {
     const flatSystems = Object.values(groupedSystems).flat();
     const found = flatSystems.find(s => s.toLowerCase().replace(/ /g, '-') === slug);
@@ -27,13 +27,12 @@ function isSystemSlug(slug: string): string | null {
 
 // Generate Static Params for CONSOLES explicitly (ISR Priming)
 export async function generateStaticParams() {
-    // Return empty to disable build-time generation to prevent API timeouts.
-    // Pages will be generated on-demand (ISR).
     return [];
 }
 
 export async function generateMetadata({ params, searchParams }: { params: Promise<{ slug: string; lang: string }>; searchParams: Promise<{ genre?: string }> }): Promise<Metadata> {
     const { slug, lang } = await params;
+    const dict = await getDictionary(lang);
 
     // Redirect "PC Games" console page to the Games List page
     if (slug === 'pc-games') {
@@ -41,9 +40,7 @@ export async function generateMetadata({ params, searchParams }: { params: Promi
         permanentRedirect(`/${lang}/${gamesSlug}/pc-games`);
     }
 
-    const dict = await getDictionary(lang);
-
-    // 1. Check if it's a Console Category Page (e.g. /consoles/nintendo-64)
+    // 1. Check if it's a Console Category Page
     const systemName = isSystemSlug(slug);
     if (systemName) {
         return {
@@ -52,7 +49,21 @@ export async function generateMetadata({ params, searchParams }: { params: Promi
         };
     }
 
-    // 2. Default: Console Product Page
+    // 2. UNIFIED METADATA (Slug-based)
+    try {
+        const game = await getGameBySlug(slug);
+        if (game) {
+            const shortConsoleName = formatConsoleName(game.console || "");
+            return {
+                title: `${game.title} ${shortConsoleName} ${dict.product.market.suffix} | RetroCharting`,
+                description: game.description || `Current market value for ${game.title} on ${game.console}`
+            };
+        }
+    } catch (e) {
+        // Fallback
+    }
+
+    // 3. Default: Console Product Page (Legacy)
     const id = getIdFromSlug(slug);
     const product = await getProductById(id);
 
@@ -93,6 +104,7 @@ export default async function Page({
     searchParams: Promise<{ genre?: string }>
 }) {
     const { slug, lang } = await params;
+    const dict = await getDictionary(lang); // Fetch dict for GameDetailView
 
     // Redirect "PC Games" console page to the Games List page
     if (slug === 'pc-games') {
@@ -100,7 +112,7 @@ export default async function Page({
         permanentRedirect(`/${lang}/${gamesSlug}/pc-games`);
     }
 
-    // 1. Dispatcher Logic
+    // 1. Dispatcher Logic (Category)
     const systemName = isSystemSlug(slug);
 
     if (systemName) {
@@ -108,22 +120,58 @@ export default async function Page({
         return <ConsoleCategoryView slug={slug} systemName={systemName} lang={lang} />;
     }
 
-    // 2. SEO Redirection Check (For Product Pages)
-    // If the current slug doesn't match the new clean URL logic, redirect.
+    // 2. UNIFIED LOOKUP (Slug-based) - Required for new links
+    try {
+        const game = await getGameBySlug(slug);
+
+        if (game) {
+            // Unified Success!
+            const mainVariant = game.variants.find((v: any) => v.region.includes("NTSC"))
+                || game.variants.find((v: any) => v.region.includes("PAL"))
+                || game.variants[0];
+
+            const [mainProduct, history] = await Promise.all([
+                getProductById(mainVariant.id),
+                getGameHistory(slug)
+            ]);
+
+            if (mainProduct) {
+                return (
+                    <GameDetailView
+                        product={mainProduct}
+                        history={history}
+                        lang={lang}
+                        dict={dict}
+                        game={game}
+                    />
+                );
+            }
+        }
+    } catch (e) {
+        // Fallback to legacy
+    }
+
+    // 3. LEGACY LOOKUP (ID-based)
     const id = getIdFromSlug(slug);
-    // We fetch purely for redirection check. The View will fetch again (cached).
+
+    // We fetch purely for redirection check or Render
     const product = await getProductById(id);
 
     if (product) {
         const canonicalPath = getGameUrl(product, lang);
-        // Path is like /en/consoles/slug-id. We need just the last segment to compare with `slug`
         const canonicalSlug = canonicalPath.split('/').pop();
 
         if (canonicalSlug && slug !== canonicalSlug) {
-            redirect(canonicalPath);
+            // Only redirect if it's strictly mismatched and likely an old URL
+            // redirect(canonicalPath); 
+            // Commented out to ensure stability for now, or use with caution.
         }
+
+        // For consistency, we could use GameDetailView here too, but ConsoleProductView is existing.
+        // Let's stick to ConsoleProductView for valid Legacy IDs to minimize change.
+        return <ConsoleProductView slug={slug} lang={lang} />;
     }
 
-    // 2. Render Product View (Independent)
-    return <ConsoleProductView slug={slug} lang={lang} />;
+    // 404
+    return <ConsoleProductView slug={slug} lang={lang} />; // View handles 404 logic internally
 }
