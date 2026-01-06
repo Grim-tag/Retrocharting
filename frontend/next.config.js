@@ -21,6 +21,11 @@ const nextConfig = {
                 permanent: true,
             },
             {
+                source: '/accessories/console/:slug',
+                destination: '/accessories/:slug',
+                permanent: true,
+            },
+            {
                 source: '/sitemap_index.xml',
                 destination: '/sitemap.xml',
                 permanent: true,
