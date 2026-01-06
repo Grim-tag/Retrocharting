@@ -2,9 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2026-01-06 Phase 2c] Sitemap & Catalog Unification
+## [Unreleased]
+### Added
+- **Unification**: Enhanced `unify_consoles` script (Bulldozer Mode) to robustly clean up legacy IDs, even for products with empty game slugs.
+- **Redirection**: Enabled persistent 308 redirects from Legacy URLs (with ID) to Clean URLs (Unified) on Console pages.
+- **Schema**: Added `game_slug` to `ProductList` schema to ensure API returns clean URLs.
 
 ### Fixed
+- **UI/UX**: Fixed visual duplication in `ConsoleGameCatalog` by implementing Name-based deduplication and prioritizing Unified items.
+- **SEO**: Fixed `{{platform}}` variable replacement in Market Analysis text.
+- **Data**: Corrected "Black Ops III" console duplication issue via frontend filtering.
 - **Frontend / Accessories**: Unified the Accessory Catalog (`/accessories`). Removed regional duplicates and established a global view grouped by Console model.
 - **Frontend / Accessories**: Removed cluttering Regional Headers ("North America", etc.) from the main accessories page for a cleaner UI.
 - **Frontend / Redirection**: Implemented intelligent redirection for Legacy Accessory URLs to their new Unified Game counterparts.
