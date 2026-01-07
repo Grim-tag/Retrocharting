@@ -562,12 +562,42 @@ export async function getPublicProfile(username: string): Promise<PublicUser | n
     }
 }
 
-export async function getPublicCollection(username: string): Promise<PublicCollectionItem[]> {
-    try {
-        const response = await apiClient.get(`/users/${username}/collection`);
-        return response.data;
-    } catch (error) {
-        console.error("Failed to fetch public collection", error);
-        return [];
+
+export async function getAllSlugs(limit = 10000): Promise<{ slug: string; genre: string }[]> {
+    let allSlugs: { slug: string; genre: string }[] = [];
+    let skip = 0;
+    let keepFetching = true;
+
+    // Safety limit
+    const MAX_FETCH = 6; // 60k max
+    let count = 0;
+
+    while (keepFetching && count < MAX_FETCH) {
+        try {
+            const response = await apiClient.get('/games/sitemap/list', {
+                params: {
+                    limit,
+                    skip
+                }
+            });
+
+            const batch = response.data;
+            if (batch && batch.length > 0) {
+                allSlugs = [...allSlugs, ...batch];
+                skip += limit;
+                if (batch.length < limit) {
+                    keepFetching = false;
+                }
+            } else {
+                keepFetching = false;
+            }
+            count++;
+        } catch (error) {
+            console.error("Error fetching sitemap slugs:", error);
+            keepFetching = false;
+        }
     }
+
+    return allSlugs;
 }
+
