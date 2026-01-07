@@ -69,10 +69,9 @@ export async function generateStaticParams() {
     return params;
 }
 
-export async function generateMetadata({ params, searchParams }: { params: Promise<{ slug: string; lang: string }>, searchParams: Promise<{ genre?: string, sort?: string }> }): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ slug: string; lang: string }> }): Promise<Metadata> {
     try {
         const { slug, lang } = await params;
-        const { genre, sort } = await searchParams;
         const dict = await getDictionary(lang);
 
         const systemName = isSystemSlug(slug);
@@ -87,7 +86,7 @@ export async function generateMetadata({ params, searchParams }: { params: Promi
             // Fallback for visual stability if count is 0 (maybe API error) -> check if truly 0? 
             // If 0, it displays "0 games", which is honest.
 
-            const seo = generateConsoleSeo(systemName, genre, sort, count, lang);
+            const seo = generateConsoleSeo(systemName, undefined, undefined, count, lang);
             return {
                 title: seo.title,
                 description: seo.description
@@ -161,15 +160,12 @@ export async function generateMetadata({ params, searchParams }: { params: Promi
 }
 
 export default async function Page({
-    params,
-    searchParams
+    params
 }: {
-    params: Promise<{ slug: string; lang: string }>,
-    searchParams: Promise<{ genre?: string, sort?: string, search?: string }>
+    params: Promise<{ slug: string; lang: string }>
 }) {
     try {
         const { slug, lang } = await params;
-        const { genre, sort, search } = await searchParams;
         const dict = await getDictionary(lang);
 
         const systemName = isSystemSlug(slug);
@@ -185,17 +181,16 @@ export default async function Page({
 
             try {
                 // Fetch initial data concurrently for speed
+                // Without searchParams, we fetch defaults (page 0, no sort, no filters)
                 const [fetchedProducts, fetchedGenres] = await Promise.all([
                     // Fetch top 50 games (SSR) to populate initial view and SEO
-                    // If this fails, client side will retry, but page won't 500 thanks to catch.
-                    getProductsByConsole(systemName, 50, genre, 'game', sort, 0, search),
+                    getProductsByConsole(systemName, 50, undefined, 'game', undefined, 0, undefined),
                     getGenres(systemName)
                 ]);
                 products = fetchedProducts || [];
                 genres = fetchedGenres || [];
             } catch (error) {
                 console.error("SSR Data Fetch Failed (Graceful Fallback):", error);
-                // We fallback to empty arrays. Client wrapper will attempt to fetch if empty.
             }
 
             return (

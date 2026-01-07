@@ -61,15 +61,14 @@ export async function generateStaticParams() {
     return params;
 }
 
-export async function generateMetadata({ params, searchParams }: { params: Promise<{ slug: string; lang: string }>; searchParams: Promise<{ genre?: string, sort?: string }> }): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ slug: string; lang: string }> }): Promise<Metadata> {
     try {
         const { slug, lang } = await params;
-        const { genre, sort } = await searchParams;
 
         // 1. Check if it's a System List Page
         const systemName = isSystemSlug(slug);
         if (systemName) {
-            const seo = generateConsoleSeo(systemName, genre, sort, 0, lang);
+            const seo = generateConsoleSeo(systemName, undefined, undefined, 0, lang);
             return {
                 title: `${systemName} Accessories & Peripherals | RetroCharting`,
                 description: `Buy and sell ${systemName} controllers, cables, memory cards and other accessories. Check current market prices.`
@@ -130,14 +129,11 @@ export async function generateMetadata({ params, searchParams }: { params: Promi
 }
 
 export default async function AccessoriesConsolePage({
-    params,
-    searchParams
+    params
 }: {
-    params: Promise<{ slug: string; lang: string }>,
-    searchParams: Promise<{ genre?: string, sort?: string, search?: string }>
+    params: Promise<{ slug: string; lang: string }>
 }) {
     const { slug, lang } = await params;
-    const { genre, sort, search: searchQuery } = await searchParams;
     const dict = await getDictionary(lang);
 
     const getSlug = (key: string) => routeMap[key]?.[lang] || key;
@@ -153,7 +149,7 @@ export default async function AccessoriesConsolePage({
 
         try {
             const [games, fetchedGenres] = await Promise.all([
-                getGamesByConsole(systemName, 40, genre, sort, 0, searchQuery, 'accessory'),
+                getGamesByConsole(systemName, 40, undefined, undefined, 0, undefined, 'accessory'),
                 getGenres(systemName)
             ]);
 
