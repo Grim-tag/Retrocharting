@@ -45,6 +45,30 @@ export function middleware(request: NextRequest) {
         return NextResponse.redirect(url, 301);
     }
 
+    // [NEW] Legacy French Category Redirection
+    // Fixes 404s for old Google indexed URLs (e.g. /fr/accessoires/...)
+    // logic: /fr/accessoires/slug -> /fr/accessories/slug
+    if (pathname.startsWith('/fr/')) {
+        let newPath = pathname;
+        let modified = false;
+
+        if (pathname.startsWith('/fr/accessoires')) {
+            newPath = pathname.replace('/fr/accessoires', '/fr/accessories');
+            modified = true;
+        } else if (pathname.startsWith('/fr/jeux-video') || pathname.startsWith('/fr/jeux')) {
+            newPath = pathname.replace(/\/fr\/jeux(-video)?/, '/fr/games');
+            modified = true;
+        }
+
+        if (modified) {
+            const url = new URL(newPath, request.url);
+            request.nextUrl.searchParams.forEach((value, key) => {
+                url.searchParams.set(key, value);
+            });
+            return NextResponse.redirect(url, 301);
+        }
+    }
+
     // 2. Handle /en/ Redirects (Canonical: /en/x -> /x)
     // If the path starts with /en, we redirect to the root version to avoid duplicates.
     // CRITICAL: We must skip this if it's an internal rewrite (marked by param).
