@@ -35,10 +35,26 @@ export async function generateStaticParams() {
     const flatSystems = Object.values(groupedSystems).flat();
     const params: { slug: string; lang: string }[] = [];
 
+    // 1. System Pages
     for (const system of flatSystems) {
         const slug = system.toLowerCase().replace(/ /g, '-');
         params.push({ slug, lang: 'en' });
         params.push({ slug, lang: 'fr' });
+    }
+
+    // 2. Full Product Catalog (Accessories Only)
+    try {
+        const { getAllSlugs } = await import('@/lib/api');
+        const allSlugs = await getAllSlugs();
+
+        for (const item of allSlugs) {
+            if (item.genre === 'Accessories' || item.genre === 'Controllers') {
+                params.push({ slug: item.slug, lang: 'en' });
+                params.push({ slug: item.slug, lang: 'fr' });
+            }
+        }
+    } catch (error) {
+        console.error("Values fetch failed for Accessory SSG:", error);
     }
 
     return params;
