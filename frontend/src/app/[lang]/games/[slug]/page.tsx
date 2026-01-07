@@ -35,8 +35,8 @@ function getIdFromSlug(slug: string): number {
     return isNaN(id) ? 0 : id;
 }
 
-// Enable Static Generation (ISR)
-export const revalidate = 86400; // 24 hours
+// Enable Static Generation (SSG - Infinite Cache)
+export const revalidate = false;
 
 export async function generateStaticParams() {
     const flatSystems = Object.values(groupedSystems).flat();
