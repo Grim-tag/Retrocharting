@@ -21,6 +21,11 @@ const nextConfig = {
             { protocol: 'https', hostname: 'res.cloudinary.com' }
         ],
     },
+    // Limit concurrency to preventing backend overload (SQLite/Localhost)
+    experimental: {
+        cpus: 1,
+        workerThreads: false,
+    },
     // Redirects are NOT supported in 'export' mode directly.
     // async redirects() { return []; }
     // Rewrites are NOT supported in 'export' mode.
