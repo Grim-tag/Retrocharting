@@ -1,0 +1,22 @@
+User-Agent: *
+Allow: /
+Disallow: /api/
+Disallow: /_next/
+Disallow: /static/
+Disallow: /admin/
+Disallow: /en/admin/
+Disallow: /fr/admin/
+Disallow: /profile/
+Disallow: /en/profile/
+Disallow: /fr/profile/
+Disallow: /collection/
+Disallow: /en/collection/
+Disallow: /fr/collection/
+Disallow: /import/
+Disallow: /en/import/
+Disallow: /fr/import/
+Disallow: /user/
+Disallow: /en/user/
+Disallow: /fr/user/
+
+Sitemap: https://retrocharting.com/sitemap.xml
