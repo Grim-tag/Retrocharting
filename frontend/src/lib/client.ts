@@ -10,11 +10,10 @@ export const API_URL = `${BASE_URL}/api/v1`;
 
 export const apiClient = axios.create({
     baseURL: API_URL,
+    timeout: 120000, // 2 minutes (increased for SSG)
     headers: {
         'Content-Type': 'application/json',
     },
-    // Fail fast during build
-    timeout: process.env.CAPACITOR_BUILD === 'true' ? 100 : 30000,
 });
 
 // Request Interceptor: Auto-inject token from localStorage

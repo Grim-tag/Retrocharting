@@ -9,6 +9,7 @@ const nextConfig = {
     productionBrowserSourceMaps: false,
     // Static Export Configuration
     output: 'export',
+    staticPageGenerationTimeout: 300, // 5 minutes per page (fix timeouts)
     // Image Optimization requires Node.js server, disable for static export
     images: {
         unoptimized: true,
