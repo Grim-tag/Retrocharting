@@ -31,13 +31,14 @@ def recover_missing_prices(limit: int = 500, continuous: bool = False):
         while True:
             # Target: Items with Valid PC ID but Missing/Zero CIB Price
             # PRIORITIZE: Items that have NEVER been scraped (last_scraped is None)
-            # OR Items that haven't been scraped in a long time (asc order)
-            from sqlalchemy import asc
+            # OR Items that haven't been scraped in a long time (asc order).
+            # IMPORTANT: Postgres puts NULLs LAST by default, which causes the "Hot Loop" check
+            # to trigger on recent items while ignoring new (NULL) items. We must force NULLS FIRST.
             
             candidates = db.query(Product).filter(
                 Product.pricecharting_id != None,
                 (Product.cib_price == None) | (Product.cib_price == 0.0)
-            ).order_by(asc(Product.last_scraped)).limit(limit).all()
+            ).order_by(Product.last_scraped.asc().nullsfirst()).limit(limit).all()
             
             if not candidates:
                 print("Price Recovery: No more candidates found.")
