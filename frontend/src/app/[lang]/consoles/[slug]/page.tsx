@@ -25,9 +25,37 @@ function isSystemSlug(slug: string): string | null {
     return found || null;
 }
 
-// Generate Static Params for CONSOLES explicitly (ISR Priming)
+// Enable Static Generation (SSG - Infinite Cache)
+export const revalidate = false;
+
 export async function generateStaticParams() {
-    return [];
+    const params: { slug: string; lang: string }[] = [];
+    const flatSystems = Object.values(groupedSystems).flat();
+
+    // 1. System Pages (Categories)
+    for (const system of flatSystems) {
+        const slug = system.toLowerCase().replace(/ /g, '-');
+        params.push({ slug, lang: 'en' });
+        params.push({ slug, lang: 'fr' });
+    }
+
+    // 2. Console Products (Hardware)
+    try {
+        const { getAllSlugs } = await import('@/lib/api');
+        const allSlugs = await getAllSlugs();
+
+        for (const item of allSlugs) {
+            // 'Systems' genre usually maps to Consoles
+            if (item.genre === 'Systems' || item.genre === 'Consoles') {
+                params.push({ slug: item.slug, lang: 'en' });
+                params.push({ slug: item.slug, lang: 'fr' });
+            }
+        }
+    } catch (error) {
+        console.error("Values fetch failed for Console SSG:", error);
+    }
+
+    return params;
 }
 
 export async function generateMetadata({ params, searchParams }: { params: Promise<{ slug: string; lang: string }>; searchParams: Promise<{ genre?: string }> }): Promise<Metadata> {

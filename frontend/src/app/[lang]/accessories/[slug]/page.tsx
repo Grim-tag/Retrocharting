@@ -28,8 +28,9 @@ function getIdFromSlug(slug: string): number {
     return isNaN(id) ? 0 : id;
 }
 
-// Enable Static Generation (ISR) - 60 seconds cache
-export const revalidate = 60;
+// Enable Static Generation (SSG - Infinite Cache)
+// Pages are generated ONCE (at build or first visit) and stored as HTML forever.
+export const revalidate = false;
 
 export async function generateStaticParams() {
     const flatSystems = Object.values(groupedSystems).flat();
@@ -42,10 +43,10 @@ export async function generateStaticParams() {
         params.push({ slug, lang: 'fr' });
     }
 
-    // 2. Full Product Catalog (Accessories Only)
+    // 2. Accessories Pre-render (Full Catalog)
     try {
         const { getAllSlugs } = await import('@/lib/api');
-        const allSlugs = await getAllSlugs();
+        const allSlugs = await getAllSlugs(); // Fetch all
 
         for (const item of allSlugs) {
             if (item.genre === 'Accessories' || item.genre === 'Controllers') {

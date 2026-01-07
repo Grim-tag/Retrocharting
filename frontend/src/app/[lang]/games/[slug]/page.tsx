@@ -35,19 +35,35 @@ function getIdFromSlug(slug: string): number {
     return isNaN(id) ? 0 : id;
 }
 
-// Enable Static Generation (ISR) - 60 seconds cache
-// Full Static Build is risky on Render, so we use ISR for safety.
-export const revalidate = 60;
+// Enable Static Generation (SSG - Infinite Cache)
+// Pages are generated ONCE (at build or first visit) and stored as HTML forever.
+export const revalidate = false;
 
 export async function generateStaticParams() {
     const flatSystems = Object.values(groupedSystems).flat();
     const params: { slug: string; lang: string }[] = [];
 
-    // 1. System Pages (Always fast)
+    // 1. System Pages (Always pre-render)
     for (const system of flatSystems) {
         const slug = system.toLowerCase().replace(/ /g, '-');
         params.push({ slug, lang: 'en' });
         params.push({ slug, lang: 'fr' });
+    }
+
+    // 2. Verified Top Games (Full Catalog for Local Export)
+    // We fetch ALL slugs because we are building locally (No timeout risk).
+    try {
+        const { getAllSlugs } = await import('@/lib/api');
+        const allSlugs = await getAllSlugs(); // Default limit is high enough (60k)
+
+        for (const item of allSlugs) {
+            if (item.genre !== 'Accessories' && item.genre !== 'Controllers') {
+                params.push({ slug: item.slug, lang: 'en' });
+                params.push({ slug: item.slug, lang: 'fr' });
+            }
+        }
+    } catch (error) {
+        console.error("Values fetch failed for SSG, falling back to Systems only:", error);
     }
 
     return params;

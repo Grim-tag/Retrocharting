@@ -7,7 +7,11 @@ const nextConfig = {
         ignoreDuringBuilds: true,
     },
     productionBrowserSourceMaps: false,
+    // Static Export Configuration
+    output: 'export',
+    // Image Optimization requires Node.js server, disable for static export
     images: {
+        unoptimized: true,
         remotePatterns: [
             { protocol: 'https', hostname: 'i.ebayimg.com' },
             { protocol: 'https', hostname: 'm.media-amazon.com' },
@@ -16,38 +20,11 @@ const nextConfig = {
             { protocol: 'https', hostname: 'res.cloudinary.com' }
         ],
     },
-    async redirects() {
-        return [
-            {
-                source: '/fr/jeux-video/:slug*',
-                destination: '/fr/games/:slug*',
-                permanent: true,
-            },
-            {
-                source: '/:lang/accessories/console/:slug',
-                destination: '/:lang/accessories/:slug',
-                permanent: true,
-            },
-            {
-                source: '/accessories/console/:slug',
-                destination: '/accessories/:slug',
-                permanent: true,
-            },
-            {
-                source: '/sitemap_index.xml',
-                destination: '/sitemap.xml',
-                permanent: true,
-            },
-        ];
-    },
-    async rewrites() {
-        return [
-            {
-                source: '/api/:path*',
-                destination: 'https://retrocharting-backend.onrender.com/api/:path*',
-            },
-        ];
-    },
+    // Redirects are NOT supported in 'export' mode directly.
+    // async redirects() { return []; }
+    // Rewrites are NOT supported in 'export' mode.
+    // Client must use absolute URLs for API calls.
+    // async rewrites() { ... }
 };
 
 module.exports = nextConfig;

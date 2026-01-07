@@ -2,7 +2,14 @@ import { NextResponse } from 'next/server';
 import { routeMap } from '@/lib/route-config';
 import { systems } from '@/data/systems';
 
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-static'; // Must be static for export
+
+export async function generateStaticParams() {
+    // Generate IDs 0 to 5 (covering 60k items)
+    return [0, 1, 2, 3, 4, 5].map((id) => ({
+        id: `${id}.xml`, // Matches [id] param including extension
+    }));
+}
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
     // Check for potential .xml extension if URL rewriting didn't strip it? 
