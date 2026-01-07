@@ -51,7 +51,23 @@ export async function generateMetadata({ params, searchParams }: { params: Promi
             };
         }
 
-        // 2. Check if it's a Product Detail Page
+        // 2. Check if it's a Product Detail Page (Unified or Legacy)
+
+        // [SEO FIX] Try Unified Slug First (Clean URLs)
+        const { getGameBySlug } = await import('@/lib/api');
+        const game = await getGameBySlug(slug);
+
+        if (game) {
+            const shortConsoleName = game.console ? game.console : "";
+            // Check if it's an accessory type game? The API returns "Game" object but it might be accessory.
+            // We just use the title.
+            return {
+                title: `${game.title} - ${shortConsoleName} Accessories | RetroCharting`,
+                description: `Buy & Sell ${game.title} for ${shortConsoleName}. Current market prices.`
+            };
+        }
+
+        // 3. Fallback Legacy ID
         const id = getIdFromSlug(slug);
         if (id) {
             const product = await getProductById(id);

@@ -180,6 +180,19 @@ export async function saveTranslation(locale: string, key: string, value: string
     }
 }
 
+// [NEW] API for SEO Counts
+export async function getProductsCountByConsole(consoleName: string, type: 'game' | 'accessory' = 'game'): Promise<number> {
+    try {
+        const response = await apiClient.get(`/products/count`, {
+            params: { console: consoleName, type }
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Error fetching product count by console:", error);
+        return 0;
+    }
+}
+
 export async function getProductsCount(): Promise<number> {
     try {
         const response = await apiClient.get(`/products/count`);

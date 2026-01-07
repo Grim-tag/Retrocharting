@@ -36,8 +36,15 @@ export function generateConsoleSeo(
         : `${cleanSystemName} Price Guide: New, Used & Loose Values`;
 
     let description = isFr
-        ? `Consultez la liste des ${count} jeux ${cleanSystemName} avec leur cote actuelle. Prix mis à jour quotidiennement pour le loose, complet (CIB) et neuf.`
-        : `Find current values for ${count} ${cleanSystemName} games. Daily updated prices for loose, CIB, and new conditions to help you buy or sell.`;
+        ? `Consultez la liste des ${count > 0 ? count : ''} jeux ${cleanSystemName} avec leur cote actuelle. Prix mis à jour quotidiennement pour le loose, complet (CIB) et neuf.`
+        : `Find current values for ${count > 0 ? count : 'all'} ${cleanSystemName} games. Daily updated prices for loose, CIB, and new conditions to help you buy or sell.`;
+
+    // Fix "0 games" awkwardness
+    if (count === 0) {
+        description = isFr
+            ? `Consultez la cote actuelle des jeux ${cleanSystemName}. Prix mis à jour quotidiennement.`
+            : `Find current values for ${cleanSystemName} games. Daily updated prices for loose, CIB, and new conditions.`;
+    }
 
     let intro = isFr
         ? `Bienvenue sur l'argus ${cleanSystemName}. Vous trouverez ci-dessous la liste complète des jeux, classée par popularité. Utilisez les filtres pour affiner votre recherche par genre (Action, RPG...) ou pour trouver les pépites rares.`

@@ -52,7 +52,17 @@ export async function generateMetadata({ params, searchParams }: { params: Promi
 
         const systemName = isSystemSlug(slug);
         if (systemName) {
-            const seo = generateConsoleSeo(systemName, genre, sort, 0, lang);
+            // [SEO FIX] Fetch real count instead of hardcoded 0
+            // We use a lightweight count API key if possible, or fallback to known constants if API fails? 
+            // Better: use the new API function. 
+            // Note: server components can await this.
+            const { getProductsCountByConsole } = await import('@/lib/api');
+            const count = await getProductsCountByConsole(systemName, 'game');
+
+            // Fallback for visual stability if count is 0 (maybe API error) -> check if truly 0? 
+            // If 0, it displays "0 games", which is honest.
+
+            const seo = generateConsoleSeo(systemName, genre, sort, count, lang);
             return {
                 title: seo.title,
                 description: seo.description
@@ -67,9 +77,15 @@ export async function generateMetadata({ params, searchParams }: { params: Promi
         if (game) {
             const shortConsoleName = formatConsoleName(game.console || "");
             const canonicalPath = `/${lang === 'en' ? 'games' : 'fr/games'}/${game.slug}`;
+
+            // [SEO FIX] Fallback description
+            const fallbackDesc = lang === 'en'
+                ? `Get the current value for ${game.title} on ${shortConsoleName}. Real-time prices for Loose, CIB, and New copies.`
+                : `Cote actuelle de ${game.title} sur ${shortConsoleName}. Prix suivis en temps réel pour le loose, complet (CIB) et neuf.`;
+
             return {
                 title: `${game.title} ${shortConsoleName} ${dict.product.market.suffix} | RetroCharting`,
-                description: game.description || `Current market value for ${game.title} on ${game.console}`,
+                description: game.description && game.description !== "none" ? game.description : fallbackDesc,
                 alternates: {
                     canonical: canonicalPath,
                     languages: {
@@ -88,12 +104,16 @@ export async function generateMetadata({ params, searchParams }: { params: Promi
         if (!product) return { title: "Product Not Found" };
 
         const shortConsoleName = formatConsoleName(product.console_name);
-        // Legacy canonical might be tricky if we want to enforce unified, but for now just point to self
         const canonicalPath = `/${lang === 'en' ? 'games' : 'fr/games'}/${slug}`;
+
+        // [SEO FIX] Fallback description for legacy
+        const legacyFallbackDesc = lang === 'en'
+            ? `Get the current value for ${product.product_name} on ${shortConsoleName}. Real-time prices.`
+            : `Cote actuelle de ${product.product_name} sur ${shortConsoleName}. Prix mis à jour.`;
 
         return {
             title: `${product.product_name} ${shortConsoleName} ${dict.product.market.suffix} | RetroCharting`,
-            description: `Current market value for ${product.product_name}`,
+            description: product.description && product.description !== "none" ? product.description : legacyFallbackDesc,
             alternates: {
                 canonical: canonicalPath
             }
