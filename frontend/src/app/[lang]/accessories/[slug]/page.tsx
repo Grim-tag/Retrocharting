@@ -28,12 +28,20 @@ function getIdFromSlug(slug: string): number {
     return isNaN(id) ? 0 : id;
 }
 
-// Generate Static Params for ACCESSORIES consoles (ISR Priming)
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+// Enable Static Generation (ISR) for Accessories
+export const revalidate = 86400; // 24 hours
 
 export async function generateStaticParams() {
-    return [];
+    const flatSystems = Object.values(groupedSystems).flat();
+    const params: { slug: string; lang: string }[] = [];
+
+    for (const system of flatSystems) {
+        const slug = system.toLowerCase().replace(/ /g, '-');
+        params.push({ slug, lang: 'en' });
+        params.push({ slug, lang: 'fr' });
+    }
+
+    return params;
 }
 
 export async function generateMetadata({ params, searchParams }: { params: Promise<{ slug: string; lang: string }>; searchParams: Promise<{ genre?: string, sort?: string }> }): Promise<Metadata> {

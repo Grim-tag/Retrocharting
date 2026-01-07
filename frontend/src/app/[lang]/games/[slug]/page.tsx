@@ -35,14 +35,21 @@ function getIdFromSlug(slug: string): number {
     return isNaN(id) ? 0 : id;
 }
 
-// Disable Static Generation for Build Performance (ISR Only)
-// We must force dynamic because we access searchParams which makes the page dynamic at runtime
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+// Enable Static Generation (ISR)
+export const revalidate = 86400; // 24 hours
 
-// export async function generateStaticParams() {
-//     return [];
-// }
+export async function generateStaticParams() {
+    const flatSystems = Object.values(groupedSystems).flat();
+    const params: { slug: string; lang: string }[] = [];
+
+    for (const system of flatSystems) {
+        const slug = system.toLowerCase().replace(/ /g, '-');
+        params.push({ slug, lang: 'en' });
+        params.push({ slug, lang: 'fr' });
+    }
+
+    return params;
+}
 
 export async function generateMetadata({ params, searchParams }: { params: Promise<{ slug: string; lang: string }>, searchParams: Promise<{ genre?: string, sort?: string }> }): Promise<Metadata> {
     try {
