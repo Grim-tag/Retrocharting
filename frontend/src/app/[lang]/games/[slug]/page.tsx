@@ -78,14 +78,18 @@ export async function generateMetadata({ params, searchParams }: { params: Promi
             const shortConsoleName = formatConsoleName(game.console || "");
             const canonicalPath = `/${lang === 'en' ? 'games' : 'fr/games'}/${game.slug}`;
 
-            // [SEO FIX] Fallback description
-            const fallbackDesc = lang === 'en'
-                ? `Get the current value for ${game.title} on ${shortConsoleName}. Real-time prices for Loose, CIB, and New copies.`
-                : `Cote actuelle de ${game.title} sur ${shortConsoleName}. Prix suivis en temps réel pour le loose, complet (CIB) et neuf.`;
+            // [SEO STANDARD] Games Template
+            const defaultDesc = lang === 'en'
+                ? `Check the current market value and price guide for ${game.title} on ${shortConsoleName}. View historical charts for Loose, CIB, and New copies on RetroCharting.`
+                : `Découvrez la cote argus et le prix de ${game.title} sur ${shortConsoleName}. Suivez l'évolution des prix en Loose, Complet ou Neuf sur RetroCharting.`;
+
+            const title = lang === 'en'
+                ? `${game.title} Prices & Value - Retrocharting.com`
+                : `${game.title} Cote & prix - Retrocharting.com`;
 
             return {
-                title: `${game.title} ${shortConsoleName} ${dict.product.market.suffix} | RetroCharting`,
-                description: game.description && game.description !== "none" ? game.description : fallbackDesc,
+                title: title,
+                description: game.description && game.description !== "none" ? game.description : defaultDesc,
                 alternates: {
                     canonical: canonicalPath,
                     languages: {
@@ -106,14 +110,18 @@ export async function generateMetadata({ params, searchParams }: { params: Promi
         const shortConsoleName = formatConsoleName(product.console_name);
         const canonicalPath = `/${lang === 'en' ? 'games' : 'fr/games'}/${slug}`;
 
-        // [SEO FIX] Fallback description for legacy
-        const legacyFallbackDesc = lang === 'en'
-            ? `Get the current value for ${product.product_name} on ${shortConsoleName}. Real-time prices.`
-            : `Cote actuelle de ${product.product_name} sur ${shortConsoleName}. Prix mis à jour.`;
+        // [SEO STANDARD] Legacy Games Template
+        const legacyDefaultDesc = lang === 'en'
+            ? `Check the current market value and price guide for ${product.product_name} on ${shortConsoleName}. View historical charts for Loose, CIB, and New copies on RetroCharting.`
+            : `Découvrez la cote argus et le prix de ${product.product_name} sur ${shortConsoleName}. Suivez l'évolution des prix en Loose, Complet ou Neuf sur RetroCharting.`;
+
+        const legacyTitle = lang === 'en'
+            ? `${product.product_name} Prices & Value - Retrocharting.com`
+            : `${product.product_name} Cote & prix - Retrocharting.com`;
 
         return {
-            title: `${product.product_name} ${shortConsoleName} ${dict.product.market.suffix} | RetroCharting`,
-            description: product.description && product.description !== "none" ? product.description : legacyFallbackDesc,
+            title: legacyTitle,
+            description: product.description && product.description !== "none" ? product.description : legacyDefaultDesc,
             alternates: {
                 canonical: canonicalPath
             }

@@ -59,11 +59,19 @@ export async function generateMetadata({ params, searchParams }: { params: Promi
 
         if (game) {
             const shortConsoleName = game.console ? game.console : "";
-            // Check if it's an accessory type game? The API returns "Game" object but it might be accessory.
-            // We just use the title.
+
+            // [SEO STANDARD] Accessory Template (Game Path)
+            const desc = lang === 'en'
+                ? `Get the official price guide for the ${game.title} for ${shortConsoleName}. Compare market values for controllers, cables, and peripherals on RetroCharting.`
+                : `Consultez la cote officielle de l'accessoire ${game.title} pour ${shortConsoleName}. Prix et valeur des manettes et périphériques sur RetroCharting.`;
+
+            const title = lang === 'en'
+                ? `${game.title} Prices & Value - Retrocharting.com`
+                : `${game.title} Cote & prix - Retrocharting.com`;
+
             return {
-                title: `${game.title} - ${shortConsoleName} Accessories | RetroCharting`,
-                description: `Buy & Sell ${game.title} for ${shortConsoleName}. Current market prices.`
+                title: title,
+                description: desc
             };
         }
 
@@ -72,9 +80,19 @@ export async function generateMetadata({ params, searchParams }: { params: Promi
         if (id) {
             const product = await getProductById(id);
             if (product) {
+                // [SEO STANDARD] Accessory Template (Legacy)
+                const shortConsoleName = product.console_name;
+                const desc = lang === 'en'
+                    ? `Get the official price guide for the ${product.product_name} for ${shortConsoleName}. Compare market values for controllers, cables, and peripherals on RetroCharting.`
+                    : `Consultez la cote officielle de l'accessoire ${product.product_name} pour ${shortConsoleName}. Prix et valeur des manettes et périphériques sur RetroCharting.`;
+
+                const title = lang === 'en'
+                    ? `${product.product_name} Prices & Value - Retrocharting.com`
+                    : `${product.product_name} Cote & prix - Retrocharting.com`;
+
                 return {
-                    title: `${product.product_name} (${product.console_name}) Value & Price | RetroCharting`,
-                    description: `Current market value, prices and history for ${product.product_name} on ${product.console_name}.`
+                    title: title,
+                    description: desc
                 };
             }
         }

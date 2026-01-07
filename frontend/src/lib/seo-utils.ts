@@ -26,25 +26,22 @@ export function generateConsoleSeo(
     // Actually generic logic: if cleanSystemName doesn't end in "Games" and we want to say "{System} Games", we add it. 
     // But user wants "{System} List Value & Prices" which works for "PC Games" (PC Games List...) and "NES" (NES List...)
 
-    // --- 1. DEFAULT TITLES ---
+    // --- 1. DEFAULT TITLES & DESC (Standardized Template) ---
+    // [SEO STANDARD] Consoles Template
     let h1 = isFr
         ? `Cote ${cleanSystemName} & Liste de Prix`
         : `${cleanSystemName} List Value & Prices`;
 
+    // Titles: User requested "Nom + Edition" or similar. Aligning with "Name Prices & Value - Retrocharting.com"
     let title = isFr
-        ? `Cote ${cleanSystemName} : Prix du neuf, occasion et loose`
-        : `${cleanSystemName} Price Guide: New, Used & Loose Values`;
+        ? `${cleanSystemName} Cote & prix - Retrocharting.com`
+        : `${cleanSystemName} Prices & Value - Retrocharting.com`;
 
     let description = isFr
-        ? `Consultez la liste des ${count > 0 ? count : ''} jeux ${cleanSystemName} avec leur cote actuelle. Prix mis à jour quotidiennement pour le loose, complet (CIB) et neuf.`
-        : `Find current values for ${count > 0 ? count : 'all'} ${cleanSystemName} games. Daily updated prices for loose, CIB, and new conditions to help you buy or sell.`;
+        ? `Quelle est la valeur de votre ${cleanSystemName} ? Accédez à la cote argus, à l'indice de rareté et aux tendances de prix pour tous les modèles sur RetroCharting.`
+        : `Find out how much your ${cleanSystemName} is worth. Access the latest market prices, rarity index, and value trends for all hardware versions on RetroCharting.`;
 
-    // Fix "0 games" awkwardness
-    if (count === 0) {
-        description = isFr
-            ? `Consultez la cote actuelle des jeux ${cleanSystemName}. Prix mis à jour quotidiennement.`
-            : `Find current values for ${cleanSystemName} games. Daily updated prices for loose, CIB, and new conditions.`;
-    }
+    // Note: description doesn't use count anymore by design.
 
     let intro = isFr
         ? `Bienvenue sur l'argus ${cleanSystemName}. Vous trouverez ci-dessous la liste complète des jeux, classée par popularité. Utilisez les filtres pour affiner votre recherche par genre (Action, RPG...) ou pour trouver les pépites rares.`
