@@ -1,0 +1,648 @@
+from fastapi import APIRouter, Depends, HTTPException, Header, Query, BackgroundTasks
+from sqlalchemy.orm import Session
+from sqlalchemy import func, or_, not_
+from app.db.session import get_db
+from app.models.product import Product
+import os
+
+router = APIRouter()
+
+# Simple secret key check
+# In production, this should be in .env
+# Simple secret key check
+# In production, this should be in .env
+from app.routers.auth import get_current_user, get_current_user_silent, get_current_admin_user
+from app.models.user import User
+
+ADMIN_SECRET_KEY = os.getenv("ADMIN_SECRET_KEY", "admin_secret_123")
+
+async def get_admin_access(
+    x_admin_key: str = Header(None, alias="X-Admin-Key"),
+    key: str = Query(None),
+    current_user: User = Depends(get_current_user_silent)
+):
+    # 1. Check API Key (Header)
+    if x_admin_key and x_admin_key == ADMIN_SECRET_KEY:
+        return True
+        
+    # 2. Check API Key (Query Param - for browser convenience)
+    if key and key == ADMIN_SECRET_KEY:
+        return True
+    
+    # 3. Check User Admin Status (Client-to-Service)
+    if current_user and current_user.is_admin:
+        return True
+    
+    # Fail
+    raise HTTPException(status_code=403, detail="Admin Access Required")
+
+@router.get("/maintenance/fix-genres")
+def fix_pc_genres_endpoint(
+    auth_check: bool = Depends(get_admin_access),
+    db: Session = Depends(get_db)
+):
+    """
+    Standardize PC Games genres to match Console taxonomy.
+    Examples: "Action, Adventure" -> "Action & Adventure", "Shooter" -> "FPS".
+    """
+    products = db.query(Product).filter(Product.console_name == "PC Games").all()
+    updated_count = 0
+    
+    for p in products:
+        original = p.genre
+        if not original or original == "Unknown":
+            continue
+            
+        new_genre = original
+        
+        # Comma separated list from previous enrichment?
+        if "," in original:
+             parts = [x.strip() for x in original.split(",")]
+             
+
+             if "Action" in parts or "Adventure" in parts:
+                 new_genre = "Action & Adventure"
+             elif "Role-playing (RPG)" in parts or "RPG" in parts:
+                 new_genre = "RPG"
+             elif "Shooter" in parts or "FPS" in parts:
+                 new_genre = "FPS"
+             elif "Platform" in parts:
+                 new_genre = "Platformer"
+             elif "Strategy" in parts:
+                 new_genre = "Strategy"
+             elif "Fighting" in parts:
+                 new_genre = "Fighting"
+             elif "Racing" in parts:
+                 new_genre = "Racing"
+             else:
+                 new_genre = parts[0]
+        
+        # Simple mappings
+        mapping = {
+            "Shooter": "FPS",
+            "Role-playing (RPG)": "RPG",
+            "Platform": "Platformer",
+            "Adventure": "Action & Adventure",
+            "Action": "Action & Adventure",
+            "Real Time Strategy (RTS)": "Strategy",
+            "Turn-based strategy (TBS)": "Strategy",
+            "Fighting": "Fighting",
+            "Racing": "Racing",
+            "Sport": "Sports",
+            "Simulator": "Simulation"
+        }
+        
+        if new_genre in mapping:
+            new_genre = mapping[new_genre]
+
+        if new_genre != original:
+            p.genre = new_genre
+            updated_count += 1
+            
+    db.commit()
+    db.commit()
+    return {"status": "success", "fixed_count": updated_count}
+
+@router.post("/maintenance/fix-game-slugs", dependencies=[Depends(get_admin_access)])
+def fix_game_slugs_endpoint(db: Session = Depends(get_db)):
+    """
+    Backfill product.game_slug from linked Game.slug.
+    Crucial for Frontend Redirects (Legacy URL -> Unified URL).
+    """
+    try:
+        from sqlalchemy import text
+        # Fast SQL Update (Postgres Syntax)
+        # UPDATE products SET game_slug = games.slug FROM games WHERE products.game_id = games.id AND products.game_slug IS NULL
+        stmt = text("UPDATE products SET game_slug = games.slug FROM games WHERE products.game_id = games.id AND products.game_slug IS NULL")
+        result = db.execute(stmt)
+        count = result.rowcount
+        db.commit()
+        return {"status": "success", "updated_count": count, "message": "Game Slugs backfilled."}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/enrich-pc-games")
+def enrich_pc_games_endpoint(
+    background_tasks: BackgroundTasks,
+    limit: int = 500,
+    auth_check: bool = Depends(get_admin_access)
+):
+    """
+    Trigger IGDB enrichment specifically for PC Games.
+    """
+    from app.services.enrichment import enrichment_job
+    background_tasks.add_task(enrichment_job, max_duration=1200, limit=limit, console_filter="PC Games")
+    return {"status": "success", "message": f"Started IGDB enrichment for {limit} PC games (background)."}
+
+@router.get("/maintenance/analyze-images", dependencies=[Depends(get_admin_access)])
+def analyze_images_endpoint(db: Session = Depends(get_db)):
+    """
+    Report on Image Source Distribution (Local vs Cloudinary vs External).
+    """
+    total = db.query(Product).filter(Product.image_url != None).count()
+    local = db.query(Product).filter(Product.image_url.contains("retrocharting")).count()
+    cloudinary = db.query(Product).filter(Product.image_url.contains("cloudinary")).count()
+    pricecharting = db.query(Product).filter(Product.image_url.contains("pricecharting")).count()
+    igdb = db.query(Product).filter(Product.image_url.contains("igdb")).count()
+    
+    # Examples
+    secured_examples = db.query(Product.product_name, Product.game_slug).filter(Product.image_url.contains("retrocharting")).limit(5).all()
+    examples_list = [{"name": e[0], "slug": e[1]} for e in secured_examples]
+
+    # Safety Net: Blob exists but URL is external
+    blob_recoverable = db.query(Product).filter(
+        Product.image_blob != None,
+        ~Product.image_url.contains("retrocharting")
+    ).count()
+    
+    return {
+        "total": total,
+        "local_secured": local,
+        "broken_cloudinary": cloudinary,
+        "external_pc": pricecharting,
+        "external_igdb": igdb,
+        "recoverable_blobs": blob_recoverable,
+        "examples_secured": examples_list
+    }
+
+@router.get("/maintenance/debug-blob/{product_id}", dependencies=[Depends(get_admin_access)])
+def debug_blob_endpoint(product_id: int, db: Session = Depends(get_db)):
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        return {"error": "Product not found"}
+        
+    return {
+        "id": product.id,
+        "name": product.product_name,
+        "image_url": product.image_url,
+        "has_blob": product.image_blob is not None,
+        "blob_size": len(product.image_blob) if product.image_blob else 0
+    }
+
+@router.get("/stats", dependencies=[Depends(get_admin_access)])
+def get_admin_stats(db: Session = Depends(get_db)):
+    """
+    Returns high-level statistics for the Admin Dashboard.
+    """
+    try:
+        # Total Products
+        total_products = db.query(Product).count()
+
+        # Scraped Products (those with an image_url)
+        # Assuming scrape success implies image_url is not null
+        scraped_products = db.query(Product).filter(Product.image_url.isnot(None)).count()
+        
+        # Scraped Percentage
+        scraped_percentage = (scraped_products / total_products * 100) if total_products > 0 else 0
+
+        # Total Value (Sum of Cib Price for now, as a proxy)
+        # Handle None values efficiently
+        total_value_query = db.query(func.sum(Product.cib_price)).filter(Product.cib_price.isnot(None))
+        total_value = total_value_query.scalar() or 0.0
+
+        # Missing Descriptions (for IGDB enrichment tracking)
+        missing_description_count = db.query(Product).filter(or_(Product.description == None, Product.description == "")).count()
+        
+        # Missing Details (Publisher/Developer/Genre - approximate check)
+        missing_details_count = db.query(Product).filter(
+            or_(
+                Product.publisher == None, 
+                Product.publisher == "",
+                Product.developer == None,
+                Product.developer == ""
+            )
+        ).count()
+
+        # Pending Image Migration
+        pending_image_migration_count = db.query(Product).filter(
+            Product.image_url.isnot(None),
+            Product.image_url != "",
+            not_(Product.image_url.contains("retrocharting.com"))
+        ).count()
+        
+        return {
+            "total_products": total_products,
+            "scraped_products": scraped_products,
+            "scraped_percentage": round(scraped_percentage, 1),
+            "total_value": round(total_value, 2),
+            "missing_description_count": missing_description_count,
+            "missing_details_count": missing_details_count,
+            "pending_image_migration": pending_image_migration_count
+        }
+    except Exception as e:
+        print(f"Error producing admin stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/users", dependencies=[Depends(get_admin_access)])
+def get_admin_users(db: Session = Depends(get_db)):
+    """
+    Returns list of users with details for Admin Dashboard.
+    """
+    try:
+        from app.models.user import User
+        users = db.query(User).order_by(User.created_at.desc()).all()
+        
+        return [
+            {
+                "id": u.id,
+                "email": u.email,
+                "username": u.username,
+                "rank": u.rank,
+                "xp": u.xp,
+                "is_admin": u.is_admin,
+                "created_at": u.created_at,
+                "created_at": u.created_at,
+                "last_active": u.last_active,
+                "ip_address": u.ip_address
+            }
+            for u in users
+        ]
+    except Exception as e:
+        print(f"Error fetching users: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/logs", dependencies=[Depends(get_admin_access)])
+def get_scraper_logs(limit: int = 20, db: Session = Depends(get_db)):
+    """
+    Returns recent scraper/enrichment logs for debugging.
+    """
+    try:
+        from app.models.scraper_log import ScraperLog
+        logs = db.query(ScraperLog).order_by(ScraperLog.start_time.desc()).limit(limit).all()
+        return logs
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/fix-listings", dependencies=[Depends(get_admin_access)])
+def trigger_listing_fix(background_tasks: BackgroundTasks):
+    from app.services.listing_fixer import fix_listings_job
+    background_tasks.add_task(fix_listings_job)
+    return {"message": "Listing classification fix started in background."}
+
+@router.post("/images/migrate", dependencies=[Depends(get_admin_access)])
+def trigger_image_migration(
+    limit: int = 50,
+    background_tasks: BackgroundTasks = None, 
+    db: Session = Depends(get_db)
+):
+    from app.services.image_migration import migrate_product_images
+    
+    # Run in background to avoid timeout
+    if background_tasks:
+         background_tasks.add_task(migrate_product_images, db, limit)
+         return {"message": f"Image migration started for {limit} items."}
+    else:
+         # Fallback if no BG tasks (should not happen in FastAPI)
+         result = migrate_product_images(db, limit)
+         return result
+
+@router.post("/db/migrate", dependencies=[Depends(get_admin_access)])
+def migrate_db_schema(db: Session = Depends(get_db)):
+    """
+    Manual Schema Migration to add missing columns.
+    """
+    from sqlalchemy import text
+    try:
+        # Add new columns if they don't exist
+        # Postgres 9.6+ supports IF NOT EXISTS
+        commands = [
+            "ALTER TABLE products ADD COLUMN IF NOT EXISTS ean VARCHAR",
+            "ALTER TABLE products ADD COLUMN IF NOT EXISTS asin VARCHAR",
+            "ALTER TABLE products ADD COLUMN IF NOT EXISTS gtin VARCHAR",
+            "ALTER TABLE products ADD COLUMN IF NOT EXISTS publisher VARCHAR",
+            "ALTER TABLE products ADD COLUMN IF NOT EXISTS developer VARCHAR",
+            "ALTER TABLE products ADD COLUMN IF NOT EXISTS game_slug VARCHAR",
+        ]
+        
+        results = []
+        for cmd in commands:
+            try:
+                db.execute(text(cmd))
+                results.append(f"Success: {cmd}")
+            except Exception as e:
+                # If using older Postgres, IF NOT EXISTS might fail? 
+                # Or just duplicate column error.
+                # We catch to allow others to proceed.
+                results.append(f"Skipped: {cmd} -> {str(e)}")
+                # In SQLAlchemy, if an error occurs in a transaction, we might need to rollback before next command?
+                # Actually, standard execute might invalidate transaction.
+                # Ideally we run separate transactions or rely on savepoints.
+                # But here, we'll try just rollback and continue if possible, or just fail fast.
+                # Actually, `IF NOT EXISTS` should prevent errors. 
+                # If error happens, it's likely something else.
+                db.rollback() 
+                
+        db.commit()
+        return {"status": "success", "log": results}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/populate-pc-games", dependencies=[Depends(get_admin_access)])
+def populate_pc_games(limit: int = 50, background_tasks: BackgroundTasks = None, db: Session = Depends(get_db)):
+    """
+    Triggers scraping of PC Games.
+    If limit > 50, runs in background to prevent timeout.
+    """
+    from app.services.pc_games_scraper import scrape_pc_games_service, scrape_pc_games_bg_wrapper
+    
+    if limit > 50:
+        background_tasks.add_task(scrape_pc_games_bg_wrapper, limit)
+        return {"status": "success", "message": f"Background job started to scrape {limit} items. Operations will continue in the background."}
+    else:
+        # Sync mode for small batches (immediate feedback)
+        result = scrape_pc_games_service(db, limit)
+        return result
+
+@router.get("/smart-import-pc-games", dependencies=[Depends(get_admin_access)])
+def smart_import_pc_games_endpoint(
+    limit: int = 50000, 
+    background_tasks: BackgroundTasks = None
+):
+    """
+    Triggers the Full 'Smart Import' workflow:
+    1. Scrapes PriceCharting (recursive)
+    2. Enriches with IGDB (Images, Guidelines, Desc)
+    All in one background sequence.
+    """
+    background_tasks.add_task(smart_import_pc_games, limit=limit)
+    return {
+        "status": "success", 
+        "message": f"Smart Import started for up to {limit} items. This will Scrape AND Enrich sequentially in the background."
+    }
+
+@router.post("/enrich/ean-backfill", dependencies=[Depends(get_admin_access)])
+def trigger_ean_backfill(
+    limit: int = 50, 
+    background_tasks: BackgroundTasks = None
+):
+    """
+    Manually triggers the EAN Backfill job.
+    """
+    from app.services.scraper import backfill_ean_job
+    background_tasks.add_task(backfill_ean_job, limit=limit)
+    return {"message": f"EAN Backfill started for {limit} items."}
+
+@router.get("/amazon-stats", dependencies=[Depends(get_admin_access)])
+def get_amazon_stats(db: Session = Depends(get_db)):
+    """
+    Returns statistics about Amazon listings coverage:
+    - Total products with Amazon prices
+    - Breakdown by Region (PAL, NTSC, JP) based on domain
+    """
+    from app.models.listing import Listing
+    
+    try:
+        # 1. Total Products with Amazon Listings
+        # We count distinct product_ids to know how many "pages" have at least one Amazon offer
+        total_covered = db.query(Listing.product_id).filter(Listing.source == "Amazon").distinct().count()
+        
+        # 2. Regional Breakdown
+        # We fetch all Amazon listing URLs to classify them
+        # (Doing this in Python for simplicity regex vs complex SQL Case)
+        listings = db.query(Listing.url).filter(Listing.source == "Amazon").all()
+        
+        counts = {"PAL": 0, "NTSC": 0, "JP": 0}
+        
+        for l in listings:
+            if not l.url: continue
+            url = l.url.lower()
+            
+            if "amazon.co.jp" in url:
+                counts["JP"] += 1
+            elif "amazon.com" in url or "amazon.ca" in url:
+                counts["NTSC"] += 1
+            else:
+                # Assuming everything else is European/PAL (fr, de, uk, it, es, nl, se, pl, be)
+                counts["PAL"] += 1
+                
+        # 3. Recent 50 Listings for Table
+        # specific fields to avoid heavy load
+        recent = db.query(Listing.product_id, Listing.title, Listing.price, Listing.currency, Listing.url, Product.console_name, Product.product_name)\
+            .join(Product, Listing.product_id == Product.id)\
+            .filter(Listing.source == "Amazon")\
+            .order_by(Listing.last_updated.desc())\
+            .limit(50)\
+            .all()
+            
+        recent_data = []
+        for r in recent:
+            # Determine region for UI
+            region = "PAL"
+            if "amazon.co.jp" in r.url: region = "JP"
+            elif "amazon.com" in r.url or "amazon.ca" in r.url: region = "NTSC"
+            
+            recent_data.append({
+                "product_id": r.product_id,
+                "product_name": r.product_name,
+                "console_name": r.console_name,
+                "amazon_title": r.title,
+                "price": r.price,
+                "currency": r.currency,
+                "url": r.url,
+                "region": region
+            })
+
+        # 4. Total products with EAN/UPC (Global)
+        # Allows monitoring enrichment progress
+        products_with_ean = db.query(Product).filter(
+            or_(Product.ean != None, Product.ean != "")
+        ).count()
+
+        return {
+            "total_products_with_amazon": total_covered,
+            "region_counts": counts,
+            "products_with_ean": products_with_ean,
+            "recent_listings": recent_data
+        }
+
+    except Exception as e:
+        print(f"Error fetching amazon stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/consolidation/stats", dependencies=[Depends(get_admin_access)])
+def get_consolidation_stats(db: Session = Depends(get_db)):
+    """
+    Returns stats for the Fusion Center.
+    """
+    from app.models.game import Game
+    
+    total_products = db.query(Product).count()
+    orphans = db.query(Product).filter(Product.game_id == None).count()
+    games_created = db.query(Game).count()
+    
+    # Calculate fusion rate
+    fusion_rate = ((total_products - orphans) / total_products * 100) if total_products > 0 else 0
+    
+    return {
+        "total_products": total_products,
+        "orphans": orphans,
+        "games_created": games_created,
+        "fusion_rate": round(fusion_rate, 1)
+    }
+
+def consolidation_bg_task(dry_run: bool):
+    """
+    Wrapper to run consolidation with its own DB session.
+    """
+    from app.db.session import SessionLocal
+    from app.services.consolidation import run_consolidation
+    
+    db_bg = SessionLocal()
+    try:
+        run_consolidation(db_bg, dry_run=dry_run)
+    except Exception as e:
+        print(f"Background Consolidation Error: {e}")
+    finally:
+        db_bg.close()
+
+@router.post("/admin/unify-accessories")
+def trigger_unify_accessories(
+    background_tasks: BackgroundTasks,
+    current_user: 'User' = Depends(get_current_admin_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Triggers the accessory unification script (Background).
+    """
+    def run_unification_job():
+        # Run properly in context if needed, or straightforward function
+        # For simplicity, we can invoke a shell command or import the script function.
+        # Importing is better.
+        # But wait, providing a dedicated service function is best.
+        # For now, let's assume we have a service or we just accept this placeholder.
+        pass
+    
+    return {"status": "Not implemented via API yet, please run script on server."}
+
+
+@router.post("/admin/unify-consoles")
+def trigger_unify_consoles(
+    background_tasks: BackgroundTasks,
+    current_user: 'User' = Depends(get_current_admin_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Triggers the console/hardware unification logic to fix URLs (remove IDs).
+    """
+    from app.services.unification import unify_consoles_logic
+    
+    # Run synchronously for immediate feedback or background if too slow? 
+    # It takes a few seconds for 2000 items. Sync is risky but informative.
+    # Let's run Sync for this specific maintenance task.
+    result = unify_consoles_logic(db)
+    return result
+
+@router.post("/consolidation/run", dependencies=[Depends(get_admin_access)])
+def run_consolidation_job(
+    dry_run: bool = False,
+    background_tasks: BackgroundTasks = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Triggers the Consolidation Matcher in Background.
+    """
+    if background_tasks:
+        background_tasks.add_task(consolidation_bg_task, dry_run)
+        return {
+            "status": "success", 
+            "mode": "dry_run" if dry_run else "live", 
+            "stats": {"message": "Job started in background. Check System -> Logs tab for results."}
+        }
+    else:
+        # Fallback (unlikely)
+        from app.services.consolidation import run_consolidation
+        stats = run_consolidation(db, dry_run=dry_run)
+        return {"status": "success", "mode": "dry_run" if dry_run else "live", "stats": stats}
+
+@router.delete("/consolidation/cleanup-ghosts", dependencies=[Depends(get_admin_access)])
+def cleanup_ghost_games(db: Session = Depends(get_db)):
+    """
+    Deletes 'Ghost' Games (Games with 0 variants/products).
+    These are leftovers from previous fusion runs or URL-structure changes.
+    """
+    from app.models.game import Game
+    from app.models.product import Product
+    
+    # Identify Ghosts: Games that have NO products
+    # Fetch ALL Game IDs
+    all_game_ids = set(flat_id for (flat_id,) in db.query(Game.id).all())
+    
+    # Fetch USED Game IDs
+    used_game_ids = set(flat_id for (flat_id,) in db.query(Product.game_id).filter(Product.game_id != None).distinct().all())
+    
+    # Calculate GHOSTS (All - Used)
+    ghost_ids = list(all_game_ids - used_game_ids)
+    
+    if not ghost_ids:
+        return {
+            "status": "success",
+            "deleted_ghosts": 0,
+            "message": "No ghost games found."
+        }
+    
+    # Batch delete to avoid massive query issues (optional, but safer)
+    # db.query(Game).filter(Game.id.in_(ghost_ids)).delete(synchronize_session=False)
+    
+    # Safe Delete Loop (Chunked 1000)
+    chunk_size = 1000
+    deleted_count = 0
+    
+    for i in range(0, len(ghost_ids), chunk_size):
+        chunk = ghost_ids[i:i + chunk_size]
+        count = db.query(Game).filter(Game.id.in_(chunk)).delete(synchronize_session=False)
+        deleted_count += count
+        
+    db.commit()
+    
+    return {
+        "status": "success",
+        "deleted_ghosts": deleted_count,
+        "message": f"Successfully removed {deleted_count} ghost games."
+    }
+
+@router.post("/enrich/price-recovery", dependencies=[Depends(get_admin_access)])
+def trigger_price_recovery(
+    limit: int = 500,
+    continuous: bool = False,
+    background_tasks: BackgroundTasks = None
+):
+    """
+    Triggers Phase 2: Price Recovery.
+    Fetches missing CIB/New prices from PriceCharting for items that have a Loose price but no CIB data.
+    """
+    from app.services.price_recovery import recover_missing_prices
+    
+    # SAFETY CAP: Enforce max 500 items per batch to prevent OOM on standard instances (512MB RAM)
+    safe_limit = min(limit, 500)
+    
+    if background_tasks:
+        background_tasks.add_task(recover_missing_prices, limit=safe_limit, continuous=continuous)
+        mode_str = "Continuous Auto-Loop" if continuous else "Single Batch"
+        return {"message": f"Price Recovery started ({mode_str}, Limit: {safe_limit} [Capped]). Watch logs for progress."}
+    else:
+        recover_missing_prices(limit=safe_limit, continuous=continuous)
+        return {"message": "Price Recovery completed (Sync Mode)."}
+
+@router.post("/consolidation/unify-accessories", dependencies=[Depends(get_admin_access)])
+def trigger_accessory_unification(background_tasks: BackgroundTasks):
+    """
+    Triggers the One-Off Accessory Unification Script.
+    Groups Accessories/Controllers by name into Unified Games.
+    """
+    from app.services.accessory_unification import unify_accessories
+    
+    background_tasks.add_task(unify_accessories)
+    return {"status": "success", "message": "Accessory Unification started in background."}
+
+@router.post("/unify-consoles", dependencies=[Depends(get_admin_access)])
+async def trigger_console_unification(background_tasks: BackgroundTasks):
+    """
+    Triggers the Console/Hardware Unification.
+    Creates Game entities for hardware products to generate clean slugs.
+    """
+    from app.services.unification import unify_consoles_logic
+    
+    background_tasks.add_task(unify_consoles_logic)
+    return {"status": "success", "message": "Console/Hardware Unification started in background."}

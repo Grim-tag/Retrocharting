@@ -1,0 +1,16 @@
+"use strict";(()=>{var e={};e.id=7754,e.ids=[7754],e.modules={10846:e=>{e.exports=require("next/dist/compiled/next-server/app-page.runtime.prod.js")},44870:e=>{e.exports=require("next/dist/compiled/next-server/app-route.runtime.prod.js")},3295:e=>{e.exports=require("next/dist/server/app-render/after-task-async-storage.external.js")},29294:e=>{e.exports=require("next/dist/server/app-render/work-async-storage.external.js")},63033:e=>{e.exports=require("next/dist/server/app-render/work-unit-async-storage.external.js")},12412:e=>{e.exports=require("assert")},55511:e=>{e.exports=require("crypto")},94735:e=>{e.exports=require("events")},29021:e=>{e.exports=require("fs")},81630:e=>{e.exports=require("http")},73496:e=>{e.exports=require("http2")},55591:e=>{e.exports=require("https")},21820:e=>{e.exports=require("os")},33873:e=>{e.exports=require("path")},27910:e=>{e.exports=require("stream")},83997:e=>{e.exports=require("tty")},79551:e=>{e.exports=require("url")},28354:e=>{e.exports=require("util")},74075:e=>{e.exports=require("zlib")},38014:(e,t,r)=>{r.r(t),r.d(t,{patchFetch:()=>h,routeModule:()=>m,serverHooks:()=>d,workAsyncStorage:()=>c,workUnitAsyncStorage:()=>x});var s={};r.r(s),r.d(s,{GET:()=>l,revalidate:()=>u});var o=r(42706),a=r(28203),i=r(45994),p=r(39187),n=r(75007);let u=3600;async function l(){let e="https://retrocharting.com",t=0,r="";try{t=(await n.u.get("/products/count",{timeout:8e3})).data}catch(e){console.error("Failed to fetch product count for sitemap index",e),r=e.message||String(e),e.response&&(r+=` (Status: ${e.response.status})`),t=5e4}let s=Math.ceil(t/500),o=`<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="/sitemap.xsl"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`;for(let t=0;t<s;t++)o+=`
+  <sitemap>
+    <loc>${e}/sitemap/${t}.xml</loc>
+    <lastmod>${new Date().toISOString()}</lastmod>
+  </sitemap>`;return o+=`
+  <sitemap>
+    <loc>${e}/sitemap/main-pages.xml</loc>
+    <lastmod>${new Date().toISOString()}</lastmod>
+  </sitemap>`,r&&(o+=`
+  <sitemap>
+    <loc>${e}/debug/sitemap_error?msg=${encodeURIComponent(r)}</loc>
+    <lastmod>${new Date().toISOString()}</lastmod>
+  </sitemap>`),o+=`
+</sitemapindex>`,new p.NextResponse(o,{headers:{"Content-Type":"application/xml","Cache-Control":"public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400"}})}let m=new o.AppRouteRouteModule({definition:{kind:a.RouteKind.APP_ROUTE,page:"/sitemap_index.xml/route",pathname:"/sitemap_index.xml",filename:"route",bundlePath:"app/sitemap_index.xml/route"},resolvedPagePath:"C:\\Users\\charl\\collector\\frontend\\src\\app\\sitemap_index.xml\\route.ts",nextConfigOutput:"export",userland:s}),{workAsyncStorage:c,workUnitAsyncStorage:x,serverHooks:d}=m;function h(){return(0,i.patchFetch)({workAsyncStorage:c,workUnitAsyncStorage:x})}},75007:(e,t,r)=>{r.d(t,{u:()=>i});var s=r(93292);let o=process.env.NEXT_PUBLIC_API_URL?process.env.NEXT_PUBLIC_API_URL:"https://retrocharting-backend.onrender.com",a=`${o}/api/v1`,i=s.A.create({baseURL:a,headers:{"Content-Type":"application/json"}});i.interceptors.request.use(e=>e,e=>Promise.reject(e)),i.interceptors.response.use(e=>e,e=>Promise.reject(e))}};var t=require("../../webpack-runtime.js");t.C(e);var r=e=>t(t.s=e),s=t.X(0,[638,3292,5452],()=>r(38014));module.exports=s})();

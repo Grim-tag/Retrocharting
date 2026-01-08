@@ -1,0 +1,603 @@
+import { apiClient, API_URL } from './client';
+
+export function getApiUrl() {
+    return API_URL;
+}
+
+export interface Product {
+    id: number;
+    pricecharting_id: number;
+    product_name: string;
+    console_name: string;
+    loose_price: number;
+    cib_price: number;
+    new_price: number;
+    box_only_price?: number; // Optional as not all products might have it
+    manual_only_price?: number; // Optional
+    image_url?: string;
+    description?: string;
+    publisher?: string;
+    developer?: string;
+    esrb_rating?: string;
+    players?: string;
+    genre?: string;
+    ean?: string;
+    gtin?: string;
+    asin?: string;
+    release_date?: string; // ISO date string
+    sales_count?: number;
+    game_slug?: string; // For Redirection
+}
+
+export interface PriceHistoryPoint {
+    id: number;
+    product_id: number;
+    date: string;
+    price: number;
+    condition: string;
+}
+
+export async function getProductsByConsole(consoleName: string, limit = 50, genre?: string, type?: 'game' | 'console' | 'accessory', sort?: string, skip = 0, search?: string): Promise<Product[]> {
+    try {
+        const response = await apiClient.get(`/products`, {
+            params: {
+                console: consoleName,
+                limit,
+                genre,
+                type,
+                sort,
+                skip,
+                search
+            }
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Error fetching products:", error);
+        return [];
+    }
+}
+
+export async function getGenres(consoleName?: string): Promise<string[]> {
+    try {
+        const response = await apiClient.get(`/products/genres`, {
+            params: {
+                console: consoleName
+            }
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Error fetching genres:", error);
+        return [];
+    }
+}
+
+export async function getProductById(id: number): Promise<Product | null> {
+    try {
+        const response = await apiClient.get(`/products/${id}`);
+        return response.data;
+    } catch (error) {
+        console.error(`Error fetching product ${id}:`, error);
+        return null;
+    }
+}
+
+export async function getProductHistory(id: number): Promise<PriceHistoryPoint[]> {
+    try {
+        const response = await apiClient.get(`/products/${id}/history`);
+        return response.data;
+    } catch (error) {
+        console.error(`Error fetching history for product ${id}:`, error);
+        return [];
+    }
+}
+
+export async function searchProducts(query: string): Promise<Product[]> {
+    try {
+        const response = await apiClient.get(`/products`, {
+            params: { search: query, limit: 5 }
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Error searching products:", error);
+        return [];
+    }
+}
+
+export async function updateProduct(id: number, data: Partial<Product>, token: string): Promise<Product | null> {
+    try {
+        const response = await apiClient.put(`/products/${id}`, data);
+        return response.data;
+    } catch (error) {
+        console.error(`Error updating product ${id}:`, error);
+        return null;
+    }
+}
+
+export interface GroupedProducts {
+    [console: string]: (Product & { region?: string })[];
+}
+
+export async function searchProductsGrouped(query: string): Promise<GroupedProducts> {
+    try {
+        const response = await apiClient.get(`/products/search/grouped`, {
+            params: { query }
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Error searching products grouped:", error);
+        return {};
+    }
+}
+
+export async function getListings(id: number): Promise<{ data: any[], isStale: boolean, status: number }> {
+    try {
+        const response = await apiClient.get(`/products/${id}/listings`, {
+            params: { _t: new Date().getTime() } // Cache buster
+        });
+        const isStale = response.headers['x-is-stale'] === 'true';
+        return { data: response.data, isStale, status: response.status };
+    } catch (error: any) {
+        // If 202 is treated as error by axios interceptor? usually 2xx is success.
+        // Assuming axios considers 202 success.
+        return { data: [], isStale: false, status: error.response?.status || 500 };
+    }
+}
+
+export async function getRelatedProducts(id: number): Promise<Product[]> {
+    try {
+        const response = await apiClient.get(`/products/${id}/related`);
+        return response.data;
+    } catch (error) {
+        console.error("Error fetching related products:", error);
+        return [];
+    }
+}
+
+export async function getTranslations(locale: string): Promise<Record<string, string>> {
+    try {
+        const response = await apiClient.get(`/translations/${locale}`, {
+            timeout: 2000 // Fast timeout
+        });
+        return response.data;
+    } catch (error) {
+        return {};
+    }
+}
+
+export async function saveTranslation(locale: string, key: string, value: string, adminKey: string): Promise<boolean> {
+    try {
+        await apiClient.post(`/translations/`, {
+            locale,
+            key,
+            value
+        }, {
+            headers: { 'X-Admin-Key': adminKey }
+        });
+        return true;
+    } catch (error) {
+        console.error("Failed to save translation", error);
+        return false;
+    }
+}
+
+// [NEW] API for SEO Counts
+export async function getProductsCountByConsole(consoleName: string, type: 'game' | 'accessory' = 'game'): Promise<number> {
+    try {
+        const response = await apiClient.get(`/products/count`, {
+            params: { console: consoleName, type }
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Error fetching product count by console:", error);
+        return 0;
+    }
+}
+
+export async function getProductsCount(): Promise<number> {
+    try {
+        const response = await apiClient.get(`/products/count`);
+        return response.data;
+    } catch (error) {
+        console.error("Error fetching product count:", error);
+        return 0;
+    }
+}
+
+export async function getSitemapProducts(limit: number = 10000, skip: number = 0): Promise<any[]> {
+    try {
+        const response = await apiClient.get(`/products/sitemap?limit=${limit}&skip=${skip}`);
+        return response.data;
+    } catch (error) {
+        console.error("Error fetching sitemap products:", error);
+        return [];
+    }
+}
+
+// --- Games (Unified API) ---
+
+export interface Game {
+    id: number;
+    title: string;
+    slug: string;
+    console: string;
+    description?: string;
+    release_date?: string;
+    developer?: string;
+    publisher?: string;
+    genre?: string;
+    image_url?: string;
+    variants: Array<{
+        id: number;
+        region: string;
+        product_name: string;
+        image?: string;
+        prices: {
+            loose?: number;
+            cib?: number;
+            new?: number;
+            currency?: string;
+        };
+    }>;
+}
+
+export async function getGameBySlug(slug: string): Promise<Game | null> {
+    try {
+        const response = await apiClient.get(`/games/${slug}`);
+        return response.data;
+    } catch (error) {
+        // 404 is expected if using old slug
+        return null;
+    }
+}
+
+export async function getGameHistory(slug: string): Promise<any[]> {
+    try {
+        const response = await apiClient.get(`/games/${slug}/history`);
+        return response.data;
+    } catch (error) {
+        console.error(`Error fetching history for game ${slug}:`, error);
+        return [];
+    }
+}
+
+export async function getGamesByConsole(consoleName: string, limit = 50, genre?: string, sort?: string, skip = 0, search?: string, type?: 'game' | 'accessory'): Promise<any[]> {
+    try {
+        const response = await apiClient.get(`/games/`, {
+            params: {
+                console: consoleName,
+                limit,
+                genre,
+                type,
+                sort,
+                skip,
+                search
+            }
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Error fetching games:", error);
+        return [];
+    }
+}
+
+export async function getGamesCount(): Promise<number> {
+    try {
+        const response = await apiClient.get(`/games/count`);
+        return response.data;
+    } catch (error) {
+        console.error("Error fetching game count:", error);
+        return 0;
+    }
+}
+
+export async function getSitemapGames(limit: number = 10000, skip: number = 0): Promise<any[]> {
+    try {
+        const response = await apiClient.get(`/games/sitemap/list?limit=${limit}&skip=${skip}`);
+        return response.data;
+    } catch (error) {
+        console.error("Error fetching sitemap games:", error);
+        return [];
+    }
+}
+
+// --- Auth APIs ---
+
+export async function loginWithGoogle(credential: string): Promise<{ access_token: string, token_type: string } | null> {
+    try {
+        const response = await apiClient.post(`/auth/google`, { credential });
+        return response.data;
+    } catch (error: any) {
+        console.error("Google Login failed", error);
+        const msg = error.response?.data?.detail || error.message || "Login failed";
+        throw new Error(msg);
+    }
+}
+
+export async function fetchMe(token: string): Promise<any> {
+    try {
+        const response = await apiClient.get(`/auth/me`);
+        return response.data;
+    } catch (error) {
+        return null;
+    }
+}
+
+// --- Collection APIs ---
+
+export interface CollectionItem {
+    id: number;
+    product_id: number;
+    condition: 'LOOSE' | 'CIB' | 'NEW' | 'GRADED' | 'WISHLIST';
+    notes?: string;
+    paid_price?: number;
+    purchase_date?: string; // ISO Date
+    product_name: string;
+    console_name: string;
+    image_url?: string;
+    estimated_value?: number;
+    user_images?: string; // JSON string
+}
+
+export async function getCollection(token: string): Promise<CollectionItem[]> {
+    try {
+        const response = await apiClient.get(`/collection/`);
+        return response.data;
+    } catch (error) {
+        console.error("Failed to fetch collection", error);
+        return [];
+    }
+}
+
+export async function addToCollection(token: string, productId: number, condition: string, notes?: string, paidPrice?: number): Promise<CollectionItem> {
+    try {
+        const response = await apiClient.post(`/collection/`, {
+            product_id: productId,
+            condition,
+            paid_price: paidPrice,
+            notes
+        });
+        return response.data;
+    } catch (error: any) {
+        console.error("Failed to add to collection", error);
+        throw new Error(error.response?.data?.detail || "Failed to add to collection");
+    }
+}
+
+export async function updateCollectionItem(token: string, itemId: number, data: { condition?: string, notes?: string, paid_price?: number, purchase_date?: string, user_images?: string }): Promise<CollectionItem> {
+    try {
+        const response = await apiClient.put(`/collection/${itemId}`, data);
+        return response.data;
+    } catch (error: any) {
+        console.error("Failed to update collection item", error);
+        throw new Error(error.response?.data?.detail || "Failed to update item");
+    }
+}
+
+export async function deleteFromCollection(token: string, itemId: number): Promise<boolean> {
+    try {
+        await apiClient.delete(`/collection/${itemId}`);
+        return true;
+    } catch (error) {
+        console.error("Failed to delete item", error);
+        return false;
+    }
+}
+
+export async function updateUser(token: string, data: { username?: string, full_name?: string }): Promise<any> {
+    try {
+        const response = await apiClient.put(`/auth/me`, data);
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+}
+
+export async function getRecentlyScrapedProducts(limit: number = 10, token: string): Promise<any[]> {
+    try {
+        const response = await apiClient.get(`/products/stats/recently-scraped`, {
+            params: { limit }
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Failed to fetch recently scraped products", error);
+        return [];
+    }
+}
+
+// --- Portfolio APIs ---
+
+export async function getPortfolioSummary(token: string): Promise<any> {
+    try {
+        const response = await apiClient.get(`/portfolio/summary`);
+        return response.data;
+    } catch (error) {
+        console.error("Failed to fetch portfolio summary", error);
+        return { total_value: 0, item_count: 0, console_count: 0, top_items: [] };
+    }
+}
+
+export async function getPortfolioHistory(token: string, days = 30): Promise<any[]> {
+    try {
+        const response = await apiClient.get(`/portfolio/history`, {
+            params: { range_days: days }
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Failed to fetch portfolio history", error);
+        return [];
+    }
+}
+
+export async function getPortfolioMovers(token: string, days = 30): Promise<any> {
+    try {
+        const response = await apiClient.get(`/portfolio/movers`, {
+            params: { days }
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Failed to fetch portfolio movers", error);
+        return { gainers: [], losers: [] };
+    }
+}
+
+export async function getPortfolioDebug(token: string): Promise<any> {
+    try {
+        const response = await apiClient.get(`/portfolio/debug`);
+        return response.data;
+    } catch (error) {
+        console.error("Failed to fetch portfolio debug", error);
+        return { error: "Failed to fetch debug info" };
+    }
+}
+
+export async function getPortfolioDashboard(token: string): Promise<any> {
+    try {
+        const response = await apiClient.get(`/portfolio/dashboard`);
+        return response.data;
+    } catch (error) {
+        console.error("Failed to fetch portfolio dashboard", error);
+        return null;
+    }
+}
+
+// --- Import APIs ---
+
+export interface CSVMatchResult {
+    item: {
+        title: string;
+        platform: string;
+        condition: string;
+        paid_price?: string;
+        currency?: string;
+        purchase_date?: string;
+        comment?: string;
+        csv_index: number;
+    };
+    match?: {
+        id: number;
+        product_name: string;
+        console_name: string;
+        image_url?: string;
+        score: number;
+    };
+    best_guess?: {
+        id: number;
+        product_name: string;
+        console_name: string;
+        image_url?: string;
+        score: number;
+    };
+    reason?: string;
+}
+
+export interface ImportAnalysisResult {
+    matches: CSVMatchResult[];
+    ambiguous: CSVMatchResult[];
+    unmatched: CSVMatchResult[];
+}
+
+export async function uploadCsv(file: File, token: string): Promise<ImportAnalysisResult | null> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+        const response = await apiClient.post(`/import/upload`, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
+        return response.data;
+    } catch (error: any) {
+        console.error("CSV upload failed", error);
+        throw new Error(error.response?.data?.detail || "Upload failed");
+    }
+}
+
+export interface ImportItem {
+    product_id: number;
+    condition: string;
+    paid_price?: number;
+    currency?: string;
+    purchase_date?: string;
+    comment?: string;
+}
+
+export async function bulkImport(items: ImportItem[], token: string): Promise<{ imported: number, errors: number }> {
+    try {
+        const response = await apiClient.post(`/import/confirm`, { items });
+        return response.data;
+    } catch (error: any) {
+        console.error("Bulk import failed", error);
+        throw new Error(error.response?.data?.detail || "Import failed");
+    }
+}
+
+// --- Public Profile APIs ---
+
+export interface PublicUser {
+    username: string;
+    avatar_url?: string | null; // Allow null to match Python Optional
+    rank: string;
+    xp: number;
+    created_at: string; // ISO date
+    bio?: string;
+    is_collection_public: boolean;
+}
+
+export interface PublicCollectionItem {
+    product_name: string;
+    console_name: string;
+    image_url?: string | null;
+    condition: string;
+    product_id: number;
+}
+
+export async function getPublicProfile(username: string): Promise<PublicUser | null> {
+    try {
+        const response = await apiClient.get(`/users/${username}`);
+        return response.data;
+    } catch (error) {
+        console.error("Failed to fetch public profile", error);
+        return null;
+    }
+}
+
+
+export async function getAllSlugs(limit = 10000): Promise<{ slug: string; genre: string }[]> {
+    let allSlugs: { slug: string; genre: string }[] = [];
+    let skip = 0;
+    let keepFetching = true;
+
+    // Safety limit
+    const MAX_FETCH = 15; // 150k max (Total games ~78k)
+    let count = 0;
+
+    while (keepFetching && count < MAX_FETCH) {
+        try {
+            const response = await apiClient.get('/games/sitemap/list', {
+                params: {
+                    limit,
+                    skip
+                }
+            });
+
+            const batch = response.data;
+            if (batch && batch.length > 0) {
+                allSlugs = [...allSlugs, ...batch];
+                skip += limit;
+                if (batch.length < limit) {
+                    keepFetching = false;
+                }
+            } else {
+                keepFetching = false;
+            }
+            count++;
+        } catch (error) {
+            console.error("Error fetching sitemap slugs:", error);
+            keepFetching = false;
+        }
+    }
+
+    return allSlugs;
+}
+

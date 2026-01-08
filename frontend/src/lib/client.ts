@@ -1,0 +1,45 @@
+import axios from 'axios';
+
+const BASE_URL = (typeof window === 'undefined' && process.env.API_URL_OVERRIDE)
+    ? process.env.API_URL_OVERRIDE
+    : (process.env.NEXT_PUBLIC_API_URL || 'https://retrocharting-backend.onrender.com');
+
+export const API_URL = `${BASE_URL}/api/v1`;
+
+export const apiClient = axios.create({
+    baseURL: API_URL,
+    timeout: 120000, // 2 minutes (increased for SSG)
+    headers: {
+        'Content-Type': 'application/json',
+    },
+});
+
+// Request Interceptor: Auto-inject token from localStorage
+apiClient.interceptors.request.use(
+    (config) => {
+        // Only on client side
+        if (typeof window !== 'undefined') {
+            const token = localStorage.getItem('rc_token');
+            if (token) {
+                config.headers.Authorization = `Bearer ${token}`;
+            }
+        }
+        // If config already has Authorization (explicit override), it stays? 
+        // Axios merges? No, assignment overwrites. 
+        // Good.
+        return config;
+    },
+    (error) => {
+        return Promise.reject(error);
+    }
+);
+
+// Response Interceptor: Global Error Handling (Optional)
+apiClient.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        // Handle 401 Unauthorized globally?
+        // if (error.response?.status === 401) { ... }
+        return Promise.reject(error);
+    }
+);

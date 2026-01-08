@@ -1,0 +1,17 @@
+fastapi
+uvicorn
+sqlalchemy
+pydantic
+pydantic-settings
+python-dotenv
+requests
+beautifulsoup4
+
+psycopg2-binary
+python-jose[cryptography]
+google-auth
+APScheduler
+thefuzz
+python-Levenshtein
+python-multipart
+Pillow

@@ -1,0 +1,632 @@
+from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks, Response, File, UploadFile, Form
+from sqlalchemy.orm import Session
+from sqlalchemy import or_, exists, text
+from typing import List, Optional
+from PIL import Image
+from io import BytesIO
+
+from app.db.session import get_db
+from app.models.product import Product as ProductModel
+from app.models.price_history import PriceHistory
+from app.models.sales_transaction import SalesTransaction
+from app.schemas.product import Product as ProductSchema, ProductList
+
+
+from app.models.user import User
+from app.routers.auth import get_current_admin_user, get_current_user
+from app.routers.admin import get_admin_access
+from app.services.igdb import igdb_service
+from app.services.enrichment import enrich_product_with_igdb
+from datetime import datetime
+
+router = APIRouter()
+
+# ... (Previous code remains, but I need to be careful with replace_file_content target)
+# Actually, I should just update the imports at the top and the function at the bottom.
+# But replace_file_content works on chunks. I'll split this into two edits if needed or just one big valid chunk?
+# The tool allow Replacing a block.
+# Let's do imports first, then the function.
+
+# WAIT. I can't easily edit imports at the top AND function in one go if they are far apart.
+# I will use two replace_file_content calls.
+# First call: Imports.
+
+
+@router.get("/", response_model=List[ProductList])
+def read_products(
+    skip: int = 0,
+    limit: int = 100,
+    search: Optional[str] = None,
+    console: Optional[str] = None,
+    genre: Optional[str] = None,
+    type: Optional[str] = None, # 'game', 'console', 'accessory'
+    sort: Optional[str] = None, # 'loose_asc', 'loose_desc', etc
+    db: Session = Depends(get_db)
+):
+    # Performance Optimization: Defer 'description' as it's large and unused in List View
+    from sqlalchemy.orm import defer
+    query = db.query(ProductModel).options(defer(ProductModel.description))
+    
+    if search:
+        if search.isdigit():
+            query = query.filter(
+                or_(
+                    ProductModel.product_name.ilike(f"%{search}%"), 
+                    ProductModel.id == int(search),
+                    ProductModel.ean == search
+                )
+            )
+        else:
+            query = query.filter(
+                or_(
+                    ProductModel.product_name.ilike(f"%{search}%"),
+                    ProductModel.console_name.ilike(f"%{search}%")
+                )
+            )
+    if console:
+        query = query.filter(ProductModel.console_name == console)
+    if genre:
+        query = query.filter(ProductModel.genre.ilike(genre))
+        
+    if type:
+        if type == 'game':
+             query = query.filter(ProductModel.genre.notin_(['Systems', 'Accessories', 'Controllers']))
+        elif type == 'console':
+             query = query.filter(ProductModel.genre == 'Systems')
+        elif type == 'accessory':
+             query = query.filter(ProductModel.genre.in_(['Accessories', 'Controllers']))
+             
+    # Sorting Logic (Server Side)
+    if sort:
+        if sort == 'title_asc': query = query.order_by(ProductModel.product_name.asc())
+        elif sort == 'title_desc': query = query.order_by(ProductModel.product_name.desc())
+        elif sort == 'loose_asc': query = query.order_by(ProductModel.loose_price.asc().nullslast())
+        elif sort == 'loose_desc': query = query.order_by(ProductModel.loose_price.desc().nullslast())
+        elif sort == 'cib_asc': query = query.order_by(ProductModel.cib_price.asc().nullslast())
+        elif sort == 'cib_desc': query = query.order_by(ProductModel.cib_price.desc().nullslast())
+        elif sort == 'new_asc': query = query.order_by(ProductModel.new_price.asc().nullslast())
+        elif sort == 'new_desc': query = query.order_by(ProductModel.new_price.desc().nullslast())
+        
+    products = query.offset(skip).limit(limit).all()
+    return products
+
+
+@router.get("/count", response_model=int)
+def get_products_count(db: Session = Depends(get_db)):
+    return db.query(ProductModel).count()
+
+
+
+@router.get("/sitemap", response_model=List[dict])
+def sitemap_products(
+    limit: int = 10000, 
+    skip: int = 0,
+    db: Session = Depends(get_db)
+):
+    """
+    Returns lightweight product data for XML sitemap generation.
+    Limited to top matching items to prevent timeout.
+    """
+    # Prefer products with images or prices as they are 'high quality' pages
+    # Filter out products that are part of a Unified Game (game_slug is not null)
+    # These are covered by sitemap_games
+    products = db.query(ProductModel.id, ProductModel.product_name, ProductModel.console_name, ProductModel.genre, ProductModel.loose_price)\
+        .filter(ProductModel.game_slug == None)\
+        .order_by(ProductModel.id.asc())\
+        .offset(skip)\
+        .limit(limit)\
+        .all()
+    
+    return [
+        {
+            "id": p.id,
+            "product_name": p.product_name,
+            "console_name": p.console_name,
+            "genre": p.genre,
+            "updated_at": datetime.utcnow().isoformat() # We don't track update time per product yet, use now or rough estimate
+        }
+        for p in products
+    ]
+
+@router.get("/genres", response_model=List[str])
+def get_genres(
+    console: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Get list of unique genres. 
+    Optional: Filter by console to show only relevant genres.
+    """
+    query = db.query(ProductModel.genre).filter(ProductModel.genre != None, ProductModel.genre != "")
+    
+    if console:
+        # Fuzzy match to handle "Nintendo 64" vs "JP Nintendo 64"
+        query = query.filter(ProductModel.console_name.ilike(f"%{console}%"))
+        
+    genres = query.distinct().order_by(ProductModel.genre).all()
+    # Flatten list of tuples [('Action',), ('Adventure',)] -> ['Action', 'Adventure']
+    return [g[0] for g in genres]
+
+@router.get("/search/grouped", response_model=dict)
+def search_products_grouped(
+    query: str,
+    limit: int = 50,
+    db: Session = Depends(get_db)
+):
+    """
+    Returns search results grouped by Console Name/Region.
+    Prioritizes Games over Accessories.
+    """
+    from app.services.catalog import CatalogService
+    return CatalogService.search_grouped(db, query, limit)
+
+from app.models.listing import Listing
+from datetime import datetime, timedelta
+
+from fastapi import BackgroundTasks
+
+from app.services.pricing_service import PricingService
+
+def update_listings_background(product_id: int):
+    """
+    Background task to fetch listings via PricingService.
+    Now just a wrapper to keep the router clean.
+    """
+    PricingService.update_listings(product_id)
+
+
+
+
+
+@router.get("/{product_id}/listings")
+def get_product_listings(
+    product_id: int, 
+    background_tasks: BackgroundTasks,
+    response: Response,
+    force: bool = False,
+    db: Session = Depends(get_db)
+):
+    product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
+    if not product:
+        return []
+
+    if force:
+        from fastapi import status
+        print(f"Force refresh requested for {product_id}. Triggering background fetch.")
+        background_tasks.add_task(update_listings_background, product_id)
+        response.status_code = status.HTTP_202_ACCEPTED
+        return []
+
+    # Use Service for caching logic (Refactored V4)
+    listings, needs_refresh = PricingService.get_listings_with_cache_check(db, product_id)
+    
+    if needs_refresh:
+        # Case A: No listings at all -> Return 202 + Async Fetch
+        if not listings:
+            from fastapi import status
+            print(f"No listings for {product_id}. Triggering background fetch (Async).")
+            background_tasks.add_task(update_listings_background, product_id)
+            response.status_code = status.HTTP_202_ACCEPTED
+            return []
+        
+        # Case B: Stale listings -> Return Stale Data + Async Fetch
+        print(f"Listings for {product_id} are stale. Scheduling background update.")
+        background_tasks.add_task(update_listings_background, product_id)
+        response.headers["X-Is-Stale"] = "true"
+        
+    return listings
+@router.get("/{product_id}/history")
+def get_product_history(product_id: int, db: Session = Depends(get_db)):
+    history = db.query(PriceHistory).filter(PriceHistory.product_id == product_id).order_by(PriceHistory.date).all()
+    return history
+
+@router.post("/{product_id}/ean", response_model=ProductSchema)
+def link_ean_to_product(
+    product_id: int, 
+    ean: str = Query(..., min_length=8, max_length=13),
+    db: Session = Depends(get_db),
+    # current_user: 'User' = Depends(get_current_user) # Enable later for auth
+):
+    """
+    Associate an EAN/UPC with an existing product.
+    Crowdsourcing feature.
+    """
+    product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    # Validation: Don't overwrite if different EAN already exists?
+    # For now, allow overwrite or simple update.
+    product.ean = ean
+    db.commit()
+    db.refresh(product)
+    return product
+
+@router.post("/contribute")
+def contribute_new_product(
+    product_name: str = Form(...),
+    console_name: str = Form(...),
+    ean: str = Form(...),
+    front_image: Optional[UploadFile] = File(None),
+    back_image: Optional[UploadFile] = File(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    User creates a new product from scanner (Fallback) with Images & Gamification.
+    """
+    # Check if EAN exists
+    existing = db.query(ProductModel).filter(ProductModel.ean == ean).first()
+    if existing:
+         raise HTTPException(status_code=400, detail=f"Product with EAN {ean} already exists: {existing.product_name}")
+
+    # Process Images
+    def process_image(upload_file: UploadFile) -> Optional[bytes]:
+        if not upload_file: return None
+        try:
+            image = Image.open(upload_file.file)
+            if image.mode in ("RGBA", "P"): image = image.convert("RGB")
+            # Resize logic (Max 1000px width/height to save space)
+            image.thumbnail((1000, 1000)) 
+            buffer = BytesIO()
+            image.save(buffer, "WEBP", quality=80)
+            return buffer.getvalue()
+        except Exception as e:
+            print(f"Error processing image upload: {e}")
+            return None
+
+    front_blob = process_image(front_image)
+    back_blob = process_image(back_image)
+
+    new_prod = ProductModel(
+        product_name=product_name,
+        console_name=console_name,
+        ean=ean,
+        genre="Unknown",
+        description="User Contributed via Scanner",
+        image_blob=front_blob,
+        back_image_blob=back_blob
+    )
+    db.add(new_prod)
+    
+    # Gamification Logic
+    points_earned = 50
+    current_user.xp = (current_user.xp or 0) + points_earned
+    
+    # Simple Rank System
+    new_rank = current_user.rank
+    if current_user.xp >= 1000: new_rank = "Expert"
+    elif current_user.xp >= 500: new_rank = "Pro"
+    elif current_user.xp >= 100: new_rank = "Hunter"
+    elif current_user.xp >= 0: new_rank = "Novice"
+    
+    if new_rank != current_user.rank:
+        current_user.rank = new_rank
+        # Could notify user?
+        
+    db.commit()
+    db.refresh(new_prod)
+    
+    # Build custom response
+    return {
+        "product": ProductSchema.from_orm(new_prod),
+        "gamification": {
+            "points_earned": points_earned,
+            "new_total_xp": current_user.xp,
+            "current_rank": current_user.rank,
+            "rank_up": new_rank != current_user.rank
+        }
+    }
+
+from app.schemas.product import ProductUpdate
+
+@router.put("/{product_id}", response_model=ProductSchema)
+def update_product(
+    product_id: int,
+    product_update: ProductUpdate,
+    db: Session = Depends(get_db),
+    current_user: 'User' = Depends(get_current_admin_user)
+):
+    """
+    Update a product's details (Admin only).
+    """
+    product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+        
+    for var, value in product_update.dict(exclude_unset=True).items():
+        if var == 'sales_count': continue # skip computed
+        if hasattr(product, var):
+            setattr(product, var, value)
+            
+    db.commit()
+    db.refresh(product)
+    # Re-calc sales count for schema
+    product.sales_count = db.query(PriceHistory).filter(PriceHistory.product_id == product_id).count()
+    return product
+
+@router.get("/{product_id}", response_model=ProductSchema)
+def read_product(
+    product_id: int, 
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
+    product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
+    if product is None:
+        raise HTTPException(status_code=404, detail="Product not found")
+        
+    # Trigger Auto-Enrichment if description is missing
+    # RATE LIMIT: Only try once every 24 hours to prevent bot-induced threadpool exhaustion.
+    from datetime import datetime, timedelta
+    should_enrich = False
+    if not product.description or len(product.description) < 10:
+        if not product.last_scraped or product.last_scraped < datetime.utcnow() - timedelta(hours=24):
+            should_enrich = True
+    
+    if should_enrich:
+        background_tasks.add_task(enrich_product_with_igdb, product_id)
+        
+    # Manually populate computed fields not in DB table but in Schema
+    # Use PriceHistory count as a proxy for "Market Data Points" since SalesTransaction table is not yet live.
+    product.sales_count = db.query(PriceHistory).filter(PriceHistory.product_id == product_id).count()
+    
+    # Redirection Helper: Populate game_slug
+    if product.game:
+        product.game_slug = product.game.slug
+    
+    return product
+
+@router.get("/{product_id}/image", include_in_schema=False)
+@router.get("/{product_id}/image/{filename}")
+def get_product_image(
+    product_id: int,
+    filename: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Serves the product image directly from the Database (BLOB).
+    Supports SEO-friendly filenames (ignored logic-wise, used for display).
+    """
+    product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
+    if not product:
+        return Response(status_code=404)
+        
+    if product.image_blob:
+        # Suggest filename if not provided
+        if not filename:
+             # Basic slugify if we need to generate it on fly, strictly strictly not needed if URL has it
+             filename = f"product-{product_id}.webp"
+             
+        return Response(content=product.image_blob, media_type="image/webp", headers={
+            "Cache-Control": "public, max-age=86400",
+            "Content-Disposition": f'inline; filename="{filename}"'
+        })
+        
+    # Fallback to external URL if blob is missing but URL exists
+    # Prevent loop if URL points to self
+    if product.image_url and "retrocharting" not in product.image_url and "localhost" not in product.image_url:
+         from fastapi.responses import RedirectResponse
+         return RedirectResponse(product.image_url)
+         
+    return Response(status_code=404)
+
+@router.get("/{product_id}/related", response_model=List[ProductSchema])
+def get_related_products(product_id: int, db: Session = Depends(get_db)):
+    current_product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
+    if not current_product:
+        return []
+    
+    related = db.query(ProductModel).filter(
+        ProductModel.product_name == current_product.product_name,
+        ProductModel.id != product_id
+    ).all()
+    return related
+
+
+# Valid Filters
+from enum import Enum
+class IncompleteType(str, Enum):
+    image = "image"
+    description = "description"
+    price = "price"
+    details = "details"
+    history = "history"
+
+@router.get("/stats/health", response_model=dict)
+def get_catalog_health(
+    current_user: 'User' = Depends(get_current_admin_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Returns statistics on catalog completeness (Admin only).
+    """
+    total = db.query(ProductModel).count()
+    missing_images = db.query(ProductModel).filter(or_(ProductModel.image_url == None, ProductModel.image_url == "")).count()
+    missing_desc = db.query(ProductModel).filter(or_(ProductModel.description == None, ProductModel.description == "")).count()
+    # Missing price: check if loose_price is None or 0
+    missing_price = db.query(ProductModel).filter((ProductModel.loose_price == None) | (ProductModel.loose_price == 0)).count()
+    
+    # Missing details: Publisher OR Developer is missing
+    missing_details = db.query(ProductModel).filter(
+        or_(
+            ProductModel.publisher == None, 
+            ProductModel.publisher == "",
+            ProductModel.developer == None, 
+            ProductModel.developer == ""
+        )
+    ).count()
+
+    # Missing History: Products with NO price history entries
+    # Use EXISTS for performance
+    stmt_history = exists().where(PriceHistory.product_id == ProductModel.id)
+    missing_history = db.query(ProductModel).filter(~stmt_history).count()
+    
+    # Last Activity (Max last_scraped)
+    from sqlalchemy import func
+    last_activity = db.query(func.max(ProductModel.last_scraped)).scalar()
+
+    return {
+        "total_products": total,
+        "missing_images": missing_images,
+        "missing_descriptions": missing_desc,
+        "missing_prices": missing_price,
+        "missing_details": missing_details,
+        "missing_history": missing_history,
+        "last_activity": last_activity
+    }
+
+from app.services.scraper import scrape_missing_data
+
+@router.post("/stats/scrape")
+def run_scraper(
+    background_tasks: BackgroundTasks,
+    current_user: 'User' = Depends(get_current_admin_user)
+):
+    """
+    Trigger the scraper background job (Admin only).
+    """
+    # Run for 5 minutes in background (300s)
+    background_tasks.add_task(scrape_missing_data, max_duration=300, limit=10)
+    return {"status": "Scraper started in background"}
+
+from app.models.scraper_log import ScraperLog
+
+@router.get("/stats/scraper/status")
+def get_scraper_status(
+    current_user: 'User' = Depends(get_current_admin_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get the latest scraper log entry to determine status.
+    """
+    latest = db.query(ScraperLog).order_by(ScraperLog.start_time.desc()).first()
+    if not latest:
+        return {"status": "idle", "items_processed": 0, "start_time": None}
+    
+    # Check if 'running' but too old (stuck/crashed)
+    import datetime
+    
+    # If currently running but started > 24 hours ago, assume crashed
+    timeout_threshold = datetime.timedelta(hours=24)
+    if latest.status == "running" and (datetime.datetime.utcnow() - latest.start_time) > timeout_threshold:
+        # We can auto-update it to error in DB? Or just report 'error' to frontend?
+        # Let's report 'error' so frontend enables the button.
+        # Ideally we update DB too so it stays fixed.
+        latest.status = "error"
+        latest.error_message = "Process timed out or crashed (Zombie job)."
+        latest.end_time = datetime.datetime.utcnow()
+        db.commit() # Fix it permanently
+    
+    return {
+        "status": latest.status,
+        "items_processed": latest.items_processed,
+        "start_time": latest.start_time,
+        "end_time": latest.end_time,
+        "error_message": latest.error_message
+    }
+
+@router.post("/maintenance/fix-prices")
+def fix_price_scaling(
+    current_user: 'User' = Depends(get_current_admin_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Emergency Maintenance Tool: Fixes inflated prices (>500) by dividing by 100.
+    Executes in batches to avoid database deadlocks.
+    """
+    total_fixed = 0
+    batch_size = 100000 # Update 100k rows at a time
+    
+    try:
+        while True:
+            # Postgres subquery limit for chunking
+            # Update a batch of rows that need fixing
+            stmt = text(f"""
+                UPDATE price_history 
+                SET price = price / 100.0 
+                WHERE id IN (
+                    SELECT id FROM price_history 
+                    WHERE price > 500 
+                    LIMIT {batch_size}
+                )
+            """)
+            result = db.execute(stmt)
+            db.commit() # Commit to release lock for this batch
+            
+            count = result.rowcount
+            total_fixed += count
+            
+            # If we updated fewer than batch_size, we are done
+            if count < batch_size:
+                break
+                
+        return {"status": "success", "affected_rows": total_fixed, "message": f"Fixed {total_fixed} inflated price records."}
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/stats/recently-scraped", response_model=List[ProductSchema])
+def get_recently_scraped(
+    limit: int = 10,
+    current_user: 'User' = Depends(get_current_admin_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get list of products that were most recently scraped/updated.
+    """
+    products = db.query(ProductModel).filter(ProductModel.last_scraped != None).order_by(ProductModel.last_scraped.desc()).limit(limit).all()
+    return products
+
+
+@router.get("/incomplete", response_model=List[ProductSchema])
+def get_incomplete_products(
+    type: IncompleteType,
+    limit: int = 50,
+    skip: int = 0,
+    current_user: 'User' = Depends(get_current_admin_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get list of products missing specific data.
+    """
+    query = db.query(ProductModel)
+    
+    if type == IncompleteType.image:
+        query = query.filter(or_(ProductModel.image_url == None, ProductModel.image_url == ""))
+    elif type == IncompleteType.description:
+        query = query.filter(or_(ProductModel.description == None, ProductModel.description == ""))
+    elif type == IncompleteType.price:
+        query = query.filter((ProductModel.loose_price == None) | (ProductModel.loose_price == 0))
+    elif type == IncompleteType.details:
+        query = query.filter(
+            or_(
+                ProductModel.publisher == None, 
+                ProductModel.publisher == "",
+                ProductModel.developer == None, 
+                ProductModel.developer == ""
+            )
+        )
+    elif type == IncompleteType.history:
+        stmt = exists().where(PriceHistory.product_id == ProductModel.id)
+        query = query.filter(~stmt)
+        
+    return query.offset(skip).limit(limit).all()
+
+@router.api_route("/admin/enrich-all", methods=["GET", "POST"])
+def trigger_mass_enrichment(
+    limit: int = 100,
+    background_tasks: BackgroundTasks = None,
+    auth: bool = Depends(get_admin_access)
+):
+    """
+    Triggers a background job to enrich missing product data using IGDB.
+    Uses the robust job service with logging.
+    Supports GET (browser) and POST (curl).
+    """
+    from app.services.enrichment import enrichment_job
+    # 600 seconds duration limit (10 mins) per batch call
+    background_tasks.add_task(enrichment_job, max_duration=600, limit=limit)
+    return {"status": "started", "message": f"Enriching up to {limit} products in background (Robust Job)."}
+
+# Imports moved to top

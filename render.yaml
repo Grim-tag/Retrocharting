@@ -1,0 +1,294 @@
+services:
+  # Backend Service (FastAPI)
+  - type: web
+    name: retrocharting-backend
+    region: oregon
+    env: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: PYTHON_VERSION
+        value: 3.10.0
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: PRICECHARTING_API_TOKEN
+        sync: false
+      - key: EBAY_CLIENT_ID
+        sync: false
+      - key: EBAY_CLIENT_SECRET
+        sync: false
+      - key: EBAY_USER_TOKEN
+        sync: false
+      - key: SERPAPI_KEY
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_CALLBACK_URL
+        sync: false
+    autoDeploy: true
+
+  # Frontend Service (Next.js)
+  - type: web
+    name: retrocharting-frontend
+    region: oregon
+    env: node
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        sync: false
+      - key: NODE_VERSION
+        value: 20.11.0
+    autoDeploy: true
+
+  # Cron Job for Scraping Data (Runs every 15 minutes)
+  - type: cron
+    name: retrocharting-scraper
+    region: oregon
+    env: python
+    rootDir: .
+    schedule: "*/15 * * * *" # Every 15 minutes
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: python data_scripts/fast_scrape.py
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: PYTHON_VERSION
+        value: 3.10.0
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+
+
+
+  # Amazon Worker - PAL (Europe)
+  - type: worker
+    name: worker-amazon-pal
+    region: oregon
+    env: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m app.workers.amazon_worker --type PAL
+    envVars:
+      - key: DATABASE_URL
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: DATABASE_URL
+      - key: PYTHON_VERSION
+        value: 3.10.0
+      - key: PRICECHARTING_API_TOKEN
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: PRICECHARTING_API_TOKEN
+      - key: SERPAPI_KEY
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: SERPAPI_KEY
+      - key: CLOUDINARY_CLOUD_NAME
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: CLOUDINARY_CLOUD_NAME
+      - key: CLOUDINARY_API_KEY
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: CLOUDINARY_API_KEY
+      - key: CLOUDINARY_API_SECRET
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: CLOUDINARY_API_SECRET
+      - key: EBAY_CLIENT_ID
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: EBAY_CLIENT_ID
+      - key: EBAY_CLIENT_SECRET
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: EBAY_CLIENT_SECRET
+      - key: EBAY_USER_TOKEN
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: EBAY_USER_TOKEN
+      - key: GOOGLE_CLIENT_ID
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: GOOGLE_CLIENT_ID
+      - key: GOOGLE_CLIENT_SECRET
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: GOOGLE_CLIENT_SECRET
+      - key: GOOGLE_CALLBACK_URL
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: GOOGLE_CALLBACK_URL
+    autoDeploy: true
+
+  # Amazon Worker - NTSC (US/CA)
+  - type: worker
+    name: worker-amazon-ntsc
+    region: oregon
+    env: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m app.workers.amazon_worker --type NTSC
+    envVars:
+      - key: DATABASE_URL
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: DATABASE_URL
+      - key: PYTHON_VERSION
+        value: 3.10.0
+      - key: PRICECHARTING_API_TOKEN
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: PRICECHARTING_API_TOKEN
+      - key: SERPAPI_KEY
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: SERPAPI_KEY
+      - key: CLOUDINARY_CLOUD_NAME
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: CLOUDINARY_CLOUD_NAME
+      - key: CLOUDINARY_API_KEY
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: CLOUDINARY_API_KEY
+      - key: CLOUDINARY_API_SECRET
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: CLOUDINARY_API_SECRET
+      - key: EBAY_CLIENT_ID
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: EBAY_CLIENT_ID
+      - key: EBAY_CLIENT_SECRET
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: EBAY_CLIENT_SECRET
+      - key: EBAY_USER_TOKEN
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: EBAY_USER_TOKEN
+      - key: GOOGLE_CLIENT_ID
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: GOOGLE_CLIENT_ID
+      - key: GOOGLE_CLIENT_SECRET
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: GOOGLE_CLIENT_SECRET
+      - key: GOOGLE_CALLBACK_URL
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: GOOGLE_CALLBACK_URL
+    autoDeploy: true
+
+  # Amazon Worker - JP (Japan)
+  - type: worker
+    name: worker-amazon-jp
+    region: oregon
+    env: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m app.workers.amazon_worker --type JP
+    envVars:
+      - key: DATABASE_URL
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: DATABASE_URL
+      - key: PYTHON_VERSION
+        value: 3.10.0
+      - key: PRICECHARTING_API_TOKEN
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: PRICECHARTING_API_TOKEN
+      - key: SERPAPI_KEY
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: SERPAPI_KEY
+      - key: CLOUDINARY_CLOUD_NAME
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: CLOUDINARY_CLOUD_NAME
+      - key: CLOUDINARY_API_KEY
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: CLOUDINARY_API_KEY
+      - key: CLOUDINARY_API_SECRET
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: CLOUDINARY_API_SECRET
+      - key: EBAY_CLIENT_ID
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: EBAY_CLIENT_ID
+      - key: EBAY_CLIENT_SECRET
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: EBAY_CLIENT_SECRET
+      - key: EBAY_USER_TOKEN
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: EBAY_USER_TOKEN
+      - key: GOOGLE_CLIENT_ID
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: GOOGLE_CLIENT_ID
+      - key: GOOGLE_CLIENT_SECRET
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: GOOGLE_CLIENT_SECRET
+      - key: GOOGLE_CALLBACK_URL
+        fromService:
+          type: web
+          name: retrocharting-backend
+          envVarKey: GOOGLE_CALLBACK_URL
+    autoDeploy: true

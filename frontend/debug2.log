@@ -1,0 +1,15 @@
+
+> frontend@0.1.0 build
+> next build
+
+ ⚠ Invalid next.config.js options detected: 
+ ⚠     Unrecognized key(s) in object: 'reactCompiler'
+ ⚠ See more info here: https://nextjs.org/docs/messages/invalid-next-config
+   ▲ Next.js 15.1.3
+
+   Creating an optimized production build ...
+
+> Build error occurred
+[Error: Page "/admin/games/[id]/edit/page" cannot use both "use client" and export function "generateStaticParams()".] {
+  type: 'Error'
+}
