@@ -131,9 +131,6 @@ export function getGameUrl(product: { id: number; product_name: string; console_
     const suffix = suffixMap[safeLang] || 'prices-value';
     const fullSlug = `${fullSlugPart}-${suffix}`;
 
-    // 4. Construct path (handle root for EN)
-    if (lang === 'en') {
-        return `/${baseSlug}/${fullSlug}`;
-    }
+    // 4. Construct path (Always include lang for Static Export)
     return `/${lang}/${baseSlug}/${fullSlug}`;
 }
