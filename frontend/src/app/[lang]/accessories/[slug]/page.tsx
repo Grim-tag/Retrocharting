@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getProductsByConsole, getGenres, getProductById, getProductHistory, getGamesByConsole } from "@/lib/api";
+import { Suspense } from 'react';
 import ConsoleGameCatalog from "@/components/ConsoleGameCatalog";
 import GameDetailView from "@/components/GameDetailView";
 import { groupedSystems } from '@/data/systems';
@@ -181,18 +182,20 @@ export default async function AccessoriesConsolePage({
             <main className="flex-grow bg-[#0f121e] py-8">
                 <div className="max-w-[1400px] mx-auto px-4">
                     <Breadcrumbs items={breadcrumbItems} lang={lang} />
-                    <ConsoleGameCatalog
-                        products={products}
-                        genres={[]}
-                        systemName={systemName}
-                        lang={lang}
-                        gamesSlug={accessoriesSlug}
-                        systemSlug={slug}
-                        h1Title={`${systemName} Accessories`}
-                        introText={`Find detailed price history and market values for ${systemName} accessories.`}
-                        faq={[]}
-                        productType="accessory"
-                    />
+                    <Suspense fallback={<div className="text-white text-center py-20">Loading catalog...</div>}>
+                        <ConsoleGameCatalog
+                            products={products}
+                            genres={[]}
+                            systemName={systemName}
+                            lang={lang}
+                            gamesSlug={accessoriesSlug}
+                            systemSlug={slug}
+                            h1Title={`${systemName} Accessories`}
+                            introText={`Find detailed price history and market values for ${systemName} accessories.`}
+                            faq={[]}
+                            productType="accessory"
+                        />
+                    </Suspense>
                 </div>
             </main>
         );

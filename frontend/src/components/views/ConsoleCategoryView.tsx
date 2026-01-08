@@ -3,6 +3,7 @@ import { getDictionary } from "@/lib/get-dictionary";
 import { routeMap } from "@/lib/route-config";
 import Breadcrumbs from "@/components/seo/Breadcrumbs";
 import ConsoleSeoStats from "@/components/seo/ConsoleSeoStats";
+import { Suspense } from 'react';
 import ConsoleGameCatalog from "@/components/ConsoleGameCatalog";
 import ConsoleFaq from "@/components/seo/ConsoleFaq";
 
@@ -68,17 +69,19 @@ export default async function ConsoleCategoryView({ slug, systemName, lang }: Co
                 <ConsoleSeoStats products={products} systemName={systemName} region={region} lang={lang} />
 
                 <div className="mt-6">
-                    <ConsoleGameCatalog
-                        products={products}
-                        genres={[]}
-                        systemName={systemName}
-                        lang={lang}
-                        gamesSlug={consolesSlug}
-                        systemSlug={slug}
-                        productType="console"
-                        h1Title={catalogTitle}     // H2 Override
-                        introText={catalogIntro}   // Intro Override
-                    />
+                    <Suspense fallback={<div className="text-white text-center py-20">Loading catalog...</div>}>
+                        <ConsoleGameCatalog
+                            products={products}
+                            genres={[]}
+                            systemName={systemName}
+                            lang={lang}
+                            gamesSlug={consolesSlug}
+                            systemSlug={slug}
+                            productType="console"
+                            h1Title={catalogTitle}     // H2 Override
+                            introText={catalogIntro}   // Intro Override
+                        />
+                    </Suspense>
                 </div>
                 {/* SEO FAQ (BOTTOM) */}
                 <ConsoleFaq products={products} systemName={systemName} region={region} lang={lang} />
