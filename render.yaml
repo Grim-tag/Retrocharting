@@ -43,7 +43,8 @@ services:
     env: node
     rootDir: frontend
     buildCommand: npm install && npm run build
-    startCommand: npm start
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./out
     envVars:
       - key: NEXT_PUBLIC_API_URL
         sync: false
