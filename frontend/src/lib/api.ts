@@ -569,7 +569,7 @@ export async function getAllSlugs(limit = 10000): Promise<{ slug: string; genre:
     let keepFetching = true;
 
     // Safety limit
-    const MAX_FETCH = 10; // 100k max
+    const MAX_FETCH = 50; // 500k max
     let count = 0;
 
     while (keepFetching && count < MAX_FETCH) {
