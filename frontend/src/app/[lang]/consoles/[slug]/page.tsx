@@ -41,14 +41,37 @@ export async function generateStaticParams() {
 
     // 2. Console Products (Hardware)
     try {
-        const { getAllSlugs } = await import('@/lib/api');
-        const allSlugs = await getAllSlugs();
+        // [FIX] Fetch BOTH Unified Games AND Legacy Products
+        const { getAllSlugs, getSitemapProducts } = await import('@/lib/api');
 
+        // A. Unified Games (Systems)
+        const allSlugs = await getAllSlugs();
         for (const item of allSlugs) {
             // 'Systems' genre usually maps to Consoles
             if (item.genre === 'Systems' || item.genre === 'Consoles') {
                 params.push({ slug: item.slug, lang: 'en' });
                 params.push({ slug: item.slug, lang: 'fr' });
+            }
+        }
+
+        // B. Legacy Products (Systems)
+        const productBatch = await getSitemapProducts(50000, 0);
+        const { cleanGameSlug } = await import('@/lib/utils');
+
+        for (const p of productBatch) {
+            if (p.genre === 'Systems' || p.genre === 'Consoles') {
+                // Generate clean slug for legacy hardware
+                let cleanSlug = (p.product_name || 'unknown').toLowerCase()
+                    .replace(/[\[\]\(\)]/g, '')
+                    .replace(/[^a-z0-9]+/g, '-')
+                    .replace(/(^-|-$)/g, '');
+
+                const consoleSlug = (p.console_name || 'unknown').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                cleanSlug = `${cleanSlug}-${consoleSlug}`;
+
+                // Add Suffixes
+                params.push({ slug: `${cleanSlug}-prices-value`, lang: 'en' });
+                params.push({ slug: `${cleanSlug}-prix-cotes`, lang: 'fr' });
             }
         }
     } catch (error) {

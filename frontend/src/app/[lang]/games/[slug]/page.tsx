@@ -81,6 +81,30 @@ export async function generateStaticParams() {
                 params.push({ slug: enSlug, lang: 'en' });
             }
         }
+
+        // B. Legacy Products (Games fallback)
+        // Fetch remaining products that might not be in Games table
+        const { getSitemapProducts } = await import('@/lib/api');
+        const productBatch = await getSitemapProducts(50000, 0);
+
+        for (const p of productBatch) {
+            // Filter out what is definitely NOT a game
+            if (p.genre !== 'Accessories' && p.genre !== 'Controllers' && p.genre !== 'Systems' && p.genre !== 'Consoles') {
+                // Generate clean slug for legacy game
+                // Same logic as cleanGameSlug but starting from raw product data
+                let cleanSlug = (p.product_name || 'unknown').toLowerCase()
+                    .replace(/[\[\]\(\)]/g, '')
+                    .replace(/[^a-z0-9]+/g, '-')
+                    .replace(/(^-|-$)/g, '');
+
+                const consoleSlug = (p.console_name || 'unknown').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                cleanSlug = `${cleanSlug}-${consoleSlug}`;
+
+                // Add Suffixes
+                params.push({ slug: `${cleanSlug}-prices-value`, lang: 'en' });
+                params.push({ slug: `${cleanSlug}-prix-cotes`, lang: 'fr' });
+            }
+        }
     } catch (error) {
         console.error("Values fetch failed for SSG (Games):", error);
     }
