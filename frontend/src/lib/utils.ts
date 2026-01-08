@@ -73,6 +73,25 @@ export function getRegion(name: string): "NTSC" | "PAL" | "JP" | "GLOBAL" {
 
 import { routeMap } from "./route-config";
 
+// Helper to clean messy DB slugs (remove IDs, fix suffixes)
+export function cleanGameSlug(slug: string, lang: string): string {
+    // 1. Remove ID at end if present (-12345)
+    let clean = slug.replace(/-\d+$/, '');
+
+    // 2. Remove known suffixes to get base
+    const suffixes = ['-prices-value', '-prix-cotes', '-prices', '-cote-prix'];
+    for (const s of suffixes) {
+        if (clean.endsWith(s)) {
+            clean = clean.substring(0, clean.length - s.length);
+            break;
+        }
+    }
+
+    // 3. Append correct suffix for Lang
+    const targetSuffix = lang === 'fr' ? 'prix-cotes' : 'prices-value';
+    return `${clean}-${targetSuffix}`;
+}
+
 // --- URL Generation Helper ---
 export function getGameUrl(product: { id: number; product_name: string; console_name: string; genre?: string; game_slug?: string }, lang: string = 'en') {
     // 1. Determine base key (games vs accessories vs consoles)
@@ -85,18 +104,14 @@ export function getGameUrl(product: { id: number; product_name: string; console_
 
     const baseSlug = routeMap[baseKey]?.[lang] || baseKey;
 
-    // 0. Priority: Unified Game Slug (New System)
+    // 0. Priority: Unified Game Slug (Cleaned)
     if (product.game_slug) {
-        // Unified slugs are DB-controlled. We can't easily auto-translate them 
-        // unless the DB stores localized slugs.
-        // Assuming universal slug for now for Unified games.
-        if (lang === 'en') {
-            return `/${baseSlug}/${product.game_slug}`;
-        }
-        return `/${lang}/${baseSlug}/${product.game_slug}`;
+        const finalSlug = cleanGameSlug(product.game_slug, lang);
+        // Force prefix for Static Export
+        return `/${lang}/${baseSlug}/${finalSlug}`;
     }
 
-    // 2. Generate clean product slug (title-console)
+    // 2. Generate clean product slug (fallback)
     let cleanProductName = (product.product_name || 'unknown-product').toLowerCase();
     cleanProductName = cleanProductName.replace(/[\[\]\(\)]/g, '');
 
@@ -122,7 +137,7 @@ export function getGameUrl(product: { id: number; product_name: string; console_
         fullSlugPart = `${titleSlug}-${consoleSlug}`;
     }
 
-    // 3. Append localized keyword (NO ID)
+    // 3. Append localized keyword
     const suffixMap: Record<string, string> = {
         'fr': 'prix-cotes',
         'en': 'prices-value'

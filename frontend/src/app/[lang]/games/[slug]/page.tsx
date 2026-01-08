@@ -69,13 +69,16 @@ export async function generateStaticParams() {
 
         for (const item of allSlugs) {
             if (item.slug) {
-                // Canonical Slug
-                // params.push({ slug: item.slug, lang: 'en' }); // User requested NO /en/ routes. Root handles English.
-                params.push({ slug: item.slug, lang: 'fr' });
+                // Generate CLEAN, LOCALIZED slugs for SSG
+                const { cleanGameSlug } = await import('@/lib/utils');
 
-                // Legacy Suffixes (for backward compatibility / link matching)
-                // params.push({ slug: `${item.slug}-prices-value`, lang: 'en' });
-                params.push({ slug: `${item.slug}-prix-cotes`, lang: 'fr' });
+                // FR
+                const frSlug = cleanGameSlug(item.slug, 'fr');
+                params.push({ slug: frSlug, lang: 'fr' });
+
+                // EN
+                const enSlug = cleanGameSlug(item.slug, 'en');
+                params.push({ slug: enSlug, lang: 'en' });
             }
         }
     } catch (error) {
