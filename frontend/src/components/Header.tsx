@@ -48,9 +48,6 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
             return key;
         });
         const newPath = `/${targetSegments.join('/')}`;
-        if (targetLang === 'en') {
-            return newPath || '/';
-        }
         return `/${targetLang}${newPath}`;
     };
 

@@ -46,8 +46,8 @@ export async function generateStaticParams() {
         // User has 64GB RAM: Unlocking full catalog even in Dev.
         // User has 64GB RAM: BUT Next.js Dev Server might have Stack Overflow with 77k params?
         // Reverting to 1000 to test hypothesis.
-        const limit = 1000;
-
+        // Fetch ALL slugs for production build
+        const limit = process.env.NODE_ENV === 'development' ? 1000 : 100000;
         const allSlugs = await getAllSlugs(limit);
         console.log(`[Localized-Proxy] Fetched ${allSlugs.length} slugs for SSG (Dev Mode: ${isDev}).`);
 
