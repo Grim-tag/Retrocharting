@@ -56,9 +56,7 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
     const getSlug = (key: string) => routeMap[key]?.[lang] || key;
     const getPath = (key: string) => {
         const slug = getSlug(key);
-        if (lang === 'en') {
-            return `/${slug}`;
-        }
+        // FORCE Prefix for Static Export (even for default lang 'en')
         return `/${lang}/${slug}`;
     };
 
