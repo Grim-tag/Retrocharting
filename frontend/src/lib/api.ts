@@ -569,7 +569,7 @@ export async function getAllSlugs(limit = 10000): Promise<{ slug: string; genre:
     let keepFetching = true;
 
     // Safety limit
-    const MAX_FETCH = 6; // 60k max
+    const MAX_FETCH = 10; // 100k max
     let count = 0;
 
     while (keepFetching && count < MAX_FETCH) {
@@ -600,4 +600,9 @@ export async function getAllSlugs(limit = 10000): Promise<{ slug: string; genre:
 
     return allSlugs;
 }
+
+
+// --- Game & Unified Product APIs ---
+// DUPLICATE REMOVED
+
 

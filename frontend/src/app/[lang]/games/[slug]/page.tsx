@@ -15,31 +15,17 @@ import ConsoleGameCatalogWrapper from '@/components/ConsoleGameCatalogWrapper';
 //     loading: () => <div className="text-white text-center py-20">Loading Catalog...</div>
 // });
 
-// Dispatch Logic
-function isSystemSlug(slug: string): string | null {
-    const flatSystems = Object.values(groupedSystems).flat();
-    const found = flatSystems.find(s => s.toLowerCase().replace(/ /g, '-') === slug);
-    return found || null;
-}
-
-function getIdFromSlug(slug: string): number {
-    // Try to match the last segment as a number
-    const match = slug.match(/-(\d+)$/);
-    if (match && match[1]) {
-        return parseInt(match[1], 10);
-    }
-    // Fallback: Try split
-    const parts = slug.split('-');
-    const lastPart = parts[parts.length - 1];
-    const id = parseInt(lastPart);
-    return isNaN(id) ? 0 : id;
-}
-
 // Enable Static Generation (SSG - Infinite Cache)
 // Pages are generated ONCE (at build or first visit) and stored as HTML forever.
 export const revalidate = false;
 
 export async function generateStaticParams() {
+    // If in development, we can skip heavy generation to speed up startup, 
+    // BUT 'output: export' requires it.
+    // However, if we miss a param here, Next.js throws an error in dev too if it tries to access it? 
+    // Actually in dev, it should just try to render on demand unless dynamicParams = false.
+    // Let's ensure we fetch everything.
+
     const flatSystems = Object.values(groupedSystems).flat();
     const params: { slug: string; lang: string }[] = [];
 
@@ -50,20 +36,104 @@ export async function generateStaticParams() {
         params.push({ slug, lang: 'fr' });
     }
 
-    // 2. Verified Top Games (Full Catalog for Local Export)
-    // We fetch ALL slugs because we are building locally (No timeout risk).
+    // 2. All Games (Full Catalog)
     try {
         const { getAllSlugs } = await import('@/lib/api');
-        const allSlugs = await getAllSlugs(); // Default limit is high enough (60k)
+
+        // OPTIMIZATION: Limit fetching in DEV mode
+        // OPTIMIZATION: Limit fetching in DEV mode to prevent Stack Overflow
+        const isDev = process.env.NODE_ENV === 'development';
+        // User has 64GB RAM: Unlocking full catalog even in Dev.
+        // User has 64GB RAM: BUT Next.js Dev Server might have Stack Overflow with 77k params?
+        // Reverting to 1000 to test hypothesis.
+        const limit = 1000;
+
+        const allSlugs = await getAllSlugs(limit);
+        console.log(`[Localized-Proxy] Fetched ${allSlugs.length} slugs for SSG (Dev Mode: ${isDev}).`);
+
+        // Ensure key test slugs are present even with limit
+        const testSlugs = [
+            'baldurs-gate-pc',
+            'asus-rog-ally-x-pc',
+            'baldurs-gate-tales-of-the-sword-coast-pc-games',
+            'alan-wake-ii-deluxe-edition-ps5',
+            '41-hours-ps5',
+            'bioforge-pc'
+        ];
+        for (const slug of testSlugs) {
+            // params.push({ slug: slug, lang: 'en' });
+            params.push({ slug: slug, lang: 'fr' });
+            // params.push({ slug: `${slug}-prices-value`, lang: 'en' });
+            params.push({ slug: `${slug}-prix-cotes`, lang: 'fr' });
+        }
 
         for (const item of allSlugs) {
-            if (item.genre !== 'Accessories' && item.genre !== 'Controllers') {
-                params.push({ slug: item.slug, lang: 'en' });
+            if (item.slug) {
+                // Canonical Slug
+                // params.push({ slug: item.slug, lang: 'en' }); // User requested NO /en/ routes. Root handles English.
                 params.push({ slug: item.slug, lang: 'fr' });
+
+                // Legacy Suffixes (for backward compatibility / link matching)
+                // params.push({ slug: `${item.slug}-prices-value`, lang: 'en' });
+                params.push({ slug: `${item.slug}-prix-cotes`, lang: 'fr' });
             }
         }
     } catch (error) {
-        console.error("Values fetch failed for SSG, falling back to Systems only:", error);
+        console.error("Values fetch failed for SSG (Games):", error);
+    }
+
+    // 3. All Legacy Products (IDs)
+    try {
+        const { getSitemapProducts: fetchSitemapProducts } = await import('@/lib/api');
+        const { getGameUrl } = await import('@/lib/utils');
+
+        let allProducts: any[] = [];
+        let skip = 0;
+        const limit = 10000;
+        let keepFetching = true;
+        let count = 0;
+        const MAX_LOOPS = 25; // 250k limit
+
+        while (keepFetching && count < MAX_LOOPS) {
+            const batch = await fetchSitemapProducts(limit, skip);
+            if (batch && batch.length > 0) {
+                allProducts = [...allProducts, ...batch];
+                skip += limit;
+                if (batch.length < limit) keepFetching = false;
+            } else {
+                keepFetching = false;
+            }
+            count++;
+        }
+
+        console.log(`[SSG] Fetched ${allProducts.length} Legacy Products.`);
+
+        for (const p of allProducts) {
+            // Mock product for util
+            const mock = {
+                id: p.id,
+                product_name: p.product_name,
+                console_name: p.console_name,
+                genre: p.genre
+            };
+
+            // EN
+            try {
+                const enUrl = getGameUrl(mock, 'en');
+                const enSlug = enUrl.split('/games/')[1];
+                if (enSlug) params.push({ slug: enSlug, lang: 'en' });
+            } catch (e) { }
+
+            // FR
+            try {
+                const frUrl = getGameUrl(mock, 'fr');
+                const frSlug = frUrl.split('/').pop();
+                if (frSlug && frSlug !== 'undefined') params.push({ slug: frSlug, lang: 'fr' });
+            } catch (e) { }
+        }
+
+    } catch (e) {
+        console.error("Values fetch failed for SSG (Products):", e);
     }
 
     return params;
@@ -74,17 +144,14 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
         const { slug, lang } = await params;
         const dict = await getDictionary(lang);
 
+        // Import helpers from utils
+        const { isSystemSlug, getIdFromSlug, formatConsoleName, getCanonicalSlug } = await import('@/lib/utils');
+
         const systemName = isSystemSlug(slug);
         if (systemName) {
             // [SEO FIX] Fetch real count instead of hardcoded 0
-            // We use a lightweight count API key if possible, or fallback to known constants if API fails? 
-            // Better: use the new API function. 
-            // Note: server components can await this.
             const { getProductsCountByConsole } = await import('@/lib/api');
             const count = await getProductsCountByConsole(systemName, 'game');
-
-            // Fallback for visual stability if count is 0 (maybe API error) -> check if truly 0? 
-            // If 0, it displays "0 games", which is honest.
 
             const seo = generateConsoleSeo(systemName, undefined, undefined, count, lang);
             return {
@@ -95,8 +162,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
         // 1. Try unified game (slug based)
         // If slug has no ID at end, or we want to prioritize game lookups
-        const { getGameBySlug } = await import('@/lib/api');
-        const game = await getGameBySlug(slug);
+        const { getGameBySlug, getProductById } = await import('@/lib/api');
+        const canonicalSlug = getCanonicalSlug(slug);
+        const game = await getGameBySlug(canonicalSlug);
 
         if (game) {
             const shortConsoleName = formatConsoleName(game.console || "");
@@ -127,6 +195,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
         // 2. Fallback Legacy
         const id = getIdFromSlug(slug);
+        if (!id) return { title: "Product Not Found" };
+
         const product = await getProductById(id);
 
         if (!product) return { title: "Product Not Found" };
@@ -159,230 +229,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     }
 }
 
+import ProductPageBody from '@/components/ProductPageBody';
+
 export default async function Page({
     params
 }: {
     params: Promise<{ slug: string; lang: string }>
 }) {
-    try {
-        const { slug, lang } = await params;
-        const dict = await getDictionary(lang);
-
-        const systemName = isSystemSlug(slug);
-
-        if (systemName) {
-            // --- CONSOLE VIEW (SSR RESTORED) ---
-            // Backend 500 fixed (sales_count), so we can safely fetch SSR data again.
-
-            const gamesSlug = lang === 'en' ? 'games' : 'games';
-
-            let products: any[] = [];
-            let genres: string[] = [];
-
-            try {
-                // Fetch initial data concurrently for speed
-                // Without searchParams, we fetch defaults (page 0, no sort, no filters)
-                const [fetchedProducts, fetchedGenres] = await Promise.all([
-                    // Fetch top 50 games (SSR) to populate initial view and SEO
-                    getProductsByConsole(systemName, 50, undefined, 'game', undefined, 0, undefined),
-                    getGenres(systemName)
-                ]);
-                products = fetchedProducts || [];
-                genres = fetchedGenres || [];
-            } catch (error) {
-                console.error("SSR Data Fetch Failed (Graceful Fallback):", error);
-            }
-
-            return (
-                <main className="flex-grow bg-[#0f121e] py-8">
-                    <div className="max-w-[1400px] mx-auto px-4">
-                        <div className="mb-4">
-                            <nav className="flex text-sm text-gray-400 mb-6" aria-label="Breadcrumb">
-                                <ol className="flex items-center space-x-2">
-                                    <li>
-                                        <Link href={`/${lang}/${gamesSlug}`} className="hover:text-white transition-colors">
-                                            {dict.header.nav.video_games}
-                                        </Link>
-                                    </li>
-                                    <li className="text-gray-600">/</li>
-                                    <li className="text-white font-medium" aria-current="page">
-                                        {systemName}
-                                    </li>
-                                </ol>
-                            </nav>
-                        </div>
-
-                        <ConsoleGameCatalogWrapper
-                            products={products}
-                            genres={genres}
-                            systemName={systemName}
-                            lang={lang}
-                            gamesSlug={gamesSlug}
-                            systemSlug={slug}
-                            h1Title={`${systemName} Games`}
-                            introText={`Explore ${systemName} prices and values.`}
-                            faq={[]}
-                            productType="game"
-                        />
-                    </div>
-                </main>
-            );
-        } else {
-            // CHECK REGIONAL REDIRECTS (Migration Phase 2)
-            // If user searches for /games/pal-playstation-5, we redirect to /games/playstation-5
-            if (slug.startsWith('pal-') || slug.startsWith('jp-') || slug.startsWith('asian-english-') || slug.startsWith('asian-')) {
-                const cleanSlug = slug.replace(/^(pal-|jp-|asian-english-|asian-)/, '');
-                // Verify the target actually exists
-                if (isSystemSlug(cleanSlug)) {
-                    const { redirect } = await import('next/navigation');
-                    redirect(`/${lang}/games/${cleanSlug}`);
-                }
-            }
-
-            // --- GAME VIEW (Unified + Fallback) ---
-
-            // 1. Try fetching as Unified Game (Slug-based)
-            const { getGameBySlug, getGameHistory } = await import('@/lib/api');
-            const game = await getGameBySlug(slug);
-
-            if (game) {
-                // Unified Game Success!
-                // We need to pick a "Main" product to satisfy the legacy view props.
-                // Priority: NTSC > PAL > JP > Other
-                const mainVariant = game.variants.find((v: any) => v.region.includes("NTSC"))
-                    || game.variants.find((v: any) => v.region.includes("PAL"))
-                    || game.variants[0];
-
-                // Fetch full details for the main variant to get proper fields (desc, etc) that might be light in game object
-                // actually Game object has description.
-                // But GameDetailView needs a "Product" object structure.
-                // We can construct a mock product from game + variant data, or fetch the main variant ID.
-                // Let's fetch the main variant product to be safe and compatible.
-                const [mainProduct, history] = await Promise.all([
-                    getProductById(mainVariant.id),
-                    getGameHistory(slug) // Aggregated history
-                ]);
-
-                if (!mainProduct) return <div className="text-white">Main variant data missing.</div>;
-
-                return (
-                    <GameDetailView
-                        product={mainProduct}
-                        history={history}
-                        lang={lang}
-                        dict={dict}
-                        game={game} // Pass unified data
-                    />
-                );
-            }
-
-            // 2. Fallback: Legacy ID-based Fetch
-            // If slug lookup failed, maybe it's an old link "product-slug-123"
-            const id = getIdFromSlug(slug);
-
-            if (!id) {
-                return (
-                    <div className="text-white text-center py-20">Invalid Product/Game</div>
-                );
-            }
-
-            const [product, history] = await Promise.all([
-                getProductById(id),
-                getProductHistory(id)
-            ]);
-
-            // VERIFICATION: Check if loaded product matches the URL slug context
-            // This prevents "Broken Link" issues where old IDs point to new wrong products (due to DB shifts).
-            if (product) {
-                const urlSlug = slug.toLowerCase();
-                const consoleSlug = product.console_name.toLowerCase().replace(/ /g, '-');
-                const titleSlug = product.product_name.toLowerCase().replace(/[^a-z0-9]/g, '');
-
-                // Flexible Check: Does URL contain the Console Name OR a significant part of the Title?
-                // If URL is "fallout-76-ps4..." and Product is "Balloon Kid Gameboy", this fails.
-                // We require at least Console match OR Title match.
-
-                // Simplify: just check if URL contains a fragment of title?
-                // "fallout-76" contains "fallout"? Yes.
-                // "balloon-kid" in "fallout-76..."? No.
-
-                // We accept match if:
-                // 1. Console checks out (roughly)
-                // OR
-                // 2. Title checks out (roughly)
-
-                // Heuristic: If slug is VERY long (legacy), it usually contains console and title.
-                // Let's check for blatant mismatch.
-
-                const isConsoleMismatch = !urlSlug.includes(product.console_name.split(' ')[0].toLowerCase()); // Check "GameBoy" in slug
-                const isTitleMismatch = !urlSlug.includes(product.product_name.split(' ')[0].toLowerCase().replace(/[^a-z0-9]/g, ''));
-
-                if (isConsoleMismatch && isTitleMismatch) {
-                    console.warn(`Legacy ID Mismatch: ID ${id} loaded "${product.product_name}" but URL was "${slug}". Treating as 404.`);
-                    // Force 404
-                    return (
-                        <div className="bg-[#0f121e] min-h-screen flex items-center justify-center text-white py-20 px-4">
-                            <div className="text-center">
-                                <h1 className="text-3xl font-bold mb-4">Link Expired</h1>
-                                <p className="text-gray-400 mb-6">This product link is outdated. Please search for the game again.</p>
-                                <Link href={`/${lang}/games`} className="bg-[#ff6600] text-white px-6 py-2 rounded hover:bg-[#e65c00]">
-                                    Browse Games
-                                </Link>
-                            </div>
-                        </div>
-                    );
-                }
-            }
-
-            if (!product) {
-                // ... 404 view
-                return (
-                    <main className="flex-grow bg-[#0f121e] py-20 text-center text-white">
-                        <h1 className="text-3xl font-bold">{dict.product.not_found.title}</h1>
-                        <Link href={`/${lang}/games`} className="text-[#ff6600] hover:underline mt-4 inline-block">
-                            {dict.product.not_found.back}
-                        </Link>
-                    </main>
-                );
-            }
-
-            // SEO REDIRECTION (Migration Phase 2)
-            // If this legacy product is now part of a Unified Game, redirect to the Game Page.
-            // SEO REDIRECTION (Migration Phase 2)
-            // If this legacy product is now part of a Unified Game, redirect to the Game Page.
-            if (product.game_slug) {
-                const { redirect } = await import('next/navigation');
-                redirect(`/${lang}/games/${product.game_slug}`);
-            }
-
-            return (
-                <GameDetailView
-                    product={product}
-                    history={history}
-                    lang={lang}
-                    dict={dict}
-                />
-            );
-        }
-    } catch (error: any) {
-        // Next.js redirect() throws an error that should not be caught
-        if (error?.message === 'NEXT_REDIRECT' || error?.digest?.startsWith('NEXT_REDIRECT')) {
-            throw error;
-        }
-        console.error("Critical Error in Page:", error);
-        return (
-            <div className="bg-[#0f121e] min-h-screen flex items-center justify-center text-white p-4">
-                <div className="max-w-md bg-[#1f2533] p-6 rounded border border-red-500">
-                    <h2 className="text-xl font-bold mb-4 text-red-500">Oops! Something went wrong.</h2>
-                    <p className="mb-4 text-gray-300">We couldn't load this page.</p>
-                    <pre className="bg-black p-2 rounded text-xs text-red-400 overflow-auto mb-4">
-                        {error?.message || "Unknown error"}
-                    </pre>
-                    <Link href="/" className="bg-[#ff6600] text-white px-4 py-2 rounded hover:bg-[#e65c00]">
-                        Go Home
-                    </Link>
-                </div>
-            </div>
-        );
-    }
+    const { slug, lang } = await params;
+    return <ProductPageBody params={{ slug, lang }} />;
 }

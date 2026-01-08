@@ -34,9 +34,9 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
         if (!pathname) return '/';
         const segments = pathname.split('/').filter(Boolean);
         const currentLocale = ['en', 'fr'].includes(segments[0]) ? segments[0] : 'en';
-        const pathBodySegments = (currentLocale === 'en' || !['en', 'fr'].includes(segments[0]))
-            ? segments
-            : segments.slice(1);
+        const pathBodySegments = ['en', 'fr'].includes(segments[0])
+            ? segments.slice(1)
+            : segments;
         const internalSegments = pathBodySegments.map(segment => {
             const key = reverseRouteMap[currentLocale]?.[segment];
             return key || segment;

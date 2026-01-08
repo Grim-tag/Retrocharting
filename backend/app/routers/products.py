@@ -111,7 +111,6 @@ def sitemap_products(
     # Filter out products that are part of a Unified Game (game_slug is not null)
     # These are covered by sitemap_games
     products = db.query(ProductModel.id, ProductModel.product_name, ProductModel.console_name, ProductModel.genre, ProductModel.loose_price)\
-        .filter(ProductModel.game_slug == None)\
         .order_by(ProductModel.id.asc())\
         .offset(skip)\
         .limit(limit)\

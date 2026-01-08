@@ -4,7 +4,7 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_URL
     ? process.env.NEXT_PUBLIC_API_URL
     : (process.env.NODE_ENV === 'production'
         ? 'https://retrocharting-backend.onrender.com'
-        : 'http://192.168.1.10:8000'); // IP Locale du PC pour accès Mobile
+        : 'http://localhost:8000'); // Default local dev
 
 export const API_URL = `${BASE_URL}/api/v1`;
 

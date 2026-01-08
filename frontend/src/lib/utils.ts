@@ -1,3 +1,34 @@
+import { groupedSystems } from '@/data/systems';
+
+export function isSystemSlug(slug: string): string | null {
+    const flatSystems = Object.values(groupedSystems).flat();
+    const found = flatSystems.find(s => s.toLowerCase().replace(/ /g, '-') === slug);
+    return found || null;
+}
+
+export function getIdFromSlug(slug: string): number | null {
+    // Try to match the last segment as a number
+    const match = slug.match(/-(\d+)$/);
+    if (match && match[1]) {
+        return parseInt(match[1], 10);
+    }
+    return null;
+}
+
+export function getCanonicalSlug(slug: string): string {
+    // DB Legacy Slugs INCLUDE the suffix '-prices-value'.
+    // So we must NOT strip it for English.
+    // For French, we map '-prix-cotes' -> '-prices-value' to find the DB entry.
+
+    if (slug.endsWith('-prix-cotes')) {
+        return slug.replace('-prix-cotes', '-prices-value');
+    }
+
+    // For '-prices-value', we keep it as is, because that IS the canonical DB key.
+
+    return slug;
+}
+
 export function formatConsoleName(name: string): string {
     const map: Record<string, string> = {
         "Playstation 5": "PS5",
@@ -17,6 +48,7 @@ export function formatConsoleName(name: string): string {
         "Xbox Series X": "Xbox Series X",
         "Xbox One": "Xbox One",
         "Xbox 360": "Xbox 360",
+        // "PC Games" is now natively "PC" in DB, no mapping needed.
         // Add more as needed, keeping it safe/standard
     };
 
@@ -42,10 +74,6 @@ export function getRegion(name: string): "NTSC" | "PAL" | "JP" | "GLOBAL" {
 import { routeMap } from "./route-config";
 
 // --- URL Generation Helper ---
-// Generates: /[lang]/[games-slug]/[game-title]-[console]-[id]
-// OR Unified: /[lang]/[games-slug]/[unified-slug]
-// Example EN: /games/metal-gear-solid-ps1-4402
-// Example FR: /fr/jeux-video/metal-gear-solid-ps1-4402
 export function getGameUrl(product: { id: number; product_name: string; console_name: string; genre?: string; game_slug?: string }, lang: string = 'en') {
     // 1. Determine base key (games vs accessories vs consoles)
     let baseKey = 'games';
@@ -59,6 +87,9 @@ export function getGameUrl(product: { id: number; product_name: string; console_
 
     // 0. Priority: Unified Game Slug (New System)
     if (product.game_slug) {
+        // Unified slugs are DB-controlled. We can't easily auto-translate them 
+        // unless the DB stores localized slugs.
+        // Assuming universal slug for now for Unified games.
         if (lang === 'en') {
             return `/${baseSlug}/${product.game_slug}`;
         }
@@ -66,52 +97,39 @@ export function getGameUrl(product: { id: number; product_name: string; console_
     }
 
     // 2. Generate clean product slug (title-console)
-    // We treat title as universal (no translation), just slugified
     let cleanProductName = (product.product_name || 'unknown-product').toLowerCase();
-
-    // Remove brackets [] and () as requested for cleaner SEO URLs
     cleanProductName = cleanProductName.replace(/[\[\]\(\)]/g, '');
 
     const titleSlug = cleanProductName
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/(^-|-$)/g, '');
 
+    // Format console name: e.g. "PC Games" -> "PC"
     const consoleSlug = formatConsoleName(product.console_name || 'unknown-console').toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/(^-|-$)/g, '');
 
-    // Avoid repetition: if title already contains console slug (common for packs), don't append it
-    // We must check strict overlap, ignoring regional prefixes in the console slug check
-    // e.g. Title: "playstation-5-bundle..." vs Console: "pal-playstation-5"
-    // We want to detect that "playstation-5" is already in title.
     const baseConsoleSlug = consoleSlug.replace(/^(pal-|jp-|japan-)/, '');
-
-    // Identify Region to preserve it if needed
     const regionMatch = consoleSlug.match(/^(pal-|jp-|japan-)/);
     const regionPrefix = regionMatch ? regionMatch[0] : '';
 
     let fullSlugPart = titleSlug;
-    // If the title slug contains the base console slug (e.g. "playstation-5"), we consider the context present
     if (titleSlug.includes(baseConsoleSlug)) {
-        // Redundancy found. We do NOT append the full console slug.
-        // BUT we must preserve the region if the title doesn't have it.
-        // e.g. "playstation-5-bundle" (no pal) -> "pal-playstation-5-bundle"
         if (regionPrefix && !fullSlugPart.startsWith(regionPrefix)) {
             fullSlugPart = `${regionPrefix}${fullSlugPart}`;
         }
     } else {
-        // No redundancy, append the full console slug
         fullSlugPart = `${titleSlug}-${consoleSlug}`;
     }
 
-    // 3. Append ID at the end with localized keyword
+    // 3. Append localized keyword (NO ID)
     const suffixMap: Record<string, string> = {
-        'fr': 'cote-prix',
-        'en': 'prices'
+        'fr': 'prix-cotes',
+        'en': 'prices-value'
     };
     const safeLang = lang ? lang.toLowerCase() : 'en';
-    const suffix = suffixMap[safeLang] || 'prices';
-    const fullSlug = `${fullSlugPart}-${suffix}-${product.id}`;
+    const suffix = suffixMap[safeLang] || 'prices-value';
+    const fullSlug = `${fullSlugPart}-${suffix}`;
 
     // 4. Construct path (handle root for EN)
     if (lang === 'en') {

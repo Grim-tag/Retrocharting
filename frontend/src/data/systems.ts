@@ -23,7 +23,7 @@ export const systems = [
     "PAL Playstation 3", "PAL Playstation 4", "PAL Playstation 5", "PAL Playstation Vita", "PAL Sega Dreamcast", "PAL Sega Game Gear",
     "PAL Sega Master System", "PAL Sega Mega CD", "PAL Sega Mega Drive", "PAL Sega Pico", "PAL Sega Saturn", "PAL Super Nintendo",
     "PAL Vectrex", "PAL Videopac G7000", "PAL Videopac G7400", "PAL Wii", "PAL Wii U", "PAL Xbox", "PAL Xbox 360", "PAL Xbox One",
-    "PAL Xbox Series X", "PC FX", "PC Gamer Magazine", "PC Games", "PSP", "Pippin", "Playstation", "Playstation 2", "Playstation 3",
+    "PAL Xbox Series X", "PC FX", "PC Gamer Magazine", "PC", "PSP", "Pippin", "Playstation", "Playstation 2", "Playstation 3",
     "Playstation 4", "Playstation 5", "Playstation Vita", "Pokemon Mini", "Polymega", "RCA Studio II", "Rumble U", "Sega 32X",
     "Sega CD", "Sega Dreamcast", "Sega Game Gear", "Sega Genesis", "Sega Master System", "Sega Pico", "Sega Saturn", "Sega Saturn Magazine",
     "Sharp X68000", "Sinclair ZX81", "Skylanders", "Starlink", "Stoneheart", "Strategy Guide", "Super Famicom", "Super Nintendo",
@@ -35,7 +35,7 @@ export const systems = [
 export const groupedSystems: Record<string, string[]> = {
 
     "PC": [
-        "PC Games"
+        "PC"
     ],
     "Nintendo": [
         "NES", "Super Nintendo", "Nintendo 64", "Gamecube", "Wii", "Wii U", "Nintendo Switch", "Nintendo Switch 2",

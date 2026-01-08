@@ -65,10 +65,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null);
     };
 
-    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "mock_client_id_for_dev";
 
-    if (!clientId) {
-        console.error("CRITICAL: NEXT_PUBLIC_GOOGLE_CLIENT_ID is missing. Google Login will fail.");
+    if (!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID) {
+        console.warn("Notice: NEXT_PUBLIC_GOOGLE_CLIENT_ID is missing. Google Login features will be disabled.");
     }
 
     const refreshUser = async () => {

@@ -54,8 +54,8 @@ export default function GameDetailView({
     const gamesSlug = navSlug;
 
     const breadcrumbItems = [
-        { label: baseLabel, href: `/${lang}/${navSlug}` },
-        { label: displayConsole, href: `/${lang}/${navSlug}/${displayConsole.toLowerCase().replace(/ /g, '-')}` },
+        { label: baseLabel, href: lang === 'en' ? `/${navSlug}` : `/${lang}/${navSlug}` },
+        { label: displayConsole, href: lang === 'en' ? `/${navSlug}/${displayConsole.toLowerCase().replace(/ /g, '-')}` : `/${lang}/${navSlug}/${displayConsole.toLowerCase().replace(/ /g, '-')}` },
         { label: displayTitle, href: getGameUrl(product, lang) }
     ];
     const schema = generateVideoGameSchema(product, `https://retrocharting.com${getGameUrl(product, lang)}`);
