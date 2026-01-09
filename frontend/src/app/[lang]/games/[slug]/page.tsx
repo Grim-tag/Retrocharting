@@ -40,13 +40,13 @@ export async function generateStaticParams() {
     try {
         const { getAllSlugs } = await import('@/lib/api');
 
-        // OPTIMIZATION: Limit fetching to prevent Render Timeout (Hybrid Strategy)
-        // We fetch top 5000 most popular/recent items for Static Gen.
-        // The rest will be handled by Client-Side Fallback (not-found.tsx).
+        // OPTIMIZATION: EMERGENCY MODE (Survival)
+        // Backend is timing out on 5000 items. Reducing to 500 to guarantee build success.
+        // We rely on 'not-found.tsx' CSR Fallback for the rest of the catalog.
         const isDev = process.env.NODE_ENV === 'development';
-        const limit = 5000; // Plan C: 5k Static, rest CSR
+        const limit = 500; // Plan D: Survival Mode (500 Static, rest CSR)
         const allSlugs = await getAllSlugs(limit);
-        console.log(`[Localized-Proxy] Fetched ${allSlugs.length} slugs for SSG (Hybrid Mode: Limit ${limit}).`);
+        console.log(`[Localized-Proxy] Fetched ${allSlugs.length} slugs for SSG (Survival Mode: Limit ${limit}).`);
 
         // Ensure key test slugs are present even with limit
         const testSlugs = [
@@ -80,9 +80,9 @@ export async function generateStaticParams() {
         }
 
         // B. Legacy Products (Games fallback)
-        // STRATEGY: Fetch Top 2k static. Rest is CSR Fallback.
+        // STRATEGY: Fetch Top 200 static. Rest is CSR Fallback.
         const { getSitemapProducts } = await import('@/lib/api');
-        const productBatch = await getSitemapProducts(2000, 0);
+        const productBatch = await getSitemapProducts(200, 0);
 
         for (const p of productBatch) {
             // Filter out what is definitely NOT a game
