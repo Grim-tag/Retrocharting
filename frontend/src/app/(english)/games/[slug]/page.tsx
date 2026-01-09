@@ -46,6 +46,15 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
         console.log(`[generateMetadata] Called for slug: ${slug}`); // DEBUG LOG
         const lang = 'en'; // Force EN
 
+        // NUCLEAR MODE: Return generic metadata during build to avoid API timeouts
+        if (process.env.NODE_ENV === 'production') {
+            console.log(`[generateMetadata] Skipping API calls during build for: ${slug}`);
+            return {
+                title: `${slug.replace(/-/g, ' ')} - RetroCharting`,
+                description: 'Video game price guide and market values.'
+            };
+        }
+
         // Import helpers from utils
         const { isSystemSlug, getIdFromSlug, formatConsoleName, getCanonicalSlug } = await import('@/lib/utils');
 

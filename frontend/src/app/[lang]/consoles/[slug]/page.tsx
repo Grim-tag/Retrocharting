@@ -56,6 +56,15 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params, searchParams }: { params: Promise<{ slug: string; lang: string }>; searchParams: Promise<{ genre?: string }> }): Promise<Metadata> {
     const { slug, lang } = await params;
+
+    // NUCLEAR MODE: Return generic metadata during build to avoid API timeouts
+    if (process.env.NODE_ENV === 'production') {
+        return {
+            title: `${slug.replace(/-/g, ' ')} Consoles - RetroCharting`,
+            description: 'Retro gaming consoles price guide and market values.'
+        };
+    }
+
     const dict = await getDictionary(lang);
 
     // Redirect "PC Games" console page to the Games List page

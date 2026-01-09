@@ -73,6 +73,15 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string; lang: string }> }): Promise<Metadata> {
     try {
         const { slug, lang } = await params;
+
+        // NUCLEAR MODE: Return generic metadata during build to avoid API timeouts
+        if (process.env.NODE_ENV === 'production') {
+            return {
+                title: `${slug.replace(/-/g, ' ')} - RetroCharting`,
+                description: 'Video game price guide and market values.'
+            };
+        }
+
         const dict = await getDictionary(lang);
 
         // Import helpers from utils

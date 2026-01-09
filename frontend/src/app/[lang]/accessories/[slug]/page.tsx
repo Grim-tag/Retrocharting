@@ -62,6 +62,14 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     try {
         const { slug, lang } = await params;
 
+        // NUCLEAR MODE: Return generic metadata during build to avoid API timeouts
+        if (process.env.NODE_ENV === 'production') {
+            return {
+                title: `${slug.replace(/-/g, ' ')} Accessories - RetroCharting`,
+                description: 'Retro gaming accessories price guide and market values.'
+            };
+        }
+
         // 1. Check if it's a System List Page
         const systemName = isSystemSlug(slug);
         if (systemName) {
