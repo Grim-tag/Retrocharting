@@ -44,7 +44,7 @@ export async function generateStaticParams() {
         // Backend is timing out on 5000 items. Reducing to 500 to guarantee build success.
         // We rely on 'not-found.tsx' CSR Fallback for the rest of the catalog.
         const isDev = process.env.NODE_ENV === 'development';
-        const limit = 500; // Plan D: Survival Mode (500 Static, rest CSR)
+        const limit = 0; // Plan D: NUCLEAR MODE (0 Static, 100% CSR) to unblock build
         const allSlugs = await getAllSlugs(limit);
         console.log(`[Localized-Proxy] Fetched ${allSlugs.length} slugs for SSG (Survival Mode: Limit ${limit}).`);
 
