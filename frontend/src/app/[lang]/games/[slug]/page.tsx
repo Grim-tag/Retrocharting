@@ -20,68 +20,61 @@ import ConsoleGameCatalogWrapper from '@/components/ConsoleGameCatalogWrapper';
 export const revalidate = false;
 
 export async function generateStaticParams() {
-    // If in development, we can skip heavy generation to speed up startup, 
-    // BUT 'output: export' requires it.
-    // However, if we miss a param here, Next.js throws an error in dev too if it tries to access it? 
-    // Actually in dev, it should just try to render on demand unless dynamicParams = false.
-    // Let's ensure we fetch everything.
-
-    const flatSystems = Object.values(groupedSystems).flat();
     const params: { slug: string; lang: string }[] = [];
 
-    // 1. System Pages -> DISABLED (Nuclear Mode)
-    // for (const system of flatSystems) {
-    //    const slug = system.toLowerCase().replace(/ /g, '-');
-    //    params.push({ slug, lang: 'en' });
-    //    params.push({ slug, lang: 'fr' });
-    // }
-    console.log(`[Localized-Proxy] System Pages Disabled.`);
+    // 1. System Pages (Console Catalogs)
+    const flatSystems = Object.values(groupedSystems).flat();
+    for (const system of flatSystems) {
+        const slug = system.toLowerCase().replace(/ /g, '-');
+        params.push({ slug, lang: 'en' });
+        params.push({ slug, lang: 'fr' });
+    }
+    console.log(`[SSG Minimal] Generated ${flatSystems.length * 2} system pages.`);
 
-    // 2. All Games (Full Catalog)
+    // 2. MINIMAL: Only 1 game per console for fast build
     try {
-        // OPTIMIZATION: NUCLEAR V2 (Explicit Empty)
-        // We do NOT call the API to avoid timeouts.
-        console.log(`[Localized-Proxy] SSG Disabled (Nuclear Mode).`);
+        const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+        const API_URL = BASE_URL.endsWith('/api/v1') ? BASE_URL : `${BASE_URL}/api/v1`;
 
-        // Ensure key test slugs are present
-        const testSlugs = [
-            'baldurs-gate-pc',
-            'asus-rog-ally-x-pc',
-            'baldurs-gate-tales-of-the-sword-coast-pc-games',
-            'alan-wake-ii-deluxe-edition-ps5',
-            '41-hours-ps5',
-            'bioforge-pc'
-        ];
-        for (const slug of testSlugs) {
-            params.push({ slug: slug, lang: 'fr' });
-            params.push({ slug: `${slug}-prix-cotes`, lang: 'fr' });
+        // Fetch only 1 game per console
+        for (const system of flatSystems) {
+            try {
+                const res = await fetch(`${API_URL}/games/?console=${encodeURIComponent(system)}&limit=1`, {
+                    next: { revalidate: false }
+                });
+
+                if (res.ok) {
+                    const games = await res.json();
+                    if (games && games.length > 0) {
+                        const game = games[0];
+                        const baseSlug = game.slug?.replace(/-prices-value$/, '').replace(/-prix-cotes$/, '') || game.slug;
+
+                        params.push({ slug: `${baseSlug}-prices-value`, lang: 'en' });
+                        params.push({ slug: `${baseSlug}-prix-cotes`, lang: 'fr' });
+                    }
+                }
+            } catch (e) {
+                console.error(`[SSG Minimal] Failed to fetch game for ${system}:`, e);
+            }
         }
 
-        // B. Legacy Products (Games fallback) -> DISABLED (Empty)
+        console.log(`[SSG Minimal] Total: ${params.length} pages (minimal build)`);
 
     } catch (error) {
-        console.error("Values fetch failed for SSG (Games):", error);
+        console.error("[SSG Minimal] Failed to fetch games:", error);
     }
-
-    // 3. All Legacy Products (IDs) -> DISABLED (Empty)
-    // No code here to avoid timeouts.
-
 
     return params;
 }
+
+// Enable on-demand static generation for missing pages
+export const dynamicParams = true;
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string; lang: string }> }): Promise<Metadata> {
     try {
         const { slug, lang } = await params;
 
-        // NUCLEAR MODE: Return generic metadata during build to avoid API timeouts
-        if (process.env.NODE_ENV === 'production') {
-            return {
-                title: `${slug.replace(/-/g, ' ')} - RetroCharting`,
-                description: 'Video game price guide and market values.'
-            };
-        }
-
+        // NOTE: Nuclear Mode removed - full metadata generation enabled for local build
         const dict = await getDictionary(lang);
 
         // Import helpers from utils

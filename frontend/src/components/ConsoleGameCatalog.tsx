@@ -246,8 +246,9 @@ export default function ConsoleGameCatalog({
         if (genre) params.set('genre', genre);
         if (sort) params.set('sort', sort);
 
-        // Shallow update to avoid full reload/scroll
-        router.push(`/${lang}/${gamesSlug}/${systemSlug}?${params.toString()}`, { scroll: false });
+        // Shallow update to avoid full reload/scroll (English = root, French = /fr/ prefix)
+        const langPrefix = lang === 'en' ? '' : `/${lang}`;
+        router.push(`${langPrefix}/${gamesSlug}/${systemSlug}?${params.toString()}`, { scroll: false });
     };
 
     // -- Handlers --

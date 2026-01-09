@@ -124,9 +124,9 @@ def migrate_product_images(db: Session, limit: int = 50):
     db.commit()
 
     return {
-        "status": "partial" if success_count < len(candidates) else "success",
+        "status": "partial" if success_count < len(candidates_query) else "success",
         "migrated": success_count,
-        "attempted": len(candidates),
+        "attempted": len(candidates_query),
         "errors": errors
     }
 

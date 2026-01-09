@@ -107,8 +107,9 @@ export function getGameUrl(product: { id: number; product_name: string; console_
     // 0. Priority: Unified Game Slug (Cleaned)
     if (product.game_slug) {
         const finalSlug = cleanGameSlug(product.game_slug, lang);
-        // Force prefix for Static Export
-        return `/${lang}/${baseSlug}/${finalSlug}`;
+        // English = root, French = /fr/ prefix
+        const langPrefix = lang === 'en' ? '' : `/${lang}`;
+        return `${langPrefix}/${baseSlug}/${finalSlug}`;
     }
 
     // 2. Generate clean product slug (fallback)
@@ -146,6 +147,7 @@ export function getGameUrl(product: { id: number; product_name: string; console_
     const suffix = suffixMap[safeLang] || 'prices-value';
     const fullSlug = `${fullSlugPart}-${suffix}`;
 
-    // 4. Construct path (Always include lang for Static Export)
-    return `/${lang}/${baseSlug}/${fullSlug}`;
+    // 4. Construct path (English = root, French = /fr/ prefix)
+    const langPrefix = lang === 'en' ? '' : `/${lang}`;
+    return `${langPrefix}/${baseSlug}/${fullSlug}`;
 }

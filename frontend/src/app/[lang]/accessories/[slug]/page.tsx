@@ -37,23 +37,43 @@ export async function generateStaticParams() {
     const flatSystems = Object.values(groupedSystems).flat();
     const params: { slug: string; lang: string }[] = [];
 
-    // 1. System Pages -> DISABLED (Nuclear Mode)
-    // but we MUST return at least one param for output: export to work?
-    // Actually, usually [] is fine. But maybe the error is misleading or Next bug.
-    // Let's safe-guard by generating ONE valid slug.
-    params.push({ slug: 'nes', lang: 'en' });
-
-    // for (const system of flatSystems) {
-    //     const slug = system.toLowerCase().replace(/ /g, '-');
-    //     params.push({ slug, lang: 'en' });
-    //     params.push({ slug, lang: 'fr' });
-    // }
-    console.log(`[Accessories] SSG Disabled (Nuclear Mode). Added 'nes' as dummy.`);
+    // 1. System Pages
+    for (const system of flatSystems) {
+        const slug = system.toLowerCase().replace(/ /g, '-');
+        params.push({ slug, lang: 'en' });
+        params.push({ slug, lang: 'fr' });
+    }
+    console.log(`[Accessories] Generated ${flatSystems.length * 2} system pages.`);
 
     // 2. Accessories Pre-render (Full Catalog)
-    // EMERGENCY DISABLE: Backend Timeouts
-    // We disable fetching products here. They will be handled by CSR Fallback.
-    // ... (Code removed for Survival Mode)
+    try {
+        // Use 127.0.0.1 for local build reliability
+        const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+        const API_URL = BASE_URL.endsWith('/api/v1') ? BASE_URL : `${BASE_URL}/api/v1`;
+
+        const BATCH_SIZE = 10000;
+        let skip = 0;
+
+        while (true) {
+            const products = await fetch(`${API_URL}/products/sitemap?limit=${BATCH_SIZE}&skip=${skip}&type=accessory`, {
+                next: { revalidate: false }
+            }).then(res => res.json());
+
+            if (!products || !Array.isArray(products) || products.length === 0) break;
+
+            for (const p of products) {
+                const slug = p.slug || `product-${p.id}`;
+                params.push({ slug, lang: 'en' });
+                params.push({ slug, lang: 'fr' });
+            }
+
+            skip += BATCH_SIZE;
+            console.log(`[Accessories] Loaded ${skip} candidates...`);
+            if (products.length < BATCH_SIZE) break;
+        }
+    } catch (e) {
+        console.error("Failed to fetch accessories for SSG", e);
+    }
 
     return params;
 }
@@ -62,13 +82,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     try {
         const { slug, lang } = await params;
 
-        // NUCLEAR MODE: Return generic metadata during build to avoid API timeouts
-        if (process.env.NODE_ENV === 'production') {
-            return {
-                title: `${slug.replace(/-/g, ' ')} Accessories - RetroCharting`,
-                description: 'Retro gaming accessories price guide and market values.'
-            };
-        }
+        // NOTE: Nuclear Mode removed
+        const dict = await getDictionary(lang);
 
         // 1. Check if it's a System List Page
         const systemName = isSystemSlug(slug);

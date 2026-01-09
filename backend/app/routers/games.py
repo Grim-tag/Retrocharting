@@ -54,12 +54,9 @@ def read_games(
     ).offset(skip).limit(limit).all()
     
     results = []
-    from app.routers.products import get_product_image # To reference route logic if needed, but we build URL manually
-    from app.db.session import API_URL_BASE # Assuming we have a base or just use relative? 
-    # For frontend consumption, relative path or absolute path is needed.
-    # Frontend uses API_URL constant.
-    # We will return the Path relative to API root. 
-    # Frontend handles the Base URL.
+    from app.core.config import settings
+    # Construct full image URL base
+    api_image_base = f"{settings.API_BASE_URL}{settings.API_V1_STR}"
     
     for g in games:
         # Resolve Image & Prices from variants
@@ -86,104 +83,15 @@ def read_games(
                 if p.new_price and (min_new is None or p.new_price < min_new):
                     min_new = p.new_price
         
-        # [SEO IMAGE URL]
-        # Instead of returning the raw external URL, we return the API endpoint path.
-        # Format: /products/{id}/image/{slug}.webp
+        # [SEO IMAGE URL] - Full URL for frontend consumption
+        # All images served from retrocharting backend, no external URLs
         final_image_url = None
         if main_product_id:
-            # Create a clean slug for the image filename
-            # e.g. "super-mario-64-nintendo-64"
-            clean_title = g.title.lower().replace(" ", "-").replace("/", "-").replace(":", "")
+            # Create clean filename from game title and console
+            clean_title = g.title.lower().replace(" ", "-").replace("/", "-").replace(":", "").replace("'", "")
             clean_console = g.console_name.lower().replace(" ", "-")
             filename = f"{clean_title}-{clean_console}.webp"
-            
-            # The frontend typically expects a full URL or relative.
-            # If we return "/api/v1/products/...", the frontend <img src> will hit the backend.
-            # Currently backend runs at localhost:8000/api/v1 (or deployed URL)
-            # We return the path suffix.
-            # NOTE: Frontend's 'getGameUrl' and images might rely on full string.
-            # But normally <img src> works with relative path if on same domain, 
-            # OR full URL if different domain.
-            
-            # Since frontend runs on port 3000 and backend on 8000 (proxied or not?),
-            # In Next.js dev, usually we don't proxy images unless configured.
-            # BUT, we want a Full URL if possible, or a path the frontend understands essentially.
-            
-            # Let's construct the standard API path. 
-            # Frontend often checks "if http" -> use as is.
-            # If we give "/api/v1/...", browser on port 3000 might fetch localhost:3000/api/v1... which is Next.js.
-            # Does Next.js proxy /api/v1 to Backend? 
-            # If yes, this works.
-            # If no, we need full localhost:8000 URL (locally) or production URL.
-            
-            # Simplest for now: Return the API path, user can adjust Base URL in frontend/client.ts?
-            # Actually, `client.ts` defines `API_URL`.
-            # Let's return the string `/products/{main_product_id}/image/{filename}`
-            # And let Frontend prepend API_URL if it's not present?
-            # Or we prepend it here if we know the absolute base (env var).
-            
-            # Ideally, stick to relative path structure that maps to the route.
-            # backend route: /products/{product_id}/image/{filename}
-            
-            # We will return the FULL URL using a helper or hardcoded base for now relative to API root?
-            # Wait, `image_url` in JSON is usually used directly in <img src>.
-            # If we return a relative path `/products/...`, the browser resolves it against the Page URL (localhost:3000/...).
-            # So localhost:3000/products/... -> 404 in Next.js (unless rewritten).
-            
-            # SAFEST: We return the full environment-aware URL.
-            # But we don't always know the full externally visible URL in FastAPI easily (without Request object).
-            # We can use a relative path logic if we assume Frontend knows the API domain.
-            
-            # Let's try returning a special marker or just using the path assuming the Frontend
-            # wraps it or we configure the frontend to handle it?
-            
-            # BETTER: We use the `API_URL` variable if available or relative.
-            # Let's assume the frontend will display whatever string we give it.
-            # If we give "https://retrocharting-backend.onrender.com/api/v1/products/...", it works.
-            # Locally: "http://localhost:8000/api/v1/products/..."
-            
-            # Let's rely on a reliable relative path being appended to the API_BASE_URL strictly?
-            # No, `image_url` field is currently "absolute" (google storage).
-            # So if we change it, existing frontend components might break if they expect absolute.
-            
-            # Let's return a special URL format that we know works:
-            # We'll use a hardcoded ENV-check or just dynamic request retrieval?
-            # We don't have request here easily in listing loop (can be passed but heavy).
-            
-            # HYBRID APPROACH:
-            # We'll construct: `f"{API_URL_BASE}/products/{main_product_id}/image/{filename}"` using a config import.
-            from app.core.config import settings
-            base = settings.API_STR # /api/v1
-            # We need the HOST.
-            # For now, let's just return the relative path `/products/...` 
-            # AND update proper frontend image component (or Confirm it handles relative URLs relative to API).
-            # Currently frontend displays `product.image_url` directly.
-            
-            # Let's try to return: `/api/v1/products/{main_product_id}/image/{filename}`
-            # And see if browser resolves it? 
-            # Browser on `localhost:3000` -> request `localhost:3000/api/v1/...`
-            # If Next.js rewrites are set up, this works.
-            # If not, it fails.
-            
-            # User wants "retrocharting.com/Afterimage..." logic.
-            # The backend is at `api.retrocharting.com` or similar? 
-            # Actually `retrocharting-backend.onrender.com`.
-            
-            # Let's just hardcode the logic to construct the URL that points to `THIS` router.
-            # We'll format it as: `/api/v1/products/{main_product_id}/image/{filename}`.
-            # AND we will tell User to ensure Frontend Proxies /api/v1 OR we verify.
-            # Wait, frontend `client.ts` has `baseURL`.
-            # If we return a full URL, we are safe.
-            
-            # Let's just return the generic path and let the frontend qualify it?
-            # Or better: Just use the `image_url` field to store the "Real" URL?
-            # No, `image_url` in DB stores the Source.
-            # In the API response, we override it.
-            
-            final_image_url = f"/products/{main_product_id}/image/{filename}" 
-            # Note: This is partial. Frontend usually needs full URL if it's on different port.
-            # But let's assume we fix it in Frontend or Proxy.
-            # Actually, let's prefix with a standard variable we can replace.
+            final_image_url = f"{api_image_base}/products/{main_product_id}/image/{filename}"
             
         
         results.append({
@@ -191,7 +99,7 @@ def read_games(
             "title": g.title,
             "slug": g.slug,
             "console": g.console_name,
-            "image_url": final_image_url or image_url, # Fallback to raw if no main product
+            "image_url": final_image_url,  # Only local images, no external URLs
             "min_price": min_loose,
             "cib_price": min_cib,
             "new_price": min_new,

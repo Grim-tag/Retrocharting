@@ -34,8 +34,11 @@ export default async function GamesPage({ params }: { params: Promise<{ lang: st
     const getSlug = (key: string) => routeMap[key]?.[lang] || key;
     const gamesSlug = getSlug('games');
 
+    // Helper for locale-aware paths (English = root, French = /fr/)
+    const getPath = (path: string) => lang === 'en' ? path : `/${lang}${path}`;
+
     const breadcrumbItems = [
-        { label: dict.header.nav.video_games, href: `/${lang}/${gamesSlug}` }
+        { label: dict.header.nav.video_games, href: getPath(`/${gamesSlug}`) }
     ];
 
     // Flatten systems for Schema
@@ -44,7 +47,7 @@ export default async function GamesPage({ params }: { params: Promise<{ lang: st
         dict.home.categories.items.video_games.title,
         allSystems.map((system, idx) => ({
             name: system,
-            url: `/${lang}/${gamesSlug}/${system.toLowerCase().replace(/ /g, '-')}`,
+            url: getPath(`/${gamesSlug}/${system.toLowerCase().replace(/ /g, '-')}`),
             position: idx + 1
         }))
     );
@@ -96,7 +99,7 @@ export default async function GamesPage({ params }: { params: Promise<{ lang: st
                                                 <Link
                                                     key={system}
                                                     // Link to /games/console/[system-slug]
-                                                    href={`/${lang}/${gamesSlug}/${system.toLowerCase().replace(/ /g, '-')}`}
+                                                    href={getPath(`/${gamesSlug}/${system.toLowerCase().replace(/ /g, '-')}`)}
                                                     className="bg-[#1f2533] p-4 rounded border border-[#2a3142] hover:border-[#ff6600] hover:bg-[#252b3b] transition-all group"
                                                 >
                                                     <h3 className="font-medium text-gray-300 group-hover:text-white truncate" title={system}>

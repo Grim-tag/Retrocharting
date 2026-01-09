@@ -21,7 +21,7 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
     // Force Onboarding if username is missing
     useEffect(() => {
         if (user && !user.username && !pathname.includes('/onboarding')) {
-            router.push(`/${lang}/onboarding`);
+            router.push(lang === 'en' ? '/onboarding' : `/${lang}/onboarding`);
         }
     }, [user, pathname, router, lang]);
 
@@ -48,16 +48,21 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
             return key;
         });
         const newPath = `/${targetSegments.join('/')}`;
-        return `/${targetLang}${newPath}`;
+        // English → root (no /en/ prefix), French → /fr/ prefix
+        return targetLang === 'en' ? newPath : `/${targetLang}${newPath}`;
     };
 
+    // Helper for localized path (routes like /collection, /profile)
+    const getLocalizedPath = (path: string) => {
+        return lang === 'en' ? path : `/${lang}${path}`;
+    };
 
-    // Helper for localized path
+    // Helper for category slugs (games, consoles, accessories)
     const getSlug = (key: string) => routeMap[key]?.[lang] || key;
     const getPath = (key: string) => {
         const slug = getSlug(key);
-        // FORCE Prefix for Static Export (even for default lang 'en')
-        return `/${lang}/${slug}`;
+        // English = root, French = /fr/ prefix
+        return lang === 'en' ? `/${slug}` : `/${lang}/${slug}`;
     };
 
     // Dynamic Menu Items from Dictionary
@@ -107,7 +112,7 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
                     {/* Right: Actions (Desktop) */}
                     <div className="hidden md:flex items-center gap-4">
                         <button
-                            onClick={() => router.push(`/${lang}/collection`)}
+                            onClick={() => router.push(getLocalizedPath('/collection'))}
                             className="text-sm font-medium text-gray-300 hover:text-white transition-colors"
                         >
                             {dict.header.actions.collection}
@@ -118,13 +123,13 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
                         {user ? (
                             <div className="flex items-center gap-3 bg-[#2a3142] px-3 py-1.5 rounded-full border border-[#3a4152]">
                                 {user.avatar_url && (
-                                    <button onClick={() => router.push(`/${lang}/profile`)}>
+                                    <button onClick={() => router.push(getLocalizedPath('/profile'))}>
                                         <img src={user.avatar_url} alt="User" className="w-8 h-8 rounded-full border border-[#ff6600]" />
                                     </button>
                                 )}
                                 <div className="text-sm flex flex-col leading-tight">
                                     <button
-                                        onClick={() => router.push(`/${lang}/profile`)}
+                                        onClick={() => router.push(getLocalizedPath('/profile'))}
                                         className="font-bold text-white hover:text-[#ff6600] transition-colors flex items-center gap-1"
                                     >
                                         {user.username || "Choose Pseudo"}
@@ -145,7 +150,7 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
                                     )}
                                 </div>
                                 <button
-                                    onClick={() => router.push(`/${lang}/sniper`)}
+                                    onClick={() => router.push(getLocalizedPath('/sniper'))}
                                     className="hidden lg:flex items-center gap-1 text-xs font-bold bg-[#09b1ba]/20 text-[#09b1ba] hover:bg-[#09b1ba] hover:text-white px-2 py-1 rounded border border-[#09b1ba]/30 transition-all"
                                     title="Sniper Mode"
                                 >
@@ -211,7 +216,7 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
                     {/* Mobile Menu Button + SCANNER */}
                     <div className="md:hidden flex items-center gap-4">
                         <Link
-                            href={`/${lang}/scan`}
+                            href={getLocalizedPath('/scan')}
                             className="text-white p-2 bg-[#2a3142] rounded-full hover:bg-gray-700 transition-colors"
                             aria-label="Scan Barcode"
                         >
@@ -260,7 +265,7 @@ export default function Header({ dict, lang }: { dict: any; lang: string }) {
 
                         <div className="border-t border-[#2a3142] my-2 pt-2">
                             <Link
-                                href={`/${lang}/collection`}
+                                href={getLocalizedPath('/collection')}
                                 className="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-[#2a3142] hover:text-white"
                                 onClick={() => setIsMobileMenuOpen(false)}
                             >

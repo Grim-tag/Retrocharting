@@ -5,7 +5,28 @@ import { systems } from '@/data/systems';
 export const dynamic = 'force-static'; // Must be static for export
 
 export async function generateStaticParams() {
-    // Nuclear Mode: Only 1 sitemap (0.xml)
+    // Nuclear Mode removed: Determine actual number of sitemaps
+    try {
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+        const BASE_API = API_URL.endsWith('/api/v1') ? API_URL : API_URL + '/api/v1';
+
+        const res = await fetch(`${BASE_API}/games/count`, { next: { revalidate: 60 } });
+        if (res.ok) {
+            const total = await res.json();
+            const pageSize = 10000;
+            const numSitemaps = Math.ceil(total / pageSize) || 1;
+
+            const params = [];
+            for (let i = 0; i < numSitemaps; i++) {
+                params.push({ id: `${i}.xml` });
+            }
+            console.log(`[Sitemap] Generated ${numSitemaps} sitemap IDs.`);
+            return params;
+        }
+    } catch (e) {
+        console.error("Sitemap Params Error:", e);
+    }
+
     return [{ id: '0.xml' }];
 }
 
@@ -64,42 +85,46 @@ export async function GET(request: Request, { params }: { params: { id: string }
         });
     }
 
-    // --- DYNAMIC CONTENT (Games) -> DISABLED (Nuclear Mode) ---
-    // try {
-    //     const apiUrl = `https://retrocharting-backend.onrender.com/api/v1/games/sitemap/list?limit=${limit}&skip=${skip}`;
-    //     const res = await fetch(apiUrl, { next: { revalidate: 3600 } });
+    // --- DYNAMIC CONTENT (Games) ---
+    try {
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+        const BASE_API = API_URL.endsWith('/api/v1') ? API_URL : API_URL + '/api/v1';
 
-    //     if (res.ok) {
-    //         const games = await res.json();
-    //         const langs = ['en', 'fr'];
+        const apiUrl = `${BASE_API}/games/sitemap/list?limit=${limit}&skip=${skip}`;
+        const res = await fetch(apiUrl, { next: { revalidate: 3600 } });
 
-    //         games.forEach((game: any) => {
-    //             langs.forEach(lang => {
-    //                 let routeKey = 'games';
-    //                 if (game.genre === 'Accessories' || game.genre === 'Controllers') {
-    //                     routeKey = 'accessories';
-    //                 } else if (game.genre === 'Systems') {
-    //                     routeKey = 'consoles';
-    //                 }
+        if (res.ok) {
+            const games = await res.json();
+            const langs = ['en', 'fr'];
+            console.log(`[Sitemap ${id}] Added ${games.length} games.`);
 
-    //                 const base = routeMap[routeKey]?.[lang] || routeKey;
+            games.forEach((game: any) => {
+                langs.forEach(lang => {
+                    let routeKey = 'games';
+                    if (game.genre === 'Accessories' || game.genre === 'Controllers') {
+                        routeKey = 'accessories';
+                    } else if (game.genre === 'Systems') {
+                        routeKey = 'consoles';
+                    }
 
-    //                 // Unified URL Construction
-    //                 const path = lang === 'en'
-    //                     ? `/${routeKey}/${game.slug}`
-    //                     : `/${lang}/${base}/${game.slug}`;
+                    const base = routeMap[routeKey]?.[lang] || routeKey;
 
-    //                 xml += '  <url>\n';
-    //                 xml += `    <loc>${BASE_URL}${path}</loc>\n`;
-    //                 xml += '    <changefreq>weekly</changefreq>\n';
-    //                 xml += '  </url>\n';
-    //             });
-    //         });
-    //     }
-    // } catch (e) {
-    //     console.error(`Sitemap Child ${id} Error:`, e);
-    // }
-    console.log(`[Sitemap] Dynamic generation disabled for ID ${id}.`);
+                    // Unified URL Construction
+                    const path = lang === 'en'
+                        ? `/${routeKey}/${game.slug}`
+                        : `/${lang}/${base}/${game.slug}`;
+
+                    xml += '  <url>\n';
+                    xml += `    <loc>${BASE_URL}${path}</loc>\n`;
+                    xml += '    <changefreq>weekly</changefreq>\n';
+                    xml += '  </url>\n';
+                });
+            });
+        }
+    } catch (e) {
+        console.error(`Sitemap Child ${id} Error:`, e);
+    }
+    // console.log(`[Sitemap] Dynamic generation disabled for ID ${id}.`);
 
     xml += '</urlset>';
 

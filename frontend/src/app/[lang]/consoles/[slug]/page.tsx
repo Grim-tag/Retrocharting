@@ -32,24 +32,35 @@ export async function generateStaticParams() {
     const params: { slug: string; lang: string }[] = [];
     const flatSystems = Object.values(groupedSystems).flat();
 
-    // 1. System Pages (Categories) -> DISABLED (Nuclear Mode)
-    // but we MUST return at least one param for output: export to work?
-    // Let's safe-guard by generating ONE valid slug.
-    params.push({ slug: 'nes', lang: 'en' });
-
-    // for (const system of flatSystems) {
-    //     const slug = system.toLowerCase().replace(/ /g, '-');
-    //     params.push({ slug, lang: 'en' });
-    //     params.push({ slug, lang: 'fr' });
-    // }
-    console.log(`[Consoles] SSG Disabled (Nuclear Mode). Added 'nes' as dummy.`);
+    // 1. System Pages (Categories)
+    for (const system of flatSystems) {
+        const slug = system.toLowerCase().replace(/ /g, '-');
+        params.push({ slug, lang: 'en' });
+        params.push({ slug, lang: 'fr' });
+    }
+    console.log(`[Consoles] Generated ${flatSystems.length * 2} system pages.`);
 
     // 2. Console Products (Hardware)
-    // EMERGENCY DISABLE: Backend Timeouts
-    // We disable fetching products here. They will be handled by CSR Fallback.
-    // const { getAllSlugs, getSitemapProducts } = await import('@/lib/api');
+    try {
+        const { getSitemapProducts } = await import('@/lib/api');
+        // Fetch console hardware (limit 5000, usually ~2000 total)
+        // type='console'
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+        const products = await fetch(`${API_URL.endsWith('/api/v1') ? API_URL : API_URL + '/api/v1'}/products/sitemap?limit=10000&type=console`, {
+            next: { revalidate: false }
+        }).then(res => res.json());
 
-    // ... (Code removed for Survival Mode)
+        if (products && Array.isArray(products)) {
+            for (const p of products) {
+                const slug = p.slug || `product-${p.id}`; // Fallback
+                params.push({ slug, lang: 'en' });
+                params.push({ slug, lang: 'fr' });
+            }
+            console.log(`[Consoles] Loaded ${products.length} hardware products.`);
+        }
+    } catch (e) {
+        console.error("Failed to fetch console products for SSG", e);
+    }
 
     return params;
 }
@@ -57,14 +68,7 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params, searchParams }: { params: Promise<{ slug: string; lang: string }>; searchParams: Promise<{ genre?: string }> }): Promise<Metadata> {
     const { slug, lang } = await params;
 
-    // NUCLEAR MODE: Return generic metadata during build to avoid API timeouts
-    if (process.env.NODE_ENV === 'production') {
-        return {
-            title: `${slug.replace(/-/g, ' ')} Consoles - RetroCharting`,
-            description: 'Retro gaming consoles price guide and market values.'
-        };
-    }
-
+    // NOTE: Nuclear Mode removed
     const dict = await getDictionary(lang);
 
     // Redirect "PC Games" console page to the Games List page

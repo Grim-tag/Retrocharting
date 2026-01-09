@@ -5,22 +5,25 @@ export const dynamic = 'force-static';
 export async function GET() {
     const BASE_URL = 'https://retrocharting.com';
 
-    // NUCLEAR MODE: SITEMAP INDEX
-    // Disable Backend Fetch to prevent timeouts.
-    // Just generate 1 sitemap (sitemap/0.xml) which will contain static routes.
+    // NUCLEAR MODE REMOVED: SITEMAP INDEX restored
     let total = 0;
-    // try {
-    //     // Direct fetch to backend to avoid "import" issues if any
-    //     const res = await fetch("https://retrocharting-backend.onrender.com/api/v1/games/count", { next: { revalidate: 60 } });
-    //     if (res.ok) {
-    //         total = await res.json();
-    //     }
-    // } catch (e) {
-    //     console.error("Sitemap Index Error:", e);
-    // }
+    try {
+        // Use 127.0.0.1 for local build
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+        const BASE_API = API_URL.endsWith('/api/v1') ? API_URL : API_URL + '/api/v1';
 
-    // Just 1 sitemap for now
-    const numSitemaps = 1;
+        const res = await fetch(`${BASE_API}/games/count`, { next: { revalidate: 60 } });
+        if (res.ok) {
+            total = await res.json();
+            console.log(`[Sitemap] Total games: ${total}`);
+        }
+    } catch (e) {
+        console.error("Sitemap Index Error:", e);
+    }
+
+    // 10000 items per sitemap
+    const pageSize = 10000;
+    const numSitemaps = Math.ceil(total / pageSize) || 1;
 
     let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
     xml += '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';

@@ -12,48 +12,53 @@ export async function generateStaticParams() {
     const flatSystems = Object.values(groupedSystems).flat();
     const params: { slug: string }[] = [];
 
-    // 1. System Pages -> DISABLED (Nuclear Mode)
-    // for (const system of flatSystems) {
-    //    const slug = system.toLowerCase().replace(/ /g, '-');
-    //    params.push({ slug });
-    // }
-    console.log('[EN-Proxy] System Pages Disabled.');
-
-    // 2. All Games (Full Catalog)
-    // 2. Nuclear Mode (Explicit Empty)
-    console.log(`[EN-Proxy] SSG Disabled (Nuclear Mode).`);
-
-    const testSlugs = [
-        'baldurs-gate-pc',
-        'asus-rog-ally-x-pc',
-        'baldurs-gate-tales-of-the-sword-coast-pc-games',
-        'alan-wake-ii-deluxe-edition-ps5',
-        '41-hours-ps5',
-        'bioforge-pc'
-    ];
-    for (const slug of testSlugs) {
+    // 1. System Pages
+    for (const system of flatSystems) {
+        const slug = system.toLowerCase().replace(/ /g, '-');
         params.push({ slug });
-        params.push({ slug: `${slug}-prices-value` });
+    }
+    console.log(`[EN-Proxy Minimal] Generated ${flatSystems.length} system pages.`);
+
+    // 2. MINIMAL: Only 1 game per console
+    try {
+        const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+        const API_URL = BASE_URL.endsWith('/api/v1') ? BASE_URL : `${BASE_URL}/api/v1`;
+
+        for (const system of flatSystems) {
+            try {
+                const res = await fetch(`${API_URL}/games/?console=${encodeURIComponent(system)}&limit=1`, {
+                    next: { revalidate: false }
+                });
+
+                if (res.ok) {
+                    const games = await res.json();
+                    if (games && games.length > 0) {
+                        const game = games[0];
+                        const baseSlug = game.slug?.replace(/-prices-value$/, '').replace(/-prix-cotes$/, '') || game.slug;
+                        params.push({ slug: `${baseSlug}-prices-value` });
+                    }
+                }
+            } catch (e) {
+                console.error(`[EN-Proxy Minimal] Failed for ${system}:`, e);
+            }
+        }
+
+        console.log(`[EN-Proxy Minimal] Total: ${params.length} pages`);
+
+    } catch (error) {
+        console.error("[EN-Proxy Minimal] Failed to fetch games:", error);
     }
 
     return params;
 }
 
+export const dynamicParams = true;
+
 // Standalone Metadata Generation for English Route
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
     try {
         const { slug } = await params;
-        console.log(`[generateMetadata] Called for slug: ${slug}`); // DEBUG LOG
         const lang = 'en'; // Force EN
-
-        // NUCLEAR MODE: Return generic metadata during build to avoid API timeouts
-        if (process.env.NODE_ENV === 'production') {
-            console.log(`[generateMetadata] Skipping API calls during build for: ${slug}`);
-            return {
-                title: `${slug.replace(/-/g, ' ')} - RetroCharting`,
-                description: 'Video game price guide and market values.'
-            };
-        }
 
         // Import helpers from utils
         const { isSystemSlug, getIdFromSlug, formatConsoleName, getCanonicalSlug } = await import('@/lib/utils');

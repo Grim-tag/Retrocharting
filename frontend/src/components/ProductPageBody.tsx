@@ -26,10 +26,12 @@ export default async function ProductPageBody({
             let genres: string[] = [];
 
             try {
-                // Fetch initial data concurrently for speed
+                // Skip genres fetch during build to speed up SSG
+                const isBuild = process.env.NODE_ENV === 'production';
+
                 const [fetchedProducts, fetchedGenres] = await Promise.all([
                     getProductsByConsole(systemName, 50, undefined, 'game', undefined, 0, undefined),
-                    getGenres(systemName)
+                    isBuild ? Promise.resolve([]) : getGenres(systemName)
                 ]);
                 products = fetchedProducts || [];
                 genres = fetchedGenres || [];

@@ -18,7 +18,7 @@ export default function Breadcrumbs({ items, lang = 'en' }: Props) {
     const fullItems = [
         {
             label: lang === 'fr' ? 'Accueil' : 'Home',
-            href: lang === 'en' ? '/en' : '/fr'
+            href: lang === 'en' ? '/' : '/fr'
         },
         ...items,
     ];

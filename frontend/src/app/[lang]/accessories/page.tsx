@@ -17,14 +17,17 @@ export default async function AccessoriesPage({ params }: { params: Promise<{ la
     const getSlug = (key: string) => routeMap[key]?.[lang] || key;
     const accessoriesSlug = getSlug('accessories');
 
+    // Helper for locale-aware paths (English = root, French = /fr/)
+    const getPath = (path: string) => lang === 'en' ? path : `/${lang}${path}`;
+
     const breadcrumbItems = [
-        { label: dict.header.nav.accessories, href: `/${lang}/${accessoriesSlug}` }
+        { label: dict.header.nav.accessories, href: getPath(`/${accessoriesSlug}`) }
     ];
 
     const schema = generateCollectionSchema(
         dict.header.nav.accessories,
         dict.home.categories.items.video_games.desc, // Reuse description or get generic
-        `https://retrocharting.com/${lang}/${accessoriesSlug}`
+        getPath(`/${accessoriesSlug}`)
     );
 
     return (
@@ -55,7 +58,7 @@ export default async function AccessoriesPage({ params }: { params: Promise<{ la
                                                 <Link
                                                     key={system}
                                                     // Link to /accessories/console/[system-slug]
-                                                    href={`/${lang}/${accessoriesSlug}/${system.toLowerCase().replace(/ /g, '-')}`}
+                                                    href={getPath(`/${accessoriesSlug}/${system.toLowerCase().replace(/ /g, '-')}`)}
                                                     className="bg-[#1f2533] p-4 rounded border border-[#2a3142] hover:border-[#ff6600] hover:bg-[#252b3b] transition-all group"
                                                 >
                                                     <h3 className="font-medium text-gray-300 group-hover:text-white truncate" title={system}>

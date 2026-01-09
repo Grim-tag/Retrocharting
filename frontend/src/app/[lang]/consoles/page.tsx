@@ -17,14 +17,17 @@ export default async function ConsolesPage({ params }: { params: Promise<{ lang:
     const getSlug = (key: string) => routeMap[key]?.[lang] || key;
     const consolesSlug = getSlug('consoles');
 
+    // Helper for locale-aware paths (English = root, French = /fr/)
+    const getPath = (path: string) => lang === 'en' ? path : `/${lang}${path}`;
+
     const breadcrumbItems = [
-        { label: dict.header.nav.consoles, href: `/${lang}/${consolesSlug}` }
+        { label: dict.header.nav.consoles, href: getPath(`/${consolesSlug}`) }
     ];
 
     const schema = generateCollectionSchema(
         dict.home.categories.items.consoles.title,
         dict.home.categories.items.consoles.desc,
-        `https://retrocharting.com/${lang}/${consolesSlug}`
+        getPath(`/${consolesSlug}`)
     );
 
     return (
@@ -56,7 +59,7 @@ export default async function ConsolesPage({ params }: { params: Promise<{ lang:
                                                     {/* Unified View: No Separators */}
                                                     <Link
                                                         key={system}
-                                                        href={`/${lang}/${consolesSlug}/${system.toLowerCase().replace(/ /g, '-')}`}
+                                                        href={getPath(`/${consolesSlug}/${system.toLowerCase().replace(/ /g, '-')}`)}
                                                         className="bg-[#1f2533] p-4 rounded border border-[#2a3142] hover:border-[#ff6600] hover:bg-[#252b3b] transition-all group"
                                                     >
                                                         <h3 className="font-medium text-gray-300 group-hover:text-white truncate" title={system}>
