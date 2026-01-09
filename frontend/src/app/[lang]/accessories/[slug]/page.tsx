@@ -59,11 +59,11 @@ export async function generateStaticParams() {
             }
         }
 
-        // B. Legacy Products (Accessories) - Fetch 100k items (limit 100000)
-        // User Request: "I have 77k products, I want them ALL".
-        // Note: getAllSlugs (Games) might already contain some. We use a Set to avoid dupes if needed, 
-        // but duplicate params are harmless (Next.js dedupes).
-        const productBatch = await getSitemapProducts(100000, 0);
+        // B. Legacy Products (Accessories) - Fetch 5k items (SAE MODE)
+        // STRATEGY: Fetch Top 5k for Speed.
+        // The REST (70k+) are handled by Client-Side Fallback (CSR) via 404 page.
+        // This guarantees 100% coverage without Build Timeout.
+        const productBatch = await getSitemapProducts(5000, 0);
         const { cleanGameSlug } = await import('@/lib/utils'); // Sanitize
 
         for (const p of productBatch) {

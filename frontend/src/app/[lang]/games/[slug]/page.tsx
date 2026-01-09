@@ -83,10 +83,9 @@ export async function generateStaticParams() {
         }
 
         // B. Legacy Products (Games fallback)
-        // Fetch remaining products that might not be in Games table
-        // User Request: "I have 77k products, I want them ALL".
+        // STRATEGY: Fetch Top 5k static. Rest is CSR Fallback.
         const { getSitemapProducts } = await import('@/lib/api');
-        const productBatch = await getSitemapProducts(100000, 0);
+        const productBatch = await getSitemapProducts(5000, 0);
 
         for (const p of productBatch) {
             // Filter out what is definitely NOT a game
