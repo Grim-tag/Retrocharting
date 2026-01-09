@@ -32,7 +32,7 @@ export async function generateStaticParams() {
     const params: { slug: string; lang: string }[] = [];
     const flatSystems = Object.values(groupedSystems).flat();
 
-    // 1. System Pages (Categories)
+    // 1. System Pages (Categories) - THESE ARE SAFE (Static Array)
     for (const system of flatSystems) {
         const slug = system.toLowerCase().replace(/ /g, '-');
         params.push({ slug, lang: 'en' });
@@ -40,43 +40,11 @@ export async function generateStaticParams() {
     }
 
     // 2. Console Products (Hardware)
-    try {
-        // [FIX] Fetch BOTH Unified Games AND Legacy Products
-        const { getAllSlugs, getSitemapProducts } = await import('@/lib/api');
+    // EMERGENCY DISABLE: Backend Timeouts
+    // We disable fetching products here. They will be handled by CSR Fallback.
+    // const { getAllSlugs, getSitemapProducts } = await import('@/lib/api');
 
-        // A. Unified Games (Systems)
-        const allSlugs = await getAllSlugs();
-        for (const item of allSlugs) {
-            // 'Systems' genre usually maps to Consoles
-            if (item.genre === 'Systems' || item.genre === 'Consoles') {
-                params.push({ slug: item.slug, lang: 'en' });
-                params.push({ slug: item.slug, lang: 'fr' });
-            }
-        }
-
-        // B. Legacy Products (Systems)
-        const productBatch = await getSitemapProducts(50000, 0);
-        const { cleanGameSlug } = await import('@/lib/utils');
-
-        for (const p of productBatch) {
-            if (p.genre === 'Systems' || p.genre === 'Consoles') {
-                // Generate clean slug for legacy hardware
-                let cleanSlug = (p.product_name || 'unknown').toLowerCase()
-                    .replace(/[\[\]\(\)]/g, '')
-                    .replace(/[^a-z0-9]+/g, '-')
-                    .replace(/(^-|-$)/g, '');
-
-                const consoleSlug = (p.console_name || 'unknown').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-                cleanSlug = `${cleanSlug}-${consoleSlug}`;
-
-                // Add Suffixes
-                params.push({ slug: `${cleanSlug}-prices-value`, lang: 'en' });
-                params.push({ slug: `${cleanSlug}-prix-cotes`, lang: 'fr' });
-            }
-        }
-    } catch (error) {
-        console.error("Values fetch failed for Console SSG:", error);
-    }
+    // ... (Code removed for Survival Mode)
 
     return params;
 }

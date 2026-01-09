@@ -45,79 +45,9 @@ export async function generateStaticParams() {
     }
 
     // 2. Accessories Pre-render (Full Catalog)
-    // 2. Accessories Pre-render (Full Catalog)
-    try {
-        // [FIX] Fetch BOTH Unified Games AND Legacy Products to ensure 100% coverage
-        const { getAllSlugs, getSitemapProducts } = await import('@/lib/api');
-
-        // A. Unified Games (Accessories)
-        const allGameSlugs = await getAllSlugs();
-        for (const item of allGameSlugs) {
-            if (item.genre === 'Accessories' || item.genre === 'Controllers') {
-                params.push({ slug: item.slug, lang: 'en' });
-                params.push({ slug: item.slug, lang: 'fr' });
-            }
-        }
-
-        // B. Legacy Products (Accessories) - Fetch 5k items (SAE MODE)
-        // STRATEGY: Fetch Top 5k for Speed.
-        // The REST (70k+) are handled by Client-Side Fallback (CSR) via 404 page.
-        // This guarantees 100% coverage without Build Timeout.
-        const productBatch = await getSitemapProducts(5000, 0);
-        const { cleanGameSlug } = await import('@/lib/utils'); // Sanitize
-
-        for (const p of productBatch) {
-            if (p.genre === 'Accessories' || p.genre === 'Controllers') {
-                // Construct clean slug if possible, or use ID-based slug
-                // Original logic uses cleanGameSlug in utils.ts which handles ID stripping if it's a game.
-                // For legacy products, we often rely on ID.
-                // BUT user wants Clean URLs.
-                // If we generate clean slug here, page.tsx "lookup by slug" needs to find it.
-                // Page.tsx (Line 238) uses `getIdFromSlug`.
-                // If we generate "clean", `getIdFromSlug` finds nothing -> Page broken?
-                // NO! Page.tsx (Line 208) tries `getGameBySlug(slug)` first!
-                // So if we generate clean slug, we need Backend to find it.
-
-                // ISSUE: Legacy products (not in Game table) CANNOT be found by `getGameBySlug` (Game table only).
-                // They MUST rely on ID lookup.
-                // So for Legacy Products, we MUST keep the ID in the slug?
-                // OR we migrate them.
-                // User hates IDs.
-                // But for now, to fix 404, we MUST generate the page that matches the LINK.
-                // What does the LINK link to? `getGameUrl`?
-                // `getGameUrl` strips ID if we want clean.
-                // If `getGameUrl` returns Clean, `page.tsx` receives Clean.
-                // `page.tsx` calls `getGameBySlug(Clean)`.
-                // If item is ONLY in `product` table, `getGameBySlug` (Game table) returns NULL.
-                // Then `getIdFromSlug(Clean)` returns NULL.
-                // Result: 404.
-
-                // CRITICAL REALIZATION: 
-                // Accessing Legacy Products via Clean URLs is IMPOSSIBLE unless:
-                // 1. They are migrated to Game table (Unified).
-                // 2. OR `getGameBySlug` (Backend) searches Product table too. (It DOES! Line 308 in games.py).
-
-                // So, `getGameBySlug` IN BACKEND finds Products by fuzzy match.
-                // So we CAN generate Clean URLs for pure Products.
-
-                // Generates Clean Slug from Product Name + Console
-                let cleanSlug = (p.product_name || 'unknown').toLowerCase()
-                    .replace(/[\[\]\(\)]/g, '')
-                    .replace(/[^a-z0-9]+/g, '-')
-                    .replace(/(^-|-$)/g, '');
-
-                const consoleSlug = (p.console_name || 'unknown').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-                cleanSlug = `${cleanSlug}-${consoleSlug}`;
-
-                // Add Suffixes
-                params.push({ slug: `${cleanSlug}-prices-value`, lang: 'en' });
-                params.push({ slug: `${cleanSlug}-prix-cotes`, lang: 'fr' });
-            }
-        }
-
-    } catch (error) {
-        console.error("Values fetch failed for Accessory SSG:", error);
-    }
+    // EMERGENCY DISABLE: Backend Timeouts
+    // We disable fetching products here. They will be handled by CSR Fallback.
+    // ... (Code removed for Survival Mode)
 
     return params;
 }
