@@ -19,49 +19,20 @@ export async function generateStaticParams() {
     }
 
     // 2. All Games (Full Catalog)
-    try {
-        const { getAllSlugs } = await import('@/lib/api');
+    // 2. Nuclear Mode (Explicit Empty)
+    console.log(`[EN-Proxy] SSG Disabled (Nuclear Mode).`);
 
-        // OPTIMIZATION: Limit fetching in DEV mode to prevent Stack Overflow
-        // OPTIMIZATION: Limit fetching in DEV mode to prevent Stack Overflow
-        const isDev = process.env.NODE_ENV === 'development';
-        // User has 64GB RAM: Unlocking full catalog even in Dev.
-        // User has 64GB RAM: BUT Next.js Dev Server might have Stack Overflow with 77k params?
-        // Reverting to 1000 to test hypothesis.
-        const limit = 1000;
-
-        const allSlugs = await getAllSlugs(limit);
-
-        console.log(`[EN-Proxy] Fetched ${allSlugs.length} slugs for SSG (Dev Mode: ${isDev}).`);
-
-        // Ensure key test slugs are present even with limit
-        const testSlugs = [
-            'baldurs-gate-pc',
-            'asus-rog-ally-x-pc',
-            'baldurs-gate-tales-of-the-sword-coast-pc-games',
-            'alan-wake-ii-deluxe-edition-ps5',
-            '41-hours-ps5',
-            'bioforge-pc'
-        ];
-        for (const slug of testSlugs) {
-            params.push({ slug });
-            // params.push({ slug: `${slug}-prices-value` }); // We now generate this via the loop below or standard logic?
-            // Actually, for manual test slugs, we must ensure we push BOTH formats if logic below doesn't cover them.
-            params.push({ slug: `${slug}-prices-value` });
-        }
-
-        for (const item of allSlugs) {
-            if (item.slug) {
-                // Canonical Clean URL
-                params.push({ slug: item.slug });
-
-                // Legacy URL Suffix for EN (for backward compatibility / client redirect)
-                // e.g. baldurs-gate-pc-prices-value
-                params.push({ slug: `${item.slug}-prices-value` });
-            }
-        }
-    } catch (error) {
-        console.error("[EN-Proxy] Values fetch failed for SSG (Games):", error);
+    const testSlugs = [
+        'baldurs-gate-pc',
+        'asus-rog-ally-x-pc',
+        'baldurs-gate-tales-of-the-sword-coast-pc-games',
+        'alan-wake-ii-deluxe-edition-ps5',
+        '41-hours-ps5',
+        'bioforge-pc'
+    ];
+    for (const slug of testSlugs) {
+        params.push({ slug });
+        params.push({ slug: `${slug}-prices-value` });
     }
 
     return params;
