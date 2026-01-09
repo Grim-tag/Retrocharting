@@ -33,12 +33,16 @@ export async function generateStaticParams() {
     const flatSystems = Object.values(groupedSystems).flat();
 
     // 1. System Pages (Categories) -> DISABLED (Nuclear Mode)
+    // but we MUST return at least one param for output: export to work?
+    // Let's safe-guard by generating ONE valid slug.
+    params.push({ slug: 'nes', lang: 'en' });
+
     // for (const system of flatSystems) {
     //     const slug = system.toLowerCase().replace(/ /g, '-');
     //     params.push({ slug, lang: 'en' });
     //     params.push({ slug, lang: 'fr' });
     // }
-    console.log(`[Consoles] SSG Disabled (Nuclear Mode).`);
+    console.log(`[Consoles] SSG Disabled (Nuclear Mode). Added 'nes' as dummy.`);
 
     // 2. Console Products (Hardware)
     // EMERGENCY DISABLE: Backend Timeouts

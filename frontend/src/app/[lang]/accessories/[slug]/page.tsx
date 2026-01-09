@@ -38,12 +38,17 @@ export async function generateStaticParams() {
     const params: { slug: string; lang: string }[] = [];
 
     // 1. System Pages -> DISABLED (Nuclear Mode)
+    // but we MUST return at least one param for output: export to work?
+    // Actually, usually [] is fine. But maybe the error is misleading or Next bug.
+    // Let's safe-guard by generating ONE valid slug.
+    params.push({ slug: 'nes', lang: 'en' });
+
     // for (const system of flatSystems) {
     //     const slug = system.toLowerCase().replace(/ /g, '-');
     //     params.push({ slug, lang: 'en' });
     //     params.push({ slug, lang: 'fr' });
     // }
-    console.log(`[Accessories] SSG Disabled (Nuclear Mode).`);
+    console.log(`[Accessories] SSG Disabled (Nuclear Mode). Added 'nes' as dummy.`);
 
     // 2. Accessories Pre-render (Full Catalog)
     // EMERGENCY DISABLE: Backend Timeouts
