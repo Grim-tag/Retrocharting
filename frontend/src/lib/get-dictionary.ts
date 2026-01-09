@@ -24,6 +24,14 @@ const fetchTranslations = async (locale: string) => {
             return {};
         }
 
+        // NUCLEAR MODE: Skip network fetch during production build to prevent timeouts
+        // The static JSON dictionaries are sufficient for the build.
+        // Dynamic translations can be loaded client-side if needed later.
+        if (process.env.NODE_ENV === 'production' || process.env.NEXT_PHASE === 'phase-production-build') {
+            console.log(`[Translations] Skipping backend fetch during build for locale: ${locale}`);
+            return {};
+        }
+
         const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
         // Ensure no double slash
         const url = `${baseUrl.replace(/\/$/, '')}/api/v1/translations/${locale}`;
