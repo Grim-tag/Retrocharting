@@ -40,16 +40,13 @@ export async function generateStaticParams() {
     try {
         const { getAllSlugs } = await import('@/lib/api');
 
-        // OPTIMIZATION: Limit fetching in DEV mode
-        // OPTIMIZATION: Limit fetching in DEV mode to prevent Stack Overflow
+        // OPTIMIZATION: Limit fetching to prevent Render Timeout (Hybrid Strategy)
+        // We fetch top 5000 most popular/recent items for Static Gen.
+        // The rest will be handled by Client-Side Fallback (not-found.tsx).
         const isDev = process.env.NODE_ENV === 'development';
-        // User has 64GB RAM: Unlocking full catalog even in Dev.
-        // User has 64GB RAM: BUT Next.js Dev Server might have Stack Overflow with 77k params?
-        // Reverting to 1000 to test hypothesis.
-        // Fetch ALL slugs for production build
-        const limit = process.env.NODE_ENV === 'development' ? 1000 : 100000;
+        const limit = 5000; // Plan C: 5k Static, rest CSR
         const allSlugs = await getAllSlugs(limit);
-        console.log(`[Localized-Proxy] Fetched ${allSlugs.length} slugs for SSG (Dev Mode: ${isDev}).`);
+        console.log(`[Localized-Proxy] Fetched ${allSlugs.length} slugs for SSG (Hybrid Mode: Limit ${limit}).`);
 
         // Ensure key test slugs are present even with limit
         const testSlugs = [
@@ -83,9 +80,9 @@ export async function generateStaticParams() {
         }
 
         // B. Legacy Products (Games fallback)
-        // STRATEGY: Fetch Top 5k static. Rest is CSR Fallback.
+        // STRATEGY: Fetch Top 2k static. Rest is CSR Fallback.
         const { getSitemapProducts } = await import('@/lib/api');
-        const productBatch = await getSitemapProducts(5000, 0);
+        const productBatch = await getSitemapProducts(2000, 0);
 
         for (const p of productBatch) {
             // Filter out what is definitely NOT a game
@@ -116,10 +113,10 @@ export async function generateStaticParams() {
 
         let allProducts: any[] = [];
         let skip = 0;
-        const limit = 10000;
-        let keepFetching = true;
+        const limit = 0; // DISABLE massive fetch
+        let keepFetching = false;
         let count = 0;
-        const MAX_LOOPS = 25; // 250k limit
+        const MAX_LOOPS = 0; // DISABLE massive fetch
 
         while (keepFetching && count < MAX_LOOPS) {
             const batch = await fetchSitemapProducts(limit, skip);
