@@ -12,11 +12,12 @@ export async function generateStaticParams() {
     const flatSystems = Object.values(groupedSystems).flat();
     const params: { slug: string }[] = [];
 
-    // 1. System Pages
-    for (const system of flatSystems) {
-        const slug = system.toLowerCase().replace(/ /g, '-');
-        params.push({ slug });
-    }
+    // 1. System Pages -> DISABLED (Nuclear Mode)
+    // for (const system of flatSystems) {
+    //    const slug = system.toLowerCase().replace(/ /g, '-');
+    //    params.push({ slug });
+    // }
+    console.log('[EN-Proxy] System Pages Disabled.');
 
     // 2. All Games (Full Catalog)
     // 2. Nuclear Mode (Explicit Empty)
