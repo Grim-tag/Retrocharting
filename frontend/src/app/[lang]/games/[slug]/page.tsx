@@ -38,17 +38,11 @@ export async function generateStaticParams() {
 
     // 2. All Games (Full Catalog)
     try {
-        const { getAllSlugs } = await import('@/lib/api');
+        // OPTIMIZATION: NUCLEAR V2 (Explicit Empty)
+        // We do NOT call the API to avoid timeouts.
+        console.log(`[Localized-Proxy] SSG Disabled (Nuclear Mode).`);
 
-        // OPTIMIZATION: EMERGENCY MODE (Survival)
-        // Backend is timing out on 5000 items. Reducing to 500 to guarantee build success.
-        // We rely on 'not-found.tsx' CSR Fallback for the rest of the catalog.
-        const isDev = process.env.NODE_ENV === 'development';
-        const limit = 0; // Plan D: NUCLEAR MODE (0 Static, 100% CSR) to unblock build
-        const allSlugs = await getAllSlugs(limit);
-        console.log(`[Localized-Proxy] Fetched ${allSlugs.length} slugs for SSG (Survival Mode: Limit ${limit}).`);
-
-        // Ensure key test slugs are present even with limit
+        // Ensure key test slugs are present
         const testSlugs = [
             'baldurs-gate-pc',
             'asus-rog-ally-x-pc',
@@ -58,107 +52,19 @@ export async function generateStaticParams() {
             'bioforge-pc'
         ];
         for (const slug of testSlugs) {
-            // params.push({ slug: slug, lang: 'en' });
             params.push({ slug: slug, lang: 'fr' });
-            // params.push({ slug: `${slug}-prices-value`, lang: 'en' });
             params.push({ slug: `${slug}-prix-cotes`, lang: 'fr' });
         }
 
-        for (const item of allSlugs) {
-            if (item.slug) {
-                // Generate CLEAN, LOCALIZED slugs for SSG
-                const { cleanGameSlug } = await import('@/lib/utils');
+        // B. Legacy Products (Games fallback) -> DISABLED (Empty)
 
-                // FR
-                const frSlug = cleanGameSlug(item.slug, 'fr');
-                params.push({ slug: frSlug, lang: 'fr' });
-
-                // EN
-                const enSlug = cleanGameSlug(item.slug, 'en');
-                params.push({ slug: enSlug, lang: 'en' });
-            }
-        }
-
-        // B. Legacy Products (Games fallback)
-        // STRATEGY: Fetch Top 200 static. Rest is CSR Fallback.
-        const { getSitemapProducts } = await import('@/lib/api');
-        const productBatch = await getSitemapProducts(200, 0);
-
-        for (const p of productBatch) {
-            // Filter out what is definitely NOT a game
-            if (p.genre !== 'Accessories' && p.genre !== 'Controllers' && p.genre !== 'Systems' && p.genre !== 'Consoles') {
-                // Generate clean slug for legacy game
-                // Same logic as cleanGameSlug but starting from raw product data
-                let cleanSlug = (p.product_name || 'unknown').toLowerCase()
-                    .replace(/[\[\]\(\)]/g, '')
-                    .replace(/[^a-z0-9]+/g, '-')
-                    .replace(/(^-|-$)/g, '');
-
-                const consoleSlug = (p.console_name || 'unknown').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-                cleanSlug = `${cleanSlug}-${consoleSlug}`;
-
-                // Add Suffixes
-                params.push({ slug: `${cleanSlug}-prices-value`, lang: 'en' });
-                params.push({ slug: `${cleanSlug}-prix-cotes`, lang: 'fr' });
-            }
-        }
     } catch (error) {
         console.error("Values fetch failed for SSG (Games):", error);
     }
 
-    // 3. All Legacy Products (IDs)
-    try {
-        const { getSitemapProducts: fetchSitemapProducts } = await import('@/lib/api');
-        const { getGameUrl } = await import('@/lib/utils');
+    // 3. All Legacy Products (IDs) -> DISABLED (Empty)
+    // No code here to avoid timeouts.
 
-        let allProducts: any[] = [];
-        let skip = 0;
-        const limit = 0; // DISABLE massive fetch
-        let keepFetching = false;
-        let count = 0;
-        const MAX_LOOPS = 0; // DISABLE massive fetch
-
-        while (keepFetching && count < MAX_LOOPS) {
-            const batch = await fetchSitemapProducts(limit, skip);
-            if (batch && batch.length > 0) {
-                allProducts = [...allProducts, ...batch];
-                skip += limit;
-                if (batch.length < limit) keepFetching = false;
-            } else {
-                keepFetching = false;
-            }
-            count++;
-        }
-
-        console.log(`[SSG] Fetched ${allProducts.length} Legacy Products.`);
-
-        for (const p of allProducts) {
-            // Mock product for util
-            const mock = {
-                id: p.id,
-                product_name: p.product_name,
-                console_name: p.console_name,
-                genre: p.genre
-            };
-
-            // EN
-            try {
-                const enUrl = getGameUrl(mock, 'en');
-                const enSlug = enUrl.split('/games/')[1];
-                if (enSlug) params.push({ slug: enSlug, lang: 'en' });
-            } catch (e) { }
-
-            // FR
-            try {
-                const frUrl = getGameUrl(mock, 'fr');
-                const frSlug = frUrl.split('/').pop();
-                if (frSlug && frSlug !== 'undefined') params.push({ slug: frSlug, lang: 'fr' });
-            } catch (e) { }
-        }
-
-    } catch (e) {
-        console.error("Values fetch failed for SSG (Products):", e);
-    }
 
     return params;
 }
