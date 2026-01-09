@@ -7,8 +7,8 @@ const nextConfig = {
         ignoreDuringBuilds: true,
     },
     productionBrowserSourceMaps: false,
-    // Static Export Configuration
-    output: process.env.NODE_ENV === 'development' ? undefined : 'export',
+    // Standalone mode for on-demand static generation
+    output: process.env.NODE_ENV === 'development' ? undefined : 'standalone',
     trailingSlash: true,
     staticPageGenerationTimeout: 300, // 5 minutes per page (fix timeouts)
     // Image Optimization requires Node.js server, disable for static export
