@@ -30,7 +30,7 @@ export default function LegacyFallbackLoader() {
 
                 // Call Backend Fuzzy Lookup directly (Public API)
                 // This mimics what 'getGameBySlug' does on server
-                const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://retro-collector-api.onrender.com';
+                const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://retrocharting-backend.onrender.com';
                 const response = await fetch(`${apiUrl}/api/v1/games/${rawSlug}`);
 
                 if (response.ok) {
