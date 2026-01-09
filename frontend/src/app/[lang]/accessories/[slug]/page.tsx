@@ -37,12 +37,13 @@ export async function generateStaticParams() {
     const flatSystems = Object.values(groupedSystems).flat();
     const params: { slug: string; lang: string }[] = [];
 
-    // 1. System Pages
-    for (const system of flatSystems) {
-        const slug = system.toLowerCase().replace(/ /g, '-');
-        params.push({ slug, lang: 'en' });
-        params.push({ slug, lang: 'fr' });
-    }
+    // 1. System Pages -> DISABLED (Nuclear Mode)
+    // for (const system of flatSystems) {
+    //     const slug = system.toLowerCase().replace(/ /g, '-');
+    //     params.push({ slug, lang: 'en' });
+    //     params.push({ slug, lang: 'fr' });
+    // }
+    console.log(`[Accessories] SSG Disabled (Nuclear Mode).`);
 
     // 2. Accessories Pre-render (Full Catalog)
     // EMERGENCY DISABLE: Backend Timeouts
