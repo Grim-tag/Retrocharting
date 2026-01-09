@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [09/01/2026] SSG Build Optimization Attempts
+
+### Changed
+- **Frontend / Build**: Optimized SSG build by disabling `getGenres()` API calls during production build to reduce timeouts.
+- **Frontend / Build**: Modified `ProductPageBody.tsx` to skip genre fetching when `NODE_ENV === 'production'`.
+- **Frontend / Build**: Attempted minimal build strategy (1 game per console) with `dynamicParams = true` for on-demand static generation.
+- **Frontend / Config**: Experimented with `output: 'standalone'` mode to support `dynamicParams` (incompatible with `output: 'export'`).
+
+### Added
+- **Frontend / Tooling**: Created `warm-pages.js` script to warm/pre-generate all static pages by visiting each URL sequentially.
+
+### Issues Identified
+- **Build Performance**: Full SSG build (~140k pages) estimated at 48+ hours with current optimizations (~0.5 page/min).
+- **Configuration Conflict**: `dynamicParams: true` incompatible with `output: 'export'` - cannot have on-demand generation with pure static export.
+- **Strategy Pending**: Need to choose between:
+  - Full static export (slow build, true static HTML)
+  - Standalone mode (fast build, server-side cache, not true static)
+  - Alternative hosting (Cloudflare Pages, Vercel with better build limits)
+
+### Fixed
+- **Frontend / Build**: Removed "Nuclear Mode" restrictions from `generateStaticParams` in game slug pages to enable full catalog generation.
+
 ## [Unreleased]
 
 ## [08/01/2026] Clean URL & Static Site Stabilization
