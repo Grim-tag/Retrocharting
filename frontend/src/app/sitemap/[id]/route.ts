@@ -5,10 +5,8 @@ import { systems } from '@/data/systems';
 export const dynamic = 'force-static'; // Must be static for export
 
 export async function generateStaticParams() {
-    // Generate IDs 0 to 5 (covering 60k items)
-    return [0, 1, 2, 3, 4, 5].map((id) => ({
-        id: `${id}.xml`, // Matches [id] param including extension
-    }));
+    // Nuclear Mode: Only 1 sitemap (0.xml)
+    return [{ id: '0.xml' }];
 }
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
@@ -66,41 +64,42 @@ export async function GET(request: Request, { params }: { params: { id: string }
         });
     }
 
-    // --- DYNAMIC CONTENT (Games) ---
-    try {
-        const apiUrl = `https://retrocharting-backend.onrender.com/api/v1/games/sitemap/list?limit=${limit}&skip=${skip}`;
-        const res = await fetch(apiUrl, { next: { revalidate: 3600 } });
+    // --- DYNAMIC CONTENT (Games) -> DISABLED (Nuclear Mode) ---
+    // try {
+    //     const apiUrl = `https://retrocharting-backend.onrender.com/api/v1/games/sitemap/list?limit=${limit}&skip=${skip}`;
+    //     const res = await fetch(apiUrl, { next: { revalidate: 3600 } });
 
-        if (res.ok) {
-            const games = await res.json();
-            const langs = ['en', 'fr'];
+    //     if (res.ok) {
+    //         const games = await res.json();
+    //         const langs = ['en', 'fr'];
 
-            games.forEach((game: any) => {
-                langs.forEach(lang => {
-                    let routeKey = 'games';
-                    if (game.genre === 'Accessories' || game.genre === 'Controllers') {
-                        routeKey = 'accessories';
-                    } else if (game.genre === 'Systems') {
-                        routeKey = 'consoles';
-                    }
+    //         games.forEach((game: any) => {
+    //             langs.forEach(lang => {
+    //                 let routeKey = 'games';
+    //                 if (game.genre === 'Accessories' || game.genre === 'Controllers') {
+    //                     routeKey = 'accessories';
+    //                 } else if (game.genre === 'Systems') {
+    //                     routeKey = 'consoles';
+    //                 }
 
-                    const base = routeMap[routeKey]?.[lang] || routeKey;
+    //                 const base = routeMap[routeKey]?.[lang] || routeKey;
 
-                    // Unified URL Construction
-                    const path = lang === 'en'
-                        ? `/${routeKey}/${game.slug}`
-                        : `/${lang}/${base}/${game.slug}`;
+    //                 // Unified URL Construction
+    //                 const path = lang === 'en'
+    //                     ? `/${routeKey}/${game.slug}`
+    //                     : `/${lang}/${base}/${game.slug}`;
 
-                    xml += '  <url>\n';
-                    xml += `    <loc>${BASE_URL}${path}</loc>\n`;
-                    xml += '    <changefreq>weekly</changefreq>\n';
-                    xml += '  </url>\n';
-                });
-            });
-        }
-    } catch (e) {
-        console.error(`Sitemap Child ${id} Error:`, e);
-    }
+    //                 xml += '  <url>\n';
+    //                 xml += `    <loc>${BASE_URL}${path}</loc>\n`;
+    //                 xml += '    <changefreq>weekly</changefreq>\n';
+    //                 xml += '  </url>\n';
+    //             });
+    //         });
+    //     }
+    // } catch (e) {
+    //     console.error(`Sitemap Child ${id} Error:`, e);
+    // }
+    console.log(`[Sitemap] Dynamic generation disabled for ID ${id}.`);
 
     xml += '</urlset>';
 
