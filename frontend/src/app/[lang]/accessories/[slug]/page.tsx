@@ -59,19 +59,18 @@ export async function generateStaticParams() {
             }
         }
 
-        // B. Legacy Products (Accessories) - Fetch 50k items (limit 50000)
-        // Many accessories might not be migrated to Games yet.
-        // We iterate products and check if they are accessories.
+        // B. Legacy Products (Accessories) - Fetch 100k items (limit 100000)
+        // User Request: "I have 77k products, I want them ALL".
         // Note: getAllSlugs (Games) might already contain some. We use a Set to avoid dupes if needed, 
         // but duplicate params are harmless (Next.js dedupes).
-        const productBatch = await getSitemapProducts(50000, 0);
+        const productBatch = await getSitemapProducts(100000, 0);
         const { cleanGameSlug } = await import('@/lib/utils'); // Sanitize
 
         for (const p of productBatch) {
             if (p.genre === 'Accessories' || p.genre === 'Controllers') {
                 // Construct clean slug if possible, or use ID-based slug
                 // Original logic uses cleanGameSlug in utils.ts which handles ID stripping if it's a game.
-                // For legacy products, we often rely on ID. 
+                // For legacy products, we often rely on ID.
                 // BUT user wants Clean URLs.
                 // If we generate clean slug here, page.tsx "lookup by slug" needs to find it.
                 // Page.tsx (Line 238) uses `getIdFromSlug`.

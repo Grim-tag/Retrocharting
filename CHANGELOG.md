@@ -3,6 +3,21 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+
+## [08/01/2026] Clean URL & Static Site Stabilization
+
+### Fixed
+- **Static Site / 404s**: Activated "Nuclear Option" for Static Generation. Now forces generation of ~250k pages (Games + Accessories + Consoles + Legacy Products) to eliminate 404s on non-unified items.
+- **Static Site / Navigation**: Fixed "Home" Breadcrumb link pointing to `/` (now forces `/en` or `/fr`).
+- **Static Site / Header**: Fixed Header Menu links pointing to `/games` (now forces `/en` prefix).
+- **URLs / Cleanliness**: Implemented `cleanGameSlug` (REMOVED IDs from URLs). All game links are now `title-console-prices-value` instead of `...-12345`.
+- **Database / Migration**: Renamed "PC Games" to "PC" in database and migrated 77k slugs to new clean format.
+- **Frontend / Pagination**: Fixed `ConsoleGameCatalog` infinite scroll issues by replacing it with a robust Pagination system (Pages 1, 2, 3...).
+
+### Added
+- **Backend / Fuzzy Lookup**: Implemented "Fuzzy Slug Matching" in `games.py` to allow finding games by their clean slug even if the DB slug is slightly different (e.g., ID mismatch).
+- **Frontend / Component**: Created `Pagination.tsx` reusable component.
+
 ### Added
 - **Unification**: Enhanced `unify_consoles` script (Bulldozer Mode) to robustly clean up legacy IDs, even for products with empty game slugs.
 - **Redirection**: Enabled persistent 308 redirects from Legacy URLs (with ID) to Clean URLs (Unified) on Console pages.
